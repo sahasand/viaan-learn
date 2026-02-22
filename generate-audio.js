@@ -1,6 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 
+// Load .env file if present
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  fs.readFileSync(envPath, 'utf8').split('\n').forEach(line => {
+    const [key, ...val] = line.split('=');
+    if (key && val.length) process.env[key.trim()] = val.join('=').trim();
+  });
+}
+
 const API_KEY = process.env.OPENAI_API_KEY;
 if (!API_KEY) {
   console.error('Set OPENAI_API_KEY environment variable');
