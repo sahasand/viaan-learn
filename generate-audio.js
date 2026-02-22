@@ -25,7 +25,7 @@ const BUNDLE_FILE = path.join(__dirname, 'audio-bundle.json');
 
 // All clips to generate
 const clips = [
-  // Phonics sounds (26)
+  // === Phonics: single letters (26) ===
   { id: 'phon_A', text: 'aah' },
   { id: 'phon_B', text: 'buh' },
   { id: 'phon_C', text: 'kuh' },
@@ -53,21 +53,89 @@ const clips = [
   { id: 'phon_Y', text: 'yuh' },
   { id: 'phon_Z', text: 'zzz' },
 
-  // Sight words (5)
-  { id: 'word_the', text: 'the' },
-  { id: 'word_is', text: 'is' },
-  { id: 'word_my', text: 'my' },
-  { id: 'word_can', text: 'can' },
-  { id: 'word_see', text: 'see' },
+  // === Phonics: digraphs & alternatives (~25) ===
+  { id: 'phon_ck', text: 'k' },
+  { id: 'phon_ff', text: 'fff' },
+  { id: 'phon_ll', text: 'lll' },
+  { id: 'phon_ss', text: 'sss' },
+  { id: 'phon_zz', text: 'zzz' },
+  { id: 'phon_ch', text: 'ch' },
+  { id: 'phon_sh', text: 'sh' },
+  { id: 'phon_th', text: 'th' },
+  { id: 'phon_ng', text: 'ng' },
+  { id: 'phon_qu', text: 'kwu' },
+  { id: 'phon_ai', text: 'ay' },
+  { id: 'phon_ee', text: 'ee' },
+  { id: 'phon_igh', text: 'eye' },
+  { id: 'phon_oa', text: 'oh' },
+  { id: 'phon_oo', text: 'oo' },
+  { id: 'phon_ar', text: 'ar' },
+  { id: 'phon_or', text: 'or' },
+  { id: 'phon_ur', text: 'er' },
+  { id: 'phon_ow', text: 'ow' },
+  { id: 'phon_oi', text: 'oy' },
+  { id: 'phon_ear', text: 'ear' },
+  { id: 'phon_air', text: 'air' },
+  { id: 'phon_er', text: 'er' },
+  { id: 'phon_a_e', text: 'ay' },
+  { id: 'phon_i_e', text: 'eye' },
+  { id: 'phon_o_e', text: 'oh' },
+  { id: 'phon_u_e', text: 'yoo' },
+  { id: 'phon_ay', text: 'ay' },
+  { id: 'phon_ea', text: 'ee' },
+  { id: 'phon_ie', text: 'eye' },
+  { id: 'phon_oy', text: 'oy' },
+  { id: 'phon_ou', text: 'ow' },
+  { id: 'phon_ir', text: 'er' },
+  { id: 'phon_ue', text: 'yoo' },
+  { id: 'phon_ew', text: 'yoo' },
+  { id: 'phon_aw', text: 'aw' },
+  { id: 'phon_ph', text: 'f' },
+  { id: 'phon_oe', text: 'oh' },
+  { id: 'phon_wh', text: 'w' },
 
-  // Sentences (5)
+  // === Decodable words (~120) ===
+  ...['sat','tap','pat','pan','pin','tin','tip','nap','map','mat','man','pit',
+  'sip','sad','dad','dim','dig','got','cot','cop','cod','kid','kit',
+  'den','pen','pet','peg','bed','red','run','rub','rug','mud','mug','hug',
+  'hen','hop','hid','him','hit','hot','bin','bit','bat','bag','fun','fit',
+  'fin','fan','leg','lip','log','lot','lid','bell','fell','doll','miss','hiss','fuss',
+  'chip','chop','chin','ship','shop','shed','shin','thin','them','king','ring','sing',
+  'vet','wax','web','yam','zip',
+  'wait','feet','night','boat','food','park','fork','hurt','cow','coin','deer','hair',
+  'moon','rain','bus',
+  'hand','tent','lamp','milk','pond','desk','fist','jump',
+  'clap','flag','plug','drum','frog','grin','swim','snap',
+  'cake','bike','bone','tube',
+  'play','day','bean','pie','boy','loud','bird','glue','stew','paw','phone','toe',
+  'dog','cat','goat','cup','fish'
+  ].map(w => ({ id: 'word_' + w, text: w })),
+
+  // === Sight words (~40) ===
+  ...['the','is','my','can','see','to','I','no','go','into',
+  'he','she','we','me','be','was','you','they','all','are','her',
+  'said','have','like','so','do','some','come','were','there','little','one','when','out','what',
+  'oh','their','people','looked','called','asked','could','water','where','who','many','because','for','in','it','at'
+  ].map(w => ({ id: 'word_' + w, text: w })),
+
+  // === Sentences for fw questions (~15) ===
   { id: 'word_I_see_a_cat_', text: 'I see a cat.' },
   { id: 'word_This_is_my_dog_', text: 'This is my dog.' },
   { id: 'word_I_can_see_it_', text: 'I can see it.' },
   { id: 'word_The_cat_is_big_', text: 'The cat is big.' },
   { id: 'word_I_can_run_fast_', text: 'I can run fast!' },
+  { id: 'word_I_go_into_the_pit_', text: 'I go into the pit.' },
+  { id: 'word_The_hen_is_big_', text: 'The hen is big.' },
+  { id: 'word_I_go_to_the_mat_', text: 'I go to the mat.' },
+  { id: 'word_She_got_the_chip_', text: 'She got the chip.' },
+  { id: 'word_The_king_can_sing_', text: 'The king can sing.' },
+  { id: 'word_We_go_on_the_boat_', text: 'We go on the boat.' },
+  { id: 'word_I_hurt_my_leg_', text: 'I hurt my leg.' },
+  { id: 'word_The_ship_sat_at_night_', text: 'The ship sat at night.' },
+  { id: 'word_I_like_the_cake_', text: 'I like the cake.' },
+  { id: 'word_The_boy_got_a_pie_', text: 'The boy got a pie.' },
 
-  // Cheers (5)
+  // === Cheers (5) ===
   { id: 'cheer_great', text: 'Great!' },
   { id: 'cheer_awesome', text: 'Awesome!' },
   { id: 'cheer_yes', text: 'Yes!' },
