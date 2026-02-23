@@ -271,16 +271,27 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
 .ph-st{font-size:0.85rem;opacity:0.9}
 .ph-body{overflow:hidden;transition:max-height 0.3s ease}
 .ph-body.shut{max-height:0}
-.wk-row{display:flex;align-items:center;gap:8px;padding:6px 8px}
-.wk-lbl{font-weight:700;font-size:0.75rem;color:var(--gray-dk);min-width:44px}
-.lv-mini{
-  width:40px;height:40px;border-radius:12px;border:none;cursor:pointer;
-  touch-action:manipulation;font-family:var(--fn);font-weight:800;font-size:0.8rem;
-  color:white;display:flex;align-items:center;justify-content:center;
-  -webkit-appearance:none;transition:transform 0.15s;position:relative;
+.wk-cd{background:white;border-radius:var(--r);margin:0 4px 10px;box-shadow:0 2px 8px rgba(0,0,0,0.05);overflow:hidden}
+.wk-cd-hd{padding:12px 16px 2px;display:flex;align-items:baseline;gap:8px}
+.wk-cd-n{font-family:var(--fn-d);font-weight:800;font-size:0.7rem;color:var(--gray);text-transform:uppercase;letter-spacing:1.5px}
+.wk-cd-tp{font-family:var(--fn-d);font-weight:900;font-size:1.05rem;color:var(--dark);letter-spacing:0.5px}
+.wk-steps{display:flex;gap:6px;padding:8px 12px 14px}
+.wk-stp{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;
+  border:none;background:none;cursor:pointer;touch-action:manipulation;
+  -webkit-appearance:none;padding:4px 2px;border-radius:14px;
+  transition:transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
 }
-.lv-mini:active{transform:scale(0.9)}
-.lv-mini.dn::after{content:'\u2B50';position:absolute;top:-4px;right:-4px;font-size:0.55rem}
+.wk-stp:active{transform:scale(0.88)}
+.wk-stp-ico{
+  width:50px;height:50px;border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.4rem;position:relative;transition:box-shadow 0.3s;
+}
+.wk-stp-ico::before{content:'';position:absolute;inset:0;border-radius:14px;background:linear-gradient(180deg,rgba(255,255,255,0.18) 0%,transparent 50%);pointer-events:none}
+.wk-stp-lbl{font-family:var(--fn);font-weight:700;font-size:0.7rem;color:var(--gray-dk);text-align:center;line-height:1.15}
+.wk-stp.dn .wk-stp-ico{box-shadow:0 0 0 2.5px rgba(251,191,36,0.6),0 0 10px rgba(251,191,36,0.15)}
+.wk-stp.dn .wk-stp-ico::after{content:'\2B50';position:absolute;top:-5px;right:-5px;font-size:0.55rem}
 
 /* ============================================
    BLENDING
@@ -409,7 +420,7 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
 
 /* --- Level Card Completion --- */
 .lv-card.dn{outline:3px solid rgba(251,191,36,0.5);outline-offset:-3px}
-.lv-mini.dn{box-shadow:0 0 8px rgba(251,191,36,0.3)}
+.wk-stp.dn{background:rgba(251,191,36,0.06)}
 
 /* --- Hover States (desktop) --- */
 @media(hover:hover){
@@ -417,7 +428,7 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
   .lv-card:hover{transform:translateY(-3px);filter:brightness(1.05)}
   .cb:hover{border-color:var(--blue-md);transform:translateY(-2px)}
   .btn:hover{filter:brightness(1.08);transform:translateY(-2px)}
-  .lv-mini:hover{transform:scale(1.1)}
+  .wk-stp:hover{transform:scale(1.06)}
 }
 .cb:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .btn:focus-visible{outline:3px solid rgba(255,255,255,0.6);outline-offset:2px}
@@ -428,9 +439,11 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
 
 /* --- Phase Accordion Polish --- */
 .ph-hdr{border-radius:var(--r-lg);margin-bottom:8px}
-.wk-row{border-bottom:1px solid rgba(0,0,0,0.04)}
-.wk-row:last-child{border-bottom:none}
-.wk-lbl{font-family:var(--fn-d);font-size:0.8rem;min-width:48px}
+.wk-cd{animation:fadeUp 0.3s ease both}
+.wk-cd:nth-child(1){animation-delay:0.05s}.wk-cd:nth-child(2){animation-delay:0.1s}
+.wk-cd:nth-child(3){animation-delay:0.15s}.wk-cd:nth-child(4){animation-delay:0.2s}
+.wk-cd:nth-child(5){animation-delay:0.25s}.wk-cd:nth-child(6){animation-delay:0.3s}
+.wk-cd:nth-child(n+7){animation-delay:0.33s}
 </style>
 </head>
 <body>
@@ -1818,23 +1831,18 @@ function showLvls(){
 
 function renderEngLvls(d){
   var pl=$('phL');pl.innerHTML='';
-  // Auto-expand earliest incomplete phase
   var autoP=S.phase;
   PHASES.forEach(function(ph){
-    // Header
     var hdr=document.createElement('button');
     hdr.className='ph-hdr';
     hdr.style.background='linear-gradient(135deg,'+ph.color+','+ph.color+'cc)';
     hdr.style.boxShadow='0 4px 0 '+ph.color+'88';
-    // Count stars for this phase
     var pst=0,ptot=0;
     d.forEach(function(lv){if(lv.ph===ph.id){ptot+=lv.q.length*2;pst+=(S.best[lv.id]||0)}});
     hdr.innerHTML='<span class="ph-ico">'+ph.emoji+'</span><span class="ph-nm">Phase '+ph.id+': '+ph.name+'</span><span class="ph-st">\u2B50 '+pst+'</span>';
     var open=ph.id===autoP;
-    // Body
     var body=document.createElement('div');
     body.className='ph-body'+(open?'':' shut');
-    // Group levels by week
     var wks={};
     d.forEach(function(lv,i){
       if(lv.ph!==ph.id)return;
@@ -1842,20 +1850,34 @@ function renderEngLvls(d){
       wks[lv.w].push({lv:lv,idx:i});
     });
     Object.keys(wks).sort(function(a,b){return a-b}).forEach(function(w){
-      var row=document.createElement('div');row.className='wk-row';
-      row.innerHTML='<span class="wk-lbl">W'+w+'</span>';
-      wks[w].forEach(function(item){
+      var items=wks[w];
+      var cd=document.createElement('div');cd.className='wk-cd';
+      var hd=document.createElement('div');hd.className='wk-cd-hd';
+      var topic=items[0].lv.title;
+      hd.innerHTML='<span class="wk-cd-n">Week '+w+'</span><span class="wk-cd-tp">'+topic+'</span>';
+      cd.appendChild(hd);
+      var st=document.createElement('div');st.className='wk-steps';
+      items.forEach(function(item){
         var btn=document.createElement('button');
         var best=S.best[item.lv.id]||0;
-        btn.className='lv-mini'+(best>0?' dn':'');
-        btn.style.background=item.lv.color;
-        btn.style.boxShadow='0 3px 0 '+item.lv.color+'88';
-        btn.textContent=item.lv.title.charAt(0);
+        btn.className='wk-stp'+(best>0?' dn':'');
+        var t=item.lv.title;
+        var lbl;
+        if(/^Blend/i.test(t))lbl='Read';
+        else if(/^Build/i.test(t))lbl='Spell';
+        else if(/^Review/i.test(t))lbl='Review';
+        else if(/^Big review/i.test(t))lbl='Review';
+        else if(/^Mixed/i.test(t))lbl=t.split(' ')[0];
+        else if(t.indexOf(',')>-1)lbl='Words';
+        else if(t.length<=10)lbl=t;
+        else lbl=t.split(' ')[0];
+        btn.innerHTML='<div class="wk-stp-ico" style="background:'+item.lv.color+';box-shadow:0 3px 0 '+item.lv.color+'88">'+item.lv.emoji+'</div><span class="wk-stp-lbl">'+lbl+'</span>';
         btn.title=item.lv.title;
         btn.addEventListener('click',function(){startLvl(item.idx)});
-        row.appendChild(btn);
+        st.appendChild(btn);
       });
-      body.appendChild(row);
+      cd.appendChild(st);
+      body.appendChild(cd);
     });
     hdr.addEventListener('click',function(){
       S.phase=ph.id;
