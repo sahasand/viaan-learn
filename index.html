@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Viaan">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <title>Viaan's Learning Adventure</title>
 <style>
 :root{
@@ -19,7 +20,8 @@
   --green:#10B981;--green-lt:#ECFDF5;
   --red:#EF4444;--red-lt:#FEF2F2;
   --dark:#111827;--gray:#9CA3AF;--gray-dk:#4B5563;--gray-lt:#F9FAFB;
-  --fn:-apple-system,'SF Pro Rounded','Avenir Next','Trebuchet MS',system-ui,sans-serif;
+  --fn:'Nunito',-apple-system,'SF Pro Rounded','Avenir Next',system-ui,sans-serif;
+  --fn-d:'Baloo 2','Nunito',-apple-system,system-ui,sans-serif;
   --r:16px;--r-lg:24px;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -38,10 +40,10 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
 .h-mascot{font-size:3.5rem;animation:mascot 3s ease-in-out infinite}
 @keyframes mascot{0%,100%{transform:translateY(0) rotate(0deg)}30%{transform:translateY(-12px) rotate(-3deg)}60%{transform:translateY(-6px) rotate(3deg)}}
 
-.h-pre{font-weight:700;font-size:0.95rem;color:var(--gray-dk);letter-spacing:3px;text-transform:uppercase}
+.h-pre{font-family:var(--fn-d);font-weight:700;font-size:0.95rem;color:var(--gray-dk);letter-spacing:3px;text-transform:uppercase}
 
 .h-name{
-  font-size:3.8rem;font-weight:900;letter-spacing:-2px;line-height:1;
+  font-family:var(--fn-d);font-size:3.8rem;font-weight:900;letter-spacing:-2px;line-height:1;
   background:linear-gradient(135deg,var(--coral) 0%,var(--pink) 50%,var(--purple) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
 }
@@ -64,7 +66,7 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
 .w-card.eng{background:var(--blue);box-shadow:0 8px 0 #1E3A8A,0 12px 30px rgba(59,130,246,0.25)}
 .w-card.eng:active{box-shadow:0 3px 0 #1E3A8A}
 .wc-ico{font-size:3.2rem}
-.wc-lbl{font-weight:800;font-size:1.2rem;letter-spacing:0.3px}
+.wc-lbl{font-family:var(--fn-d);font-weight:800;font-size:1.2rem;letter-spacing:0.3px}
 
 /* ============================================
    LEVEL SELECT — week tabs + spacious grid
@@ -83,7 +85,7 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
   box-shadow:0 2px 8px rgba(0,0,0,0.06);flex-shrink:0;
 }
 .ls-back:active{transform:scale(0.88)}
-.ls-title{flex:1;font-weight:900;font-size:1.4rem;color:var(--dark)}
+.ls-title{flex:1;font-family:var(--fn-d);font-weight:900;font-size:1.4rem;color:var(--dark)}
 .ls-stars{font-weight:800;font-size:1.05rem;color:var(--yellow);text-shadow:0 1px 2px rgba(0,0,0,0.06)}
 
 /* Week tabs */
@@ -147,7 +149,7 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
   gap:24px;width:100%;max-width:460px;padding:8px 0;
 }
 
-.qp{font-weight:800;font-size:1.35rem;color:var(--dark);text-align:center;line-height:1.3}
+.qp{font-family:var(--fn-d);font-weight:800;font-size:1.35rem;color:var(--dark);text-align:center;line-height:1.3}
 
 .qv{
   display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;
@@ -166,7 +168,7 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
 .op{font-weight:900;font-size:1.6rem;color:var(--dark)}
 
 /* Letter display */
-.ltr-big{font-weight:900;font-size:7rem;line-height:1}
+.ltr-big{font-family:var(--fn-d);font-weight:900;font-size:7rem;line-height:1}
 .ltr-pair{display:flex;gap:16px;align-items:center}
 .ltr-box{width:80px;height:96px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:3.2rem}
 .ltr-up{background:var(--blue-md);color:var(--blue)}
@@ -174,7 +176,7 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
 .emoji-big{font-size:4.5rem;line-height:1}
 .emoji-label{font-weight:700;font-size:1rem;color:var(--gray-dk);text-transform:capitalize}
 
-.word-big{font-weight:900;font-size:2.8rem;color:var(--dark);letter-spacing:2px}
+.word-big{font-family:var(--fn-d);font-weight:900;font-size:2.8rem;color:var(--dark);letter-spacing:2px}
 .sentence{font-weight:700;font-size:1.3rem;color:var(--dark);text-align:center;line-height:1.5}
 .word-blank{display:inline-block;border-bottom:3px dashed var(--coral);min-width:50px;height:1.4em;vertical-align:bottom;margin:0 3px}
 
@@ -230,9 +232,9 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
 #done{justify-content:center;gap:20px;text-align:center;padding:32px 24px;background:white}
 .dc-e{font-size:4rem;animation:bnc 1s cubic-bezier(0.34,1.56,0.64,1) infinite}
 @keyframes bnc{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
-.dc-t{font-weight:900;font-size:1.7rem}
+.dc-t{font-family:var(--fn-d);font-weight:900;font-size:1.7rem}
 .dc-s{font-size:2.2rem;letter-spacing:6px}
-.dc-sc{font-weight:800;font-size:1.15rem;color:var(--coral)}
+.dc-sc{font-family:var(--fn-d);font-weight:800;font-size:1.3rem;color:var(--coral)}
 .dc-m{font-size:1rem;color:var(--gray-dk);font-weight:500;max-width:270px;line-height:1.4}
 .dc-b{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 
@@ -332,6 +334,103 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
   background:white;border:3px dashed var(--coral);color:var(--coral);
   animation:pls 2s ease-in-out infinite;
 }
+
+/* ============================================
+   UI/UX ENHANCEMENTS
+   ============================================ */
+
+/* --- Screen Transitions --- */
+.scr{opacity:0;transform:translateY(12px);transition:opacity 0.3s ease,transform 0.3s ease}
+.scr.vis{opacity:1;transform:translateY(0)}
+
+/* --- Entrance Animation --- */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.scr.vis .h-mascot{animation:mascot 3s ease-in-out infinite,fadeUp 0.4s ease both;animation-delay:0s,0.05s}
+.scr.vis .h-pre{animation:fadeUp 0.4s ease both;animation-delay:0.1s}
+.scr.vis .h-name{animation:fadeUp 0.4s ease both;animation-delay:0.15s}
+.scr.vis .h-sub{animation:fadeUp 0.4s ease both;animation-delay:0.2s}
+.scr.vis .worlds{animation:fadeUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both;animation-delay:0.3s}
+.scr.vis .ls-header{animation:fadeUp 0.35s ease both;animation-delay:0.05s}
+.scr.vis .wk-tabs{animation:fadeUp 0.35s ease both;animation-delay:0.1s}
+.scr.vis .ph-list{animation:fadeUp 0.35s ease both;animation-delay:0.1s}
+.lv-card{animation:fadeUp 0.35s cubic-bezier(0.34,1.56,0.64,1) both}
+.lv-card:nth-child(1){animation-delay:0.08s}.lv-card:nth-child(2){animation-delay:0.13s}
+.lv-card:nth-child(3){animation-delay:0.18s}.lv-card:nth-child(4){animation-delay:0.23s}
+.lv-card:nth-child(5){animation-delay:0.28s}.lv-card:nth-child(6){animation-delay:0.33s}
+.lv-card:nth-child(7){animation-delay:0.38s}.lv-card:nth-child(8){animation-delay:0.43s}
+.scr.vis .g-bar{animation:fadeUp 0.3s ease both;animation-delay:0.05s}
+.scr.vis .g-prog{animation:fadeUp 0.3s ease both;animation-delay:0.08s}
+.scr.vis .qa{animation:fadeUp 0.4s ease both;animation-delay:0.12s}
+.scr.vis .dc-e{animation:bnc 1s cubic-bezier(0.34,1.56,0.64,1) infinite,fadeUp 0.4s ease both;animation-delay:0s,0.05s}
+.scr.vis .dc-t{animation:fadeUp 0.4s ease both;animation-delay:0.12s}
+.scr.vis .dc-s{animation:starPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;animation-delay:0.2s}
+.scr.vis .dc-sc{animation:fadeUp 0.4s ease both;animation-delay:0.28s}
+.scr.vis .dc-m{animation:fadeUp 0.4s ease both;animation-delay:0.34s}
+.scr.vis .dc-b{animation:fadeUp 0.5s cubic-bezier(0.34,1.56,0.64,1) both;animation-delay:0.4s}
+@keyframes starPop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* --- Background Depth --- */
+#home{background:linear-gradient(180deg,#FEFCE8 0%,#FEF9C3 50%,#FDE68A44 100%);overflow:hidden}
+#home::before{
+  content:'';position:fixed;inset:-40px;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 300px 300px at 10% 20%,rgba(236,72,153,0.08) 0%,transparent 70%),
+    radial-gradient(ellipse 250px 250px at 90% 70%,rgba(59,130,246,0.07) 0%,transparent 70%),
+    radial-gradient(ellipse 200px 200px at 50% 90%,rgba(13,148,136,0.06) 0%,transparent 70%);
+  animation:drift 20s ease-in-out infinite;will-change:transform;
+}
+@keyframes drift{0%{transform:translate(0,0)}33%{transform:translate(10px,-8px)}66%{transform:translate(-5px,4px)}100%{transform:translate(0,0)}}
+#home>*{position:relative;z-index:1}
+#levels::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(circle 1px,rgba(0,0,0,0.04) 1px,transparent 1px);
+  background-size:24px 24px;
+}
+.ls-header,.wk-tabs,.lv-grid,.ph-list{position:relative;z-index:1}
+#game{background:linear-gradient(180deg,#FEFEFE 0%,#FAFAF8 100%)}
+#done{background:radial-gradient(ellipse 400px 400px at 50% 30%,rgba(251,191,36,0.1) 0%,transparent 60%),linear-gradient(180deg,#FFFBEB 0%,#FEF3C7 100%)}
+
+/* --- Home Polish --- */
+.h-mascot{filter:drop-shadow(0 0 20px rgba(251,191,36,0.4))}
+.h-name{filter:drop-shadow(0 2px 4px rgba(0,0,0,0.08))}
+.w-card.math{animation:cardFloat 4s ease-in-out infinite}
+.w-card.eng{animation:cardFloat 4s ease-in-out infinite;animation-delay:0.5s}
+@keyframes cardFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.w-card:active{animation:none!important;transform:scale(0.9) translateY(4px)!important}
+
+/* --- Progress Bar --- */
+.g-prog{height:14px;border-radius:10px;overflow:visible;border:2px solid rgba(0,0,0,0.04)}
+.g-fill{border-radius:10px;transition:width 0.5s cubic-bezier(0.34,1.56,0.64,1);position:relative}
+.g-fill::after{content:'\2B50';position:absolute;right:-8px;top:50%;transform:translateY(-50%);font-size:0.75rem;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.15))}
+
+/* --- Done Screen --- */
+.dc-e{font-size:5rem}
+.dc-s{font-size:2.8rem;letter-spacing:8px;filter:drop-shadow(0 2px 6px rgba(251,191,36,0.5))}
+
+/* --- Level Card Completion --- */
+.lv-card.dn{outline:3px solid rgba(251,191,36,0.5);outline-offset:-3px}
+.lv-mini.dn{box-shadow:0 0 8px rgba(251,191,36,0.3)}
+
+/* --- Hover States (desktop) --- */
+@media(hover:hover){
+  .w-card:hover{transform:translateY(-4px)}
+  .lv-card:hover{transform:translateY(-3px);filter:brightness(1.05)}
+  .cb:hover{border-color:var(--blue-md);transform:translateY(-2px)}
+  .btn:hover{filter:brightness(1.08);transform:translateY(-2px)}
+  .lv-mini:hover{transform:scale(1.1)}
+}
+.cb:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.btn:focus-visible{outline:3px solid rgba(255,255,255,0.6);outline-offset:2px}
+
+/* --- Question Transition --- */
+.qa{transition:opacity 0.15s ease}
+.qa.q-out{opacity:0}
+
+/* --- Phase Accordion Polish --- */
+.ph-hdr{border-radius:var(--r-lg);margin-bottom:8px}
+.wk-row{border-bottom:1px solid rgba(0,0,0,0.04)}
+.wk-row:last-child{border-bottom:none}
+.wk-lbl{font-family:var(--fn-d);font-size:0.8rem;min-width:48px}
 </style>
 </head>
 <body>
@@ -339,7 +438,7 @@ body{font-family:var(--fn);min-height:100%;user-select:none;-webkit-user-select:
 <div class="cfb" id="cfb"></div>
 
 <!-- HOME -->
-<div class="scr on" id="home">
+<div class="scr on vis" id="home">
   <div class="h-mascot">⭐</div>
   <div class="h-pre">LEARNING ADVENTURE</div>
   <div class="h-name">Viaan</div>
@@ -1643,7 +1742,7 @@ var ENG=[
    DOM + NAV
    ============================================ */
 var $=function(i){return document.getElementById(i)};
-function show(id){document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('on')});$(id).classList.add('on')}
+function show(id){document.querySelectorAll('.scr').forEach(function(s){s.classList.remove('vis');s.classList.remove('on')});var el=$(id);el.classList.add('on');requestAnimationFrame(function(){requestAnimationFrame(function(){el.classList.add('vis')})})}
 
 /* AUDIO_START */
 var _curAudio=null;
@@ -1785,12 +1884,15 @@ function showQ(){
   var d=data(),lv=d[S.lvl],q=lv.q[S.qi],ar=$('qA');
   $('gF').style.width=Math.round(S.qi/lv.q.length*100)+'%';
   $('gSt').textContent='\u2B50 '+S.stars;
-  ar.innerHTML='';
-
-  var r={c:rCount,m:rMiss,b:rBig,cm:rCmp,cl:rCmp,ad:rAdd,eq:rEq,
-    lr:rLR,ls:rLS,ul:rUL,snd:rSnd,rhy:rRhy,sw:rSW,fw:rFW,
-    bl:rBL,wb:rWB,pm:rPM,ml:rML};
-  if(r[q.t])r[q.t](ar,q,lv);
+  ar.classList.add('q-out');
+  setTimeout(function(){
+    ar.innerHTML='';
+    var r={c:rCount,m:rMiss,b:rBig,cm:rCmp,cl:rCmp,ad:rAdd,eq:rEq,
+      lr:rLR,ls:rLS,ul:rUL,snd:rSnd,rhy:rRhy,sw:rSW,fw:rFW,
+      bl:rBL,wb:rWB,pm:rPM,ml:rML};
+    if(r[q.t])r[q.t](ar,q,lv);
+    ar.classList.remove('q-out');
+  },150);
 }
 
 /* ============================================
