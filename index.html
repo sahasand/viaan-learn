@@ -3422,7 +3422,7 @@
         _curAudio = new Audio('audio/' + id + '.mp3');
         _curAudio.play();
       }
-      function speakSound(g) { var id = 'phon_' + g; playClip(id) }
+      function speakSound(g) { var id = 'phon_' + (g.length === 1 ? g.toUpperCase() : g); playClip(id) }
       function speakWord(w) { playClip('word_' + w.replace(/[^a-zA-Z]/g, '_')) }
       function cheer() { var c = ['great', 'awesome', 'yes', 'super', 'wow']; playClip('cheer_' + c[Math.floor(Math.random() * c.length)]) }
       /* AUDIO_END */
@@ -3699,7 +3699,6 @@
         var parts = q.p.split('_');
         var html = parts.length > 1 ? '<span>' + parts[0] + '</span><span class="word-blank"></span><span>' + parts[1] + '</span>' : q.p;
         ar.innerHTML = '<div class="qp">Fill in the blank!</div><div class="qv"><div class="sentence">' + html + '</div></div>' + chs(q.ch, q.a);
-        setTimeout(function () { speakWord(q.p.replace('_', q.blank)) }, 400);
         bindCh(ar);
       }
 
