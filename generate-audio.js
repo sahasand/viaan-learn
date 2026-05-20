@@ -19,6 +19,26 @@ if (!API_KEY) {
 const API_URL = 'https://api.openai.com/v1/audio/speech';
 // "shimmer" - warm, friendly female voice; good for kids
 const VOICE = 'shimmer';
+const MODEL = 'gpt-4o-mini-tts';
+
+// Per-clip tone steering. gpt-4o-mini-tts supports an `instructions` field
+// for natural-language control over delivery — tone, pace, warmth, etc.
+function instructionsFor(id) {
+  if (id.startsWith('phon_')) {
+    return 'Pronounce this letter sound very slowly and clearly, the way an early-childhood teacher would when introducing phonics to a 4-year-old. Hold the sound briefly so the child can hear it distinctly.';
+  }
+  if (id.startsWith('cheer_') || id.startsWith('praise_')) {
+    return 'Say this with bright, warm enthusiasm — like cheering a 4-year-old for getting an answer right. Genuine and joyful, but not over-the-top.';
+  }
+  if (id === 'sfx_oops') {
+    return 'Say this in a soft, gentle, encouraging tone — not scolding. Like a kind teacher helping a child try again.';
+  }
+  if (id.startsWith('num_')) {
+    return 'Read this number slowly and clearly, with a warm smile in your voice, the way you would when counting with a 4-year-old.';
+  }
+  // word_ and prompt_ — the default
+  return 'Read this slowly and clearly, with a warm friendly smile, like an early-childhood teacher reading aloud to a 4-year-old. Pace each word so the child can follow along.';
+}
 
 const AUDIO_DIR = path.join(__dirname, 'audio');
 const BUNDLE_FILE = path.join(__dirname, 'audio-bundle.json');
@@ -258,11 +278,11 @@ async function generateClip(clip) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'tts-1',
+      model: MODEL,
       input: clip.text,
       voice: VOICE,
       response_format: 'mp3',
-      speed: 0.9,
+      instructions: instructionsFor(clip.id),
     }),
   });
 
