@@ -42,7 +42,6 @@ const clips = [
   { id: 'phon_N', text: 'nnn' },
   { id: 'phon_O', text: 'ahh' },
   { id: 'phon_P', text: 'puh' },
-  { id: 'phon_Q', text: 'kwuh' },
   { id: 'phon_R', text: 'rrr' },
   { id: 'phon_S', text: 'sss' },
   { id: 'phon_T', text: 'tuh' },
@@ -54,16 +53,12 @@ const clips = [
   { id: 'phon_Z', text: 'zzz' },
 
   // === Phonics: digraphs & alternatives (~25) ===
-  { id: 'phon_ck', text: 'k' },
-  { id: 'phon_ff', text: 'fff' },
   { id: 'phon_ll', text: 'lll' },
   { id: 'phon_ss', text: 'sss' },
-  { id: 'phon_zz', text: 'zzz' },
   { id: 'phon_ch', text: 'ch' },
   { id: 'phon_sh', text: 'sh' },
   { id: 'phon_th', text: 'th' },
   { id: 'phon_ng', text: 'ng' },
-  { id: 'phon_qu', text: 'kwu' },
   { id: 'phon_ai', text: 'ay' },
   { id: 'phon_ee', text: 'ee' },
   { id: 'phon_igh', text: 'eye' },
@@ -92,7 +87,6 @@ const clips = [
   { id: 'phon_aw', text: 'aw' },
   { id: 'phon_ph', text: 'f' },
   { id: 'phon_oe', text: 'oh' },
-  { id: 'phon_wh', text: 'w' },
 
   // === Decodable words (~120) ===
   ...['sat','tap','pat','pan','pin','tin','tip','nap','map','mat','man','pit',
@@ -117,23 +111,6 @@ const clips = [
   'said','have','like','so','do','some','come','were','there','little','one','when','out','what',
   'oh','their','people','looked','called','asked','could','water','where','who','many','because','for','in','it','at'
   ].map(w => ({ id: 'word_' + w, text: w })),
-
-  // === Sentences for fw questions (~15) ===
-  { id: 'word_I_see_a_cat_', text: 'I see a cat.' },
-  { id: 'word_This_is_my_dog_', text: 'This is my dog.' },
-  { id: 'word_I_can_see_it_', text: 'I can see it.' },
-  { id: 'word_The_cat_is_big_', text: 'The cat is big.' },
-  { id: 'word_I_can_run_fast_', text: 'I can run fast!' },
-  { id: 'word_I_go_into_the_pit_', text: 'I go into the pit.' },
-  { id: 'word_The_hen_is_big_', text: 'The hen is big.' },
-  { id: 'word_I_go_to_the_mat_', text: 'I go to the mat.' },
-  { id: 'word_She_got_the_chip_', text: 'She got the chip.' },
-  { id: 'word_The_king_can_sing_', text: 'The king can sing.' },
-  { id: 'word_We_go_on_the_boat_', text: 'We go on the boat.' },
-  { id: 'word_I_hurt_my_leg_', text: 'I hurt my leg.' },
-  { id: 'word_The_ship_sat_at_night_', text: 'The ship sat at night.' },
-  { id: 'word_I_like_the_cake_', text: 'I like the cake.' },
-  { id: 'word_The_boy_got_a_pie_', text: 'The boy got a pie.' },
 
   // === Cheers (5) ===
   { id: 'cheer_great', text: 'Great!' },
