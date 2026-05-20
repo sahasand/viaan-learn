@@ -678,6 +678,36 @@
       box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4), 0 2px 0 var(--green), 0 4px 8px rgba(16, 185, 129, 0.2)
     }
 
+    .cb.cb-rhy {
+      gap: 8px;
+      padding: 0 16px 0 10px;
+      font-size: 1.4rem;
+      min-width: 110px;
+    }
+
+    .cb-hear {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.12);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .cb-hear:active {
+      transform: scale(0.85);
+      background: rgba(99, 102, 241, 0.28);
+    }
+
+    .cb-text {
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+
     .cb.no {
       background: linear-gradient(145deg, var(--red-lt), #FECACA);
       color: var(--red-sh);
@@ -3422,8 +3452,26 @@
         _curAudio = new Audio('audio/' + id + '.mp3');
         _curAudio.play();
       }
+      function playSeq(ids, gap) {
+        gap = gap || 250;
+        var i = 0;
+        function next() {
+          while (i < ids.length && !ids[i]) i++;
+          if (i >= ids.length) return;
+          if (_curAudio) { try { _curAudio.pause() } catch (e) { } }
+          _curAudio = new Audio('audio/' + ids[i] + '.mp3');
+          _curAudio.onended = function () { i++; setTimeout(next, gap); };
+          _curAudio.onerror = function () { i++; setTimeout(next, gap); };
+          _curAudio.play();
+        }
+        next();
+      }
       function speakSound(g) { var id = 'phon_' + (g.length === 1 ? g.toUpperCase() : g); playClip(id) }
       function speakWord(w) { playClip('word_' + w.replace(/[^a-zA-Z]/g, '_')) }
+      var PROMPT_ALIAS = { 'Count by 2s!': 'prompt_Count_by_twos_', 'Count by 5s!': 'prompt_Count_by_fives_' };
+      function promptId(p) { return PROMPT_ALIAS[p] || ('prompt_' + p.replace(/[^a-zA-Z]/g, '_')); }
+      function speakPrompt(p) { playClip(promptId(p)); }
+      function speakNum(n) { playClip('num_' + n); }
       function cheer() { var c = ['great', 'awesome', 'yes', 'super', 'wow']; playClip('cheer_' + c[Math.floor(Math.random() * c.length)]) }
       /* AUDIO_END */
 
@@ -3598,9 +3646,32 @@
         return h + '</div>';
       }
 
+      function chsRhy(ch, ans) {
+        var h = '<div class="ch">';
+        ch.forEach(function (c) {
+          h += '<button class="cb cb-rhy" data-v="' + c + '" data-a="' + ans + '">' +
+            '<span class="cb-hear" data-w="' + c + '">🔊</span>' +
+            '<span class="cb-text">' + c + '</span>' +
+            '</button>';
+        });
+        return h + '</div>';
+      }
+
+      function bindHear(ar) {
+        ar.querySelectorAll('.cb-hear').forEach(function (icon) {
+          icon.addEventListener('click', function (e) {
+            e.stopPropagation();
+            speakWord(icon.getAttribute('data-w'));
+          });
+        });
+      }
+
       /* MATH RENDERERS */
       function rCount(ar, q) {
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv">' + dots(q.d, q.dc) + '</div>' + chs(q.ch, q.a);
+        var seq = [promptId(q.p)];
+        for (var i = 1; i <= q.d; i++) seq.push('num_' + i);
+        setTimeout(function () { playSeq(seq, 400) }, 400);
         bindCh(ar);
       }
 
@@ -3610,6 +3681,9 @@
           sh += v === null ? '<div class="sb sx">?</div>' : '<div class="sb sf" style="background:' + lv.color + '">' + v + '</div>';
         });
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv"><div class="sr">' + sh + '</div></div>' + chs(q.ch, q.a);
+        var seq = [promptId(q.p)];
+        q.s.forEach(function (v) { if (v != null) seq.push('num_' + v); });
+        setTimeout(function () { playSeq(seq, 350) }, 400);
         bindCh(ar);
       }
 
@@ -3621,6 +3695,7 @@
           '<div style="text-align:center"><div style="font-weight:900;font-size:2.4rem;color:var(--coral)">' + q.y + '</div>' +
           '<div style="display:flex;gap:3px;justify-content:center;margin-top:4px;flex-wrap:wrap;max-width:110px">' + dots(Math.min(q.y, 10), '#F97316', true) + '</div></div></div>' +
           chs(q.ch, q.a);
+        setTimeout(function () { playSeq([promptId(q.p), 'num_' + q.x, 'num_' + q.y]) }, 400);
         bindCh(ar);
       }
 
@@ -3630,6 +3705,7 @@
           '<div style="font-weight:800;font-size:0.85rem;color:var(--gray);align-self:center">or</div>' +
           '<div class="cg" data-s="r" data-a="' + q.a + '"><div class="cd">' + dots(q.r, q.rc, true) + '</div><div class="cc">' + q.r + '</div></div>' +
           '</div></div>';
+        setTimeout(function () { playSeq([promptId(q.p), 'num_' + q.l, 'num_' + q.r]) }, 400);
         bindCmp(ar);
       }
 
@@ -3640,6 +3716,7 @@
           '<div class="dg dr">' + dots(q.y, '#F97316') + '</div>' +
           '<div class="op">=</div><div class="op" style="color:var(--gray)">?</div></div>' +
           chs(q.ch, q.a);
+        setTimeout(function () { playSeq([promptId(q.p), 'num_' + q.x, 'num_' + q.y]) }, 400);
         bindCh(ar);
       }
 
@@ -3647,18 +3724,21 @@
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv">' +
           '<div style="font-weight:900;font-size:2.2rem;color:var(--dark);letter-spacing:3px">' + q.eq + '</div></div>' +
           chs(q.ch, q.a);
+        // q.p contains digits ("What + 1 = 3?"), so its prompt audio would collide. Skip prompt; visual carries it.
         bindCh(ar);
       }
 
       /* ENGLISH RENDERERS */
       function rLR(ar, q, lv) {
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv"><div class="ltr-big" style="color:' + lv.color + '">' + q.show + '</div></div>' + chs(q.ch, q.a);
+        setTimeout(function () { playSeq([promptId(q.p), 'phon_' + q.show.toUpperCase()]) }, 400);
         bindCh(ar);
       }
 
       function rLS(ar, q) {
         var em = EM[q.img] || '\u2753';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:6px"><div class="emoji-big">' + em + '</div><div class="emoji-label">' + q.img + '</div></div>' + chs(q.ch, q.a);
+        setTimeout(function () { playSeq([promptId(q.p), 'word_' + q.img]) }, 400);
         bindCh(ar);
       }
 
@@ -3668,6 +3748,7 @@
           '<div class="op" style="font-size:1.3rem;color:var(--gray)">=</div>' +
           '<div class="op" style="font-size:2rem;color:var(--coral)">?</div></div></div>' +
           chs(q.ch, q.a);
+        setTimeout(function () { playSeq(['prompt_Match_the_lowercase_', 'phon_' + q.upper.toUpperCase()]) }, 400);
         bindCh(ar);
       }
 
@@ -3676,13 +3757,22 @@
           '<button class="snd-btn" id="sB"><span class="snd-ico">\uD83D\uDD0A</span> Hear the sound</button>' +
           '<div style="font-weight:600;font-size:0.8rem;color:var(--gray)">Tap to hear again</div></div>' +
           chs(q.ch, q.a);
+        var sndId = 'phon_' + (q.sound.length === 1 ? q.sound.toUpperCase() : q.sound);
         $('sB').addEventListener('click', function () { speakSound(q.sound) });
-        setTimeout(function () { speakSound(q.sound) }, 400);
+        setTimeout(function () { playSeq([promptId(q.p), sndId]) }, 400);
         bindCh(ar);
       }
 
       function rRhy(ar, q, lv) {
-        ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv"><div class="word-big" style="color:' + lv.color + '">' + q.word + '</div></div>' + chs(q.ch, q.a);
+        var target = q.word.toLowerCase();
+        ar.innerHTML = '<div class="qp">' + q.p + '</div>' +
+          '<div class="qv" style="flex-direction:column;gap:14px">' +
+          '<div class="word-big" style="color:' + lv.color + '">' + q.word + '</div>' +
+          '<button class="snd-btn" id="sB"><span class="snd-ico">🔊</span> Hear it</button>' +
+          '</div>' + chsRhy(q.ch, q.a);
+        $('sB').addEventListener('click', function () { speakWord(target) });
+        setTimeout(function () { playSeq([promptId(q.p), 'word_' + target]) }, 400);
+        bindHear(ar);
         bindCh(ar);
       }
 
@@ -3690,8 +3780,9 @@
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:14px">' +
           '<button class="snd-btn" id="sB"><span class="snd-ico">\uD83D\uDD0A</span> Hear the word</button></div>' +
           chs(q.ch, q.a);
+        var wId = 'word_' + q.target.replace(/[^a-zA-Z]/g, '_');
         $('sB').addEventListener('click', function () { speakWord(q.target) });
-        setTimeout(function () { speakWord(q.target) }, 400);
+        setTimeout(function () { playSeq([promptId(q.p), wId]) }, 400);
         bindCh(ar);
       }
 
@@ -3712,7 +3803,8 @@
         });
         imgs += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv"><div class="word-big">' + q.w + '</div></div>' + imgs;
-        setTimeout(function () { speakWord(q.w) }, 400);
+        var wId = 'word_' + q.w.replace(/[^a-zA-Z]/g, '_');
+        setTimeout(function () { playSeq([promptId(q.p), wId]) }, 400);
         bindCh(ar);
       }
 
@@ -3725,7 +3817,8 @@
         });
         boxes += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv">' + boxes + '</div>' + chs(q.ch, q.a);
-        setTimeout(function () { speakWord(q.w || '') }, 400);
+        var wId = q.w ? 'word_' + q.w.replace(/[^a-zA-Z]/g, '_') : null;
+        setTimeout(function () { playSeq([promptId(q.p), wId]) }, 400);
         bindCh(ar);
       }
 
@@ -3739,7 +3832,7 @@
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:12px">' + bubs +
           '<button class="snd-btn" id="blB"><span class="snd-ico">\uD83D\uDD0A</span> Blend!</button>' +
           '<div class="bl-rev" id="blR" style="display:none"></div></div>' + chs(q.ch, q.a);
-        // Auto-play phonemes sequentially
+        // Prompt first, then phonemes sequentially with bubble highlight
         var idx = 0;
         function playNext() {
           if (idx >= ph.length) return;
@@ -3750,7 +3843,14 @@
           idx++;
           setTimeout(playNext, 600);
         }
-        setTimeout(playNext, 400);
+        setTimeout(function () {
+          var pa = new Audio('audio/' + promptId(q.p) + '.mp3');
+          pa.onended = function () { setTimeout(playNext, 300); };
+          pa.onerror = function () { setTimeout(playNext, 100); };
+          if (_curAudio) { try { _curAudio.pause() } catch (e) { } }
+          _curAudio = pa;
+          pa.play();
+        }, 400);
         // Tap phoneme to hear
         ar.querySelectorAll('.bl-bub').forEach(function (b) {
           b.addEventListener('click', function () { speakSound(b.getAttribute('data-g')) });
@@ -3781,7 +3881,8 @@
           '<div class="qv" style="flex-direction:column;gap:12px">' +
           '<button class="snd-btn" id="wbH"><span class="snd-ico">\uD83D\uDD0A</span> Hear it</button>' +
           slots + tiles + '</div>';
-        setTimeout(function () { speakWord(q.w) }, 400);
+        var wId = 'word_' + q.w.replace(/[^a-zA-Z]/g, '_');
+        setTimeout(function () { playSeq([promptId(q.p), wId]) }, 400);
         $('wbH').addEventListener('click', function () { speakWord(q.w) });
         var ci = 0;
         ar.querySelectorAll('.wb-lt').forEach(function (btn) {
@@ -3841,6 +3942,7 @@
 
       function onNo(ar, cv) {
         flash('fw');
+        playClip('sfx_oops');
         if (cv !== undefined) setTimeout(function () { ar.querySelectorAll('.cb').forEach(function (b) { if (b.getAttribute('data-v') === String(cv)) b.classList.add('ok') }) }, 400);
         setTimeout(function () { S.busy = false; nxt() }, 1300);
       }
@@ -3858,6 +3960,9 @@
         $('dcT').style.color = S.world === 'math' ? 'var(--teal)' : 'var(--blue)';
         $('gF').style.width = '100%'; show('done');
         if (pc >= 0.6) conf();
+        setTimeout(function () {
+          playClip(pc >= 0.9 ? 'praise_perfect' : (pc >= 0.6 ? 'praise_great' : 'praise_keepgoing'));
+        }, 500);
       }
 
       /* ============================================
