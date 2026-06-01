@@ -106,6 +106,8 @@ state = {
 - Selecting a piece with no legal moves: shows it selected with zero dots; tapping it again or elsewhere deselects.
 - Pawn double-step blocked if either square occupied.
 - Capturing own piece is impossible (excluded by move gen).
+- **AI timer lifecycle:** the queued AI move (`setTimeout`) is stored and cancelled by New Game / mode switch, and `aiTurn` guards against stale callbacks (`mode==='ai' && turn===aiColor`) so a reset during the think-delay can never apply a move to the fresh board.
+- **AI with no legal move:** if the AI's side has zero legal moves (king alive but boxed in), `aiTurn` ends the game (opponent wins) instead of freezing with input locked.
 
 ## Testing strategy
 
