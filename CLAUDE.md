@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Viaan is a children's learning app (Math, English + Critical Thinking) built as a single HTML file with CSS and JS inline, hosted on GitHub Pages. Audio files are served separately from the `audio/` directory. No frameworks, no build tools. Only external dependency: Google Fonts (Baloo 2 + Nunito).
+Viaan is a children's learning app (Math, English, Critical Thinking + Chess) hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline; the **Chess** game is a separate self-contained page (`chess.html`, inline CSS+JS) linked from the home screen. Audio files are served separately from the `audio/` directory. No frameworks, no build tools. Only external dependency: Google Fonts (Baloo 2 + Nunito).
 
-There is no build, lint, or test step — open `index.html` in a browser (or push to GitHub Pages) to run.
+There is no build or lint step. Open `index.html` in a browser (or push to GitHub Pages) to run. The curriculum app has no tests; the Chess rules engine in `chess.html` has a headless unit test — `node --test chess.test.mjs` (17 tests) — which extracts the code between its `/* LOGIC_START */`…`/* LOGIC_END */` markers and runs it in a Node `vm` sandbox.
 
 ## Architecture
 
@@ -84,9 +84,19 @@ node generate-audio.js   # reads OPENAI_API_KEY from .env or env; writes audio/*
 - `phon_X` where single letters are **uppercase** (case-sensitive on GitHub Pages Linux — macOS APFS hides case mismatches locally). `speakSound` does the uppercasing automatically for single letters; digraphs stay lowercase.
 - `prompt_X` where `X` is sanitized prompt text. Prompts containing digits collide (e.g., all "What + N = M?" become `prompt_What_________`) — those renderers must skip prompt audio.
 
+## Chess (standalone game)
+
+`chess.html` is a self-contained core-rules chess game (no frameworks/build), reached from the home screen's Chess world card. Design philosophy and conventions are documented in `docs/superpowers/specs/2026-06-01-chess-game-design.md` and `docs/superpowers/plans/2026-06-01-chess-game.md`.
+
+- **Two marked sections** inside the single `<script>`: a pure, DOM-free rules engine between `/* LOGIC_START */`…`/* LOGIC_END */` (the unit-test surface), and the UI/state/render/interaction code between `/* UI_START */`…`/* UI_END */`. Keep this split — `chess.test.mjs` extracts the LOGIC block via these exact markers.
+- **Rules:** core movement + captures + turn enforcement only. No castling, en passant, promotion, or check/checkmate — a game ends when a **king is captured** (`applyMove` returns a `winner`).
+- **Modes:** Two Players (hotseat) and vs Computer (a greedy depth-1 material AI, `aiPickMove`). The AI reply is on a `setTimeout` stored in `aiTimer` and cancelled by `newGame()`; `aiTurn` guards against stale callbacks (`mode==='ai' && turn===aiColor`).
+- **Mobile-first:** board sizes to `min(96vw, calc(100svh − 150px))`, tap-to-move, `touch-action:manipulation`.
+- **Tests:** `node --test chess.test.mjs` (17 tests) covers move generation, captures, the AI, and the UI timer/lifecycle (via a stubbed-DOM `vm` sandbox). Run it after any change to `chess.html`.
+
 ## Key Conventions
 
-- All code stays in the single `index.html` file — no splitting into separate JS/CSS files.
+- The curriculum app (Math / English / Thinking) stays in the single `index.html` file — no splitting *its* code into separate JS/CSS files; new curriculum features go in `index.html`. The one exception is the standalone **Chess** game, which lives in its own self-contained `chess.html` (inline CSS+JS) plus `chess.test.mjs`, reached via the Chess world card (`#wX` → `location.href='chess.html'`); `chess.html` has a "← Menu" link back to `index.html`.
 - Variable names are intentionally terse (single-letter state `S`, short function names) to keep file size small.
 - CSS classes use 2–3 letter abbreviations (`.scr` = screen, `.qv` = question visual, `.cb` = choice button, `.bl-bub` = blend bubble, `.wb-lt` = word-build letter tile, `.wk-cd` = week card, `.wk-stp` = week step button).
 - Colors always use CSS variables from `:root`.

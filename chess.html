@@ -24,6 +24,11 @@ button{
   background:#5a4632;color:#fff;-webkit-appearance:none;touch-action:manipulation;cursor:pointer;
 }
 button.act{background:#cf8c3a;}
+#bar a{
+  font:inherit;font-size:14px;font-weight:700;padding:9px 13px;border-radius:11px;
+  background:#5a4632;color:#fff;text-decoration:none;touch-action:manipulation;
+  display:inline-flex;align-items:center;
+}
 #board{
   width:min(96vw, calc(100svh - 150px));
   height:min(96vw, calc(100svh - 150px));
@@ -61,6 +66,7 @@ button.act{background:#cf8c3a;}
   <div id="board"></div>
   <div class="tray" id="trayBot"></div>
   <div id="bar">
+    <a id="back" href="index.html">← Menu</a>
     <button id="mode-hot" class="act" type="button">Two Players</button>
     <button id="mode-ai" type="button">vs Computer</button>
     <button id="new" type="button">New Game</button>

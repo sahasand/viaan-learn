@@ -151,6 +151,8 @@
 
     .worlds {
       display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
       gap: 20px;
       margin-top: 8px
     }
@@ -213,6 +215,15 @@
 
     .w-card.ct:active {
       box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 2px 0 var(--purple-sh), 0 5px 10px rgba(168, 85, 247, 0.3)
+    }
+
+    .w-card.chess {
+      background: linear-gradient(145deg, #D9A05B, #9C6B43);
+      box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.3), 0 8px 0 #6E4A2C, 0 15px 30px rgba(120, 80, 45, 0.4)
+    }
+
+    .w-card.chess:active {
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 2px 0 #6E4A2C, 0 5px 10px rgba(120, 80, 45, 0.3)
     }
 
     .wc-ico {
@@ -1645,6 +1656,11 @@
       animation-delay: 1s
     }
 
+    .w-card.chess {
+      animation: cardFloat 4s ease-in-out infinite;
+      animation-delay: 1.5s
+    }
+
     @keyframes cardFloat {
 
       0%,
@@ -1819,6 +1835,10 @@
       <button class="w-card ct" id="wC">
         <div class="wc-ico">🧠</div>
         <div class="wc-lbl">Thinking</div>
+      </button>
+      <button class="w-card chess" id="wX">
+        <div class="wc-ico">♞</div>
+        <div class="wc-lbl">Chess</div>
       </button>
     </div>
   </div>
@@ -3647,6 +3667,7 @@
       $('wM').addEventListener('click', function () { S.world = 'math'; S.week = 1; showLvls() });
       $('wE').addEventListener('click', function () { S.world = 'eng'; S.week = 1; showLvls() });
       $('wC').addEventListener('click', function () { S.world = 'crit'; S.week = 1; showLvls() });
+      $('wX').addEventListener('click', function () { location.href = 'chess.html' });
       $('lBk').addEventListener('click', function () { show('home') });
       $('gBk').addEventListener('click', function () { showLvls() });
       $('dcR').addEventListener('click', function () { startLvl(S.lvl) });
