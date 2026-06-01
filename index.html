@@ -206,6 +206,15 @@
       box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 2px 0 var(--blue-sh), 0 5px 10px rgba(59, 130, 246, 0.3)
     }
 
+    .w-card.ct {
+      background: linear-gradient(145deg, #C084FC, var(--purple));
+      box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.3), 0 8px 0 var(--purple-sh), 0 15px 30px rgba(168, 85, 247, 0.4)
+    }
+
+    .w-card.ct:active {
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 2px 0 var(--purple-sh), 0 5px 10px rgba(168, 85, 247, 0.3)
+    }
+
     .wc-ico {
       font-size: 3.2rem
     }
@@ -724,6 +733,16 @@
       height: 88px;
       font-size: 2.6rem;
       padding: 0
+    }
+
+    .cb-combo {
+      font-size: 1.9rem;
+      line-height: 1.1;
+      letter-spacing: -2px
+    }
+
+    .wb-lt.wb-img {
+      font-size: 2rem
     }
 
     @keyframes bop {
@@ -1621,6 +1640,11 @@
       animation-delay: 0.5s
     }
 
+    .w-card.ct {
+      animation: cardFloat 4s ease-in-out infinite;
+      animation-delay: 1s
+    }
+
     @keyframes cardFloat {
 
       0%,
@@ -1792,6 +1816,10 @@
         <div class="wc-ico">📚</div>
         <div class="wc-lbl">English</div>
       </button>
+      <button class="w-card ct" id="wC">
+        <div class="wc-ico">🧠</div>
+        <div class="wc-lbl">Thinking</div>
+      </button>
     </div>
   </div>
 
@@ -1912,7 +1940,14 @@
         play: '\u25B6\uFE0F', day: '\u2600\uFE0F', donkey: '\uD83E\uDEBB', bean: '\uD83E\uDED8',
         pie: '\uD83E\uDD67', boy: '\uD83D\uDC66', loud: '\uD83D\uDD0A', bird: '\uD83D\uDC26',
         glue: '\uD83E\uDEE0', stew: '\uD83C\uDF72', paw: '\uD83D\uDC3E', sauce: '\uD83E\uDD6B',
-        phone: '\u260E\uFE0F', toe: '\uD83E\uDDB6'
+        phone: '\u260E\uFE0F', toe: '\uD83E\uDDB6',
+        // Critical Thinking picture set
+        bird: '\uD83D\uDC26', shoe: '\uD83D\uDC5F', sock: '\uD83E\uDDE6', lock: '\uD83D\uDD12',
+        bone: '\uD83E\uDDB4', toothbrush: '\uD83E\uDEA5', toothpaste: '\uD83E\uDDF4',
+        seed: '\uD83C\uDF30', sprout: '\uD83C\uDF31', flower: '\uD83C\uDF38', glass: '\uD83E\uDD5B',
+        broken: '\uD83E\uDDE8', puddle: '\uD83C\uDF0A', chick: '\uD83D\uDC25', butterfly: '\uD83E\uDD8B',
+        caterpillar: '\uD83D\uDC1B', rainbow: '\uD83C\uDF08', cloud: '\u2601\uFE0F',
+        heart: '\u2764\uFE0F', cookie: '\uD83C\uDF6A', bus: '\uD83D\uDE8C'
       };
 
       /* ============================================
@@ -3439,6 +3474,138 @@
       ];
 
       /* ============================================
+         CRITICAL THINKING CURRICULUM — 5 skill units
+         (w = unit number; one tab per unit in level-select)
+         ============================================ */
+      var CRIT = [
+        // ===== UNIT 1: Odd One Out (odd) =====
+        {
+          id: 'ct1a', w: 1, title: 'Odd One Out', color: '#8B5CF6', emoji: '🔍', q: [
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['cat', 'dog', 'fish', 'car'], a: 'car' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['apple', 'grape', 'cake', 'bus'], a: 'bus' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['sun', 'moon', 'star', 'shoe'], a: 'shoe' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['duck', 'hen', 'owl', 'car'], a: 'car' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['cup', 'mug', 'jar', 'frog'], a: 'frog' }]
+        },
+        {
+          id: 'ct1b', w: 1, title: 'Odd One Out', color: '#8B5CF6', emoji: '🔎', q: [
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['fish', 'frog', 'duck', 'bus'], a: 'bus' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['ball', 'coin', 'ring', 'dog'], a: 'dog' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['sock', 'shoe', 'hat', 'apple'], a: 'apple' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['cake', 'cookie', 'pie', 'car'], a: 'car' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['bird', 'owl', 'hen', 'fish'], a: 'fish' }]
+        },
+        {
+          id: 'ct1c', w: 1, title: 'Odd One Out', color: '#8B5CF6', emoji: '🕵️', q: [
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['car', 'bus', 'bike', 'dog'], a: 'dog' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['sun', 'star', 'moon', 'cup'], a: 'cup' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['dog', 'cat', 'pig', 'cake'], a: 'cake' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['flower', 'tree', 'seed', 'car'], a: 'car' },
+            { t: 'odd', p: "Which one doesn't belong?", ch: ['hat', 'shoe', 'sock', 'fish'], a: 'fish' }]
+        },
+        // ===== UNIT 2: Goes Together (goes) =====
+        {
+          id: 'ct2a', w: 2, title: 'Goes Together', color: '#0D9488', emoji: '🧩', q: [
+            { t: 'goes', p: 'What goes together?', w: 'sock', ch: ['shoe', 'hat', 'cup'], a: 'shoe' },
+            { t: 'goes', p: 'What goes together?', w: 'bird', ch: ['nest', 'bone', 'lock'], a: 'nest' },
+            { t: 'goes', p: 'What goes together?', w: 'dog', ch: ['bone', 'nest', 'key'], a: 'bone' },
+            { t: 'goes', p: 'What goes together?', w: 'key', ch: ['lock', 'shoe', 'nest'], a: 'lock' },
+            { t: 'goes', p: 'What goes together?', w: 'toothbrush', ch: ['toothpaste', 'cup', 'sock'], a: 'toothpaste' }]
+        },
+        {
+          id: 'ct2b', w: 2, title: 'Goes Together', color: '#0D9488', emoji: '🤝', q: [
+            { t: 'goes', p: 'What goes together?', w: 'hen', ch: ['egg', 'sock', 'lock'], a: 'egg' },
+            { t: 'goes', p: 'What goes together?', w: 'rain', ch: ['umbrella', 'shoe', 'bone'], a: 'umbrella' },
+            { t: 'goes', p: 'What goes together?', w: 'cat', ch: ['mouse', 'nest', 'lock'], a: 'mouse' },
+            { t: 'goes', p: 'What goes together?', w: 'fish', ch: ['net', 'bone', 'key'], a: 'net' },
+            { t: 'goes', p: 'What goes together?', w: 'toe', ch: ['sock', 'cup', 'nest'], a: 'sock' }]
+        },
+        {
+          id: 'ct2c', w: 2, title: 'Goes Together', color: '#0D9488', emoji: '🔗', q: [
+            { t: 'goes', p: 'What goes together?', w: 'seed', ch: ['flower', 'lock', 'cup'], a: 'flower' },
+            { t: 'goes', p: 'What goes together?', w: 'cow', ch: ['milk', 'shoe', 'key'], a: 'milk' },
+            { t: 'goes', p: 'What goes together?', w: 'king', ch: ['queen', 'nest', 'sock'], a: 'queen' },
+            { t: 'goes', p: 'What goes together?', w: 'rain', ch: ['cloud', 'shoe', 'cup'], a: 'cloud' },
+            { t: 'goes', p: 'What goes together?', w: 'car', ch: ['key', 'nest', 'bone'], a: 'key' }]
+        },
+        // ===== UNIT 3: What Happens Next (next) =====
+        {
+          id: 'ct3a', w: 3, title: 'What Happens Next', color: '#3B82F6', emoji: '⏭️', q: [
+            { t: 'next', p: 'What happens next?', w: 'ice', ch: ['puddle', 'flower', 'star'], a: 'puddle' },
+            { t: 'next', p: 'What happens next?', w: 'seed', ch: ['flower', 'puddle', 'rain'], a: 'flower' },
+            { t: 'next', p: 'What happens next?', w: 'glass', ch: ['broken', 'flower', 'star'], a: 'broken' },
+            { t: 'next', p: 'What happens next?', w: 'cloud', ch: ['rain', 'flower', 'star'], a: 'rain' },
+            { t: 'next', p: 'What happens next?', w: 'egg', ch: ['chick', 'flower', 'rain'], a: 'chick' }]
+        },
+        {
+          id: 'ct3b', w: 3, title: 'What Happens Next', color: '#3B82F6', emoji: '➡️', q: [
+            { t: 'next', p: 'What happens next?', w: 'caterpillar', ch: ['butterfly', 'flower', 'rain'], a: 'butterfly' },
+            { t: 'next', p: 'What happens next?', w: 'rain', ch: ['rainbow', 'star', 'broken'], a: 'rainbow' },
+            { t: 'next', p: 'What happens next?', w: 'chick', ch: ['hen', 'star', 'broken'], a: 'hen' },
+            { t: 'next', p: 'What happens next?', w: 'seed', ch: ['sprout', 'rain', 'star'], a: 'sprout' },
+            { t: 'next', p: 'What happens next?', w: 'cloud', ch: ['puddle', 'flower', 'star'], a: 'puddle' }]
+        },
+        {
+          id: 'ct3c', w: 3, title: 'What Happens Next', color: '#3B82F6', emoji: '🔮', q: [
+            { t: 'next', p: 'What happens next?', w: 'sprout', ch: ['flower', 'broken', 'rain'], a: 'flower' },
+            { t: 'next', p: 'What happens next?', w: 'ice', ch: ['puddle', 'star', 'flower'], a: 'puddle' },
+            { t: 'next', p: 'What happens next?', w: 'glass', ch: ['broken', 'rainbow', 'star'], a: 'broken' },
+            { t: 'next', p: 'What happens next?', w: 'egg', ch: ['chick', 'flower', 'rain'], a: 'chick' },
+            { t: 'next', p: 'What happens next?', w: 'caterpillar', ch: ['butterfly', 'rain', 'star'], a: 'butterfly' }]
+        },
+        // ===== UNIT 4: That's Silly! (silly — literal emoji scenes) =====
+        {
+          id: 'ct4a', w: 4, title: "That's Silly!", color: '#F97316', emoji: '🤪', q: [
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🐟🌳', v: 'fishtree' }, { e: '🐦🪹', v: 'birdnest' }, { e: '🐶🦴', v: 'dogbone' }], a: 'fishtree' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '⛄☀️', v: 'snowsun' }, { e: '🌧️☔', v: 'rainumb' }, { e: '🌻🌞', v: 'flowersun' }], a: 'snowsun' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🐧🏜️', v: 'penguindesert' }, { e: '🐧❄️', v: 'penguinsnow' }, { e: '🐪🏜️', v: 'cameldesert' }], a: 'penguindesert' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '☀️⭐', v: 'sunstars' }, { e: '🌙⭐', v: 'moonstars' }, { e: '☀️☁️', v: 'sunclouds' }], a: 'sunstars' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🐠🚲', v: 'fishbike' }, { e: '👦🚲', v: 'boybike' }, { e: '🐶🦴', v: 'dogbone' }], a: 'fishbike' }]
+        },
+        {
+          id: 'ct4b', w: 4, title: "That's Silly!", color: '#F97316', emoji: '🙃', q: [
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🐟☁️', v: 'fishsky' }, { e: '🐦☁️', v: 'birdsky' }, { e: '🪁☁️', v: 'kitesky' }], a: 'fishsky' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🐘🥛', v: 'elephantglass' }, { e: '🐟🥛', v: 'fishglass' }, { e: '🌸🥛', v: 'flowerglass' }], a: 'elephantglass' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '👟🦶', v: 'shoefoot' }, { e: '👟✋', v: 'shoehand' }, { e: '🧦🦶', v: 'sockfoot' }], a: 'shoehand' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🌙☀️', v: 'moonsun' }, { e: '🌙⭐', v: 'moonstar' }, { e: '☀️☁️', v: 'suncloud' }], a: 'moonsun' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🐶🚗', v: 'dogcar' }, { e: '👨🚗', v: 'mancar' }, { e: '🔑🚗', v: 'keycar' }], a: 'dogcar' }]
+        },
+        {
+          id: 'ct4c', w: 4, title: "That's Silly!", color: '#F97316', emoji: '🤣', q: [
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '⛄🏖️', v: 'snowbeach' }, { e: '🏊🏖️', v: 'swimbeach' }, { e: '🦀🏖️', v: 'crabbeach' }], a: 'snowbeach' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🐟🌳', v: 'fishtree2' }, { e: '🦉🌳', v: 'owltree' }, { e: '🐒🌳', v: 'monkeytree' }], a: 'fishtree2' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🐧🏜️', v: 'pengdesert2' }, { e: '🌵🏜️', v: 'cactusdesert' }, { e: '🐪🏜️', v: 'cameldesert2' }], a: 'pengdesert2' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '⭐☀️', v: 'starsun' }, { e: '☁️☀️', v: 'cloudsun' }, { e: '🌈☀️', v: 'rainbowsun' }], a: 'starsun' },
+            { t: 'silly', p: "What's silly here?", ch: [{ e: '🐘☂️', v: 'elephantumb' }, { e: '🐱☂️', v: 'catumb' }, { e: '👧☂️', v: 'girlumb' }], a: 'elephantumb' }]
+        },
+        // ===== UNIT 5: Patterns & Order (pat, seq) =====
+        {
+          id: 'ct5a', w: 5, title: 'Patterns', color: '#10B981', emoji: '🔢', q: [
+            { t: 'pat', p: 'What comes next?', seq: ['apple', 'cookie', 'apple', 'cookie'], ch: ['apple', 'cookie', 'ball'], a: 'apple' },
+            { t: 'pat', p: 'What comes next?', seq: ['sun', 'moon', 'sun', 'moon'], ch: ['sun', 'star', 'moon'], a: 'sun' },
+            { t: 'pat', p: 'What comes next?', seq: ['cat', 'dog', 'cat', 'dog'], ch: ['cat', 'fish', 'dog'], a: 'cat' },
+            { t: 'pat', p: 'What comes next?', seq: ['star', 'heart', 'star', 'heart'], ch: ['heart', 'star', 'moon'], a: 'star' },
+            { t: 'pat', p: 'What comes next?', seq: ['ball', 'cup', 'ball', 'cup'], ch: ['ball', 'hat', 'cup'], a: 'ball' }]
+        },
+        {
+          id: 'ct5b', w: 5, title: 'Patterns', color: '#10B981', emoji: '🧮', q: [
+            { t: 'pat', p: 'What comes next?', seq: ['fish', 'fish', 'bird', 'fish', 'fish'], ch: ['bird', 'fish', 'cat'], a: 'bird' },
+            { t: 'pat', p: 'What comes next?', seq: ['sun', 'moon', 'moon', 'sun', 'moon', 'moon'], ch: ['sun', 'moon', 'star'], a: 'sun' },
+            { t: 'pat', p: 'What comes next?', seq: ['apple', 'apple', 'grape', 'apple', 'apple'], ch: ['grape', 'apple', 'cookie'], a: 'grape' },
+            { t: 'pat', p: 'What comes next?', seq: ['car', 'bus', 'car', 'bus'], ch: ['car', 'bus', 'bike'], a: 'car' },
+            { t: 'pat', p: 'What comes next?', seq: ['flower', 'tree', 'flower', 'tree'], ch: ['flower', 'tree', 'seed'], a: 'flower' }]
+        },
+        {
+          id: 'ct5c', w: 5, title: 'Put in Order', color: '#10B981', emoji: '📶', q: [
+            { t: 'seq', p: 'Put them in order!', order: ['seed', 'sprout', 'flower'] },
+            { t: 'seq', p: 'Put them in order!', order: ['egg', 'chick', 'hen'] },
+            { t: 'seq', p: 'Put them in order!', order: ['cloud', 'rain', 'rainbow'] },
+            { t: 'seq', p: 'Put them in order!', order: ['egg', 'caterpillar', 'butterfly'] },
+            { t: 'seq', p: 'Put them in order!', order: ['seed', 'sprout', 'tree'] }]
+        }
+      ];
+
+      /* ============================================
          DOM + NAV
          ============================================ */
       var $ = function (i) { return document.getElementById(i) };
@@ -3479,39 +3646,40 @@
       // Navigation
       $('wM').addEventListener('click', function () { S.world = 'math'; S.week = 1; showLvls() });
       $('wE').addEventListener('click', function () { S.world = 'eng'; S.week = 1; showLvls() });
+      $('wC').addEventListener('click', function () { S.world = 'crit'; S.week = 1; showLvls() });
       $('lBk').addEventListener('click', function () { show('home') });
       $('gBk').addEventListener('click', function () { showLvls() });
       $('dcR').addEventListener('click', function () { startLvl(S.lvl) });
       $('dcL').addEventListener('click', function () { showLvls() });
 
-      function data() { return S.world === 'math' ? MATH : ENG }
+      function data() { return S.world === 'math' ? MATH : S.world === 'crit' ? CRIT : ENG }
 
       /* ============================================
          LEVEL SELECT — with week tabs
          ============================================ */
       function showLvls() {
         show('levels');
-        var d = data(), isMath = S.world === 'math';
+        var d = data(), isMath = S.world === 'math', isCrit = S.world === 'crit', isGrid = isMath || isCrit;
 
         // Style
-        $('levels').style.background = isMath ? '#F0FDF9' : '#EFF6FF';
-        $('lT').textContent = isMath ? '\uD83D\uDE80 Math' : '\uD83D\uDCDA English';
-        $('lT').style.color = isMath ? 'var(--teal)' : 'var(--blue)';
+        $('levels').style.background = isMath ? '#F0FDF9' : isCrit ? 'var(--purple-lt)' : '#EFF6FF';
+        $('lT').textContent = isMath ? '\uD83D\uDE80 Math' : isCrit ? '\uD83E\uDDE0 Thinking' : '\uD83D\uDCDA English';
+        $('lT').style.color = isMath ? 'var(--teal)' : isCrit ? 'var(--purple)' : 'var(--blue)';
 
         // Total stars
         var te = 0; d.forEach(function (lv) { te += (S.best[lv.id] || 0) });
         $('lS').textContent = '\u2B50 ' + te;
 
-        if (isMath) {
-          // Math: week tabs + grid (unchanged)
+        if (isGrid) {
+          // Math + Critical Thinking: week/unit tabs + grid
           $('wkT').style.display = ''; $('lG').style.display = ''; $('phL').style.display = 'none';
           var weeks = []; d.forEach(function (lv) { if (weeks.indexOf(lv.w) < 0) weeks.push(lv.w) });
           var tabs = $('wkT'); tabs.innerHTML = '';
           weeks.forEach(function (w) {
             var t = document.createElement('button');
             t.className = 'wk-tab' + (w === S.week ? ' on' : '');
-            t.textContent = 'Week ' + w;
-            if (w === S.week) { t.style.background = 'var(--teal)'; t.style.color = 'white' }
+            t.textContent = isCrit ? d.find(function (lv) { return lv.w === w }).title : ('Week ' + w);
+            if (w === S.week) { t.style.background = isCrit ? d.find(function (lv) { return lv.w === w }).color : 'var(--teal)'; t.style.color = 'white' }
             t.addEventListener('click', function () { S.week = w; showLvls() });
             tabs.appendChild(t);
           });
@@ -3628,7 +3796,8 @@
           var r = {
             c: rCount, m: rMiss, b: rBig, cm: rCmp, cl: rCmp, ad: rAdd, eq: rEq,
             lr: rLR, ls: rLS, ul: rUL, snd: rSnd, rhy: rRhy, sw: rSW, fw: rFW,
-            bl: rBL, wb: rWB, pm: rPM, ml: rML
+            bl: rBL, wb: rWB, pm: rPM, ml: rML,
+            odd: rOdd, goes: rGoes, next: rNext, silly: rSilly, pat: rPat, seq: rSeq
           };
           if (r[q.t]) r[q.t](ar, q, lv);
           ar.classList.remove('q-out');
@@ -3905,6 +4074,96 @@
         });
       }
 
+      /* CRITICAL THINKING RENDERERS */
+
+      // Which One Doesn't Belong — 4 picture choices, tap the odd one out
+      function rOdd(ar, q) {
+        var imgs = '<div class="ch">';
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
+        imgs += '</div>';
+        ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="min-height:40px"></div>' + imgs;
+        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        bindCh(ar);
+      }
+
+      // What Goes Together — show a stimulus picture, pick its partner
+      function rGoes(ar, q) {
+        var imgs = '<div class="ch">';
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
+        imgs += '</div>';
+        ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:6px"><div class="emoji-big">' + (EM[q.w] || '❓') + '</div><div class="emoji-label">' + q.w + '</div></div>' + imgs;
+        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        bindCh(ar);
+      }
+
+      // What Happens Next — show a cause, pick the effect
+      function rNext(ar, q) {
+        var imgs = '<div class="ch">';
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
+        imgs += '</div>';
+        ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:6px"><div class="emoji-big">' + (EM[q.w] || '❓') + '</div><div class="emoji-label">→</div></div>' + imgs;
+        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        bindCh(ar);
+      }
+
+      // What's Silly Here — choices are literal emoji scenes, tap the absurd one
+      function rSilly(ar, q) {
+        var imgs = '<div class="ch">';
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img cb-combo" data-v="' + c.v + '" data-a="' + q.a + '">' + c.e + '</button>' });
+        imgs += '</div>';
+        ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="min-height:40px"></div>' + imgs;
+        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        bindCh(ar);
+      }
+
+      // Patterns — repeating sequence ending in ?, pick what comes next
+      function rPat(ar, q, lv) {
+        var strip = '';
+        q.seq.forEach(function (s, i) {
+          if (i > 0) strip += '<span class="sa">→</span>';
+          strip += '<div class="sb sf" style="background:' + lv.color + '">' + (EM[s] || '❓') + '</div>';
+        });
+        strip += '<span class="sa">→</span><div class="sb sx">?</div>';
+        var imgs = '<div class="ch">';
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
+        imgs += '</div>';
+        ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv"><div class="sr">' + strip + '</div></div>' + imgs;
+        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        bindCh(ar);
+      }
+
+      // Put in Order — tap pictures in correct sequence (reuses the word-build mechanic)
+      function rSeq(ar, q) {
+        var order = q.order;
+        var pool = order.slice().sort(function () { return Math.random() - 0.5 });
+        var slots = '<div class="wb-slots" id="wbS">';
+        order.forEach(function () { slots += '<div class="wb-sl"></div>' });
+        slots += '</div>';
+        var tiles = '<div class="wb-pool" id="wbP">';
+        pool.forEach(function (it, i) { tiles += '<button class="wb-lt wb-img" data-it="' + it + '" data-ti="' + i + '">' + (EM[it] || '❓') + '</button>' });
+        tiles += '</div>';
+        ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:12px">' + slots + tiles + '</div>';
+        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        var ci = 0;
+        ar.querySelectorAll('.wb-lt').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            if (S.busy || ci >= order.length) return;
+            var it = btn.getAttribute('data-it');
+            if (it === order[ci]) {
+              var sl = $('wbS').children[ci];
+              sl.textContent = (EM[it] || '❓'); sl.classList.add('wb-ok');
+              btn.classList.add('wb-used');
+              ci++;
+              if (ci >= order.length) { S.busy = true; onOk(sl) }
+            } else {
+              btn.classList.add('wb-wrong');
+              flash('fw');
+              setTimeout(function () { btn.classList.remove('wb-wrong') }, 400);
+            }
+          });
+        });
+      }
+
       /* ============================================
          EVENT BINDING + FEEDBACK
          ============================================ */
@@ -3957,7 +4216,7 @@
         else if (pc >= 0.6) { sd = '\u2B50\u2B50'; mg = 'Great job, Viaan! Almost perfect!' }
         else { sd = '\u2B50'; mg = "Good try! Let's practice more!" }
         $('dcS').textContent = sd; $('dcSc').textContent = e + ' / ' + mx + ' points'; $('dcM').textContent = mg;
-        $('dcT').style.color = S.world === 'math' ? 'var(--teal)' : 'var(--blue)';
+        $('dcT').style.color = S.world === 'math' ? 'var(--teal)' : S.world === 'crit' ? 'var(--purple)' : 'var(--blue)';
         $('gF').style.width = '100%'; show('done');
         if (pc >= 0.6) conf();
         setTimeout(function () {

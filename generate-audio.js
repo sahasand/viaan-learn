@@ -256,6 +256,13 @@ const clips = [
   { id: 'prompt_Which_word_says__who__', text: "Which word says \"who\"?" },
   { id: 'prompt_Which_word_says__you__', text: "Which word says \"you\"?" },
 
+  // === Critical Thinking prompts ===
+  { id: 'prompt_Which_one_doesn_t_belong_', text: "Which one doesn't belong?" },
+  { id: 'prompt_What_goes_together_',        text: "What goes together?" },
+  { id: 'prompt_What_happens_next_',         text: "What happens next?" },
+  { id: 'prompt_What_s_silly_here_',         text: "What's silly here?" },
+  { id: 'prompt_Put_them_in_order_',         text: "Put them in order!" },
+
   // === Feedback clips ===
   { id: 'sfx_oops',         text: 'Oops!' },
   { id: 'praise_perfect',   text: 'Perfect!' },
