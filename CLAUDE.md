@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Viaan is a children's learning app (Math, English, Critical Thinking) plus two standalone games (Chess, Memory Match), hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline; the **Chess** (`chess.html`) and **Memory Match** (`memory.html`) games are separate self-contained pages (each with inline CSS+JS) linked from the home screen. Audio files are served separately from the `audio/` directory. No frameworks, no build tools. Only external dependency: Google Fonts (Baloo 2 + Nunito).
 
-There is no build or lint step. Open `index.html` in a browser (or push to GitHub Pages) to run. The curriculum app has no tests; the standalone games keep their game logic between `/* LOGIC_START */`…`/* LOGIC_END */` markers and have headless unit tests that extract that block and run it in a Node `vm` sandbox — `node --test chess.test.mjs` (17 tests) and `node --test memory.test.mjs` (7 tests).
+There is no build or lint step. Open `index.html` in a browser (or push to GitHub Pages) to run. The curriculum app has no tests; the standalone games keep their game logic between `/* LOGIC_START */`…`/* LOGIC_END */` markers and have headless unit tests that extract that block and run it in a Node `vm` sandbox — `node --test chess.test.mjs` (17 tests) and `node --test memory.test.mjs` (10 tests).
 
 ## Architecture
 
@@ -102,7 +102,9 @@ node generate-audio.js   # reads OPENAI_API_KEY from .env or env; writes audio/*
 - **Decks:** `DECKS` map, grouped by `cat` (`Pictures`: animals/food/vehicles/faces — emoji; `Learning`: letters/numbers/shapes — emoji/char, and `colors` with `kind:'color'` rendered as CSS swatches). Each deck needs ≥8 items (Hard = 8 pairs).
 - **Difficulty:** `SIZES` (easy 3 / medium 6 / hard 8 pairs; `cols` 2/3/4). Player picks deck + size on the setup screen each game; no progress persisted.
 - **Gameplay:** tap-to-flip with 3D CSS flip (`.card.up`/`.card.done`), input locked during the compare delay, matched pairs get a golden-ring pop, confetti on win. Card faces scale via container queries (`cqmin`) with a `rem` fallback.
-- **Tests:** `node --test memory.test.mjs` (7 tests) covers deck integrity, `buildGame` pair/count correctness, deterministic seeded shuffle, and match/win logic. Run it after any change to `memory.html`.
+- **Timer lifecycle:** gameplay timeouts go through `later()` (tracked in `timers[]`) so `startGame()`/`toSetup()` can `clearTimers()` them — prevents a stale flip-back/match/win callback firing on a rebuilt board or the setup screen; `winGame()` also guards on the game screen being active.
+- **Mobile fit:** `#board` width is capped by both viewport width and available height via per-game `--cols`/`--rows` (set in `buildBoard`), and `.scr` padding respects `env(safe-area-inset-*)` for notched phones.
+- **Tests:** `node --test memory.test.mjs` (10 tests) covers deck integrity, `buildGame` pair/count correctness, deterministic seeded shuffle, match/win logic, and UI control-flow (load, timer cancellation, win guard via a stubbed-DOM `vm` sandbox). Run it after any change to `memory.html`.
 
 ## Key Conventions
 

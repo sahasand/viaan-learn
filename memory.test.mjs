@@ -85,3 +85,62 @@ test('isWin: true only when all pairs are matched', () => {
   assert.equal(sandbox.isWin(6, 6), true);
   assert.equal(sandbox.isWin(7, 6), true);
 });
+
+// ---- UI control-flow (LOGIC + UI evaluated against a stubbed DOM + fake timers) ----
+const logicSrc = html.match(/\/\* LOGIC_START \*\/([\s\S]*?)\/\* LOGIC_END \*\//)[1];
+const uiSrc = html.match(/\/\* UI_START \*\/([\s\S]*?)\/\* UI_END \*\//)[1];
+
+function makeEl(){
+  const cls = new Set();
+  return {
+    _cls: cls, innerHTML:'', textContent:'', className:'',
+    style:{ setProperty(){} },
+    classList:{
+      add:c=>cls.add(c), remove:c=>cls.delete(c), contains:c=>cls.has(c),
+      toggle:(c,f)=>{ if(f===undefined){ cls.has(c)?cls.delete(c):cls.add(c); } else if(f){ cls.add(c); } else { cls.delete(c); } }
+    },
+    setAttribute(){}, getAttribute(){ return null; },
+    addEventListener(){}, appendChild(){}, querySelectorAll(){ return []; }
+  };
+}
+
+function makeUiSandbox(){
+  const pending = {}; let nid = 1;
+  const els = {};
+  const sb = {
+    document:{ getElementById:id => els[id] || (els[id]=makeEl()), createElement:()=>makeEl() },
+    setTimeout:(fn)=>{ const id=nid++; pending[id]=fn; return id; },
+    clearTimeout:(id)=>{ delete pending[id]; },
+    __pending: pending, __els: els
+  };
+  vm.createContext(sb);
+  vm.runInContext(logicSrc + '\n' + uiSrc, sb);
+  return sb;
+}
+
+test('UI: loads without error and startGame builds the right number of cards', () => {
+  const sb = makeUiSandbox();
+  sb.startGame();
+  assert.equal(sb.boardCards.length, sb.SIZES[sb.M.size].pairs * 2);
+});
+
+test('UI: starting a new game cancels the pending compare timer (no stale callback)', () => {
+  const sb = makeUiSandbox();
+  sb.startGame();
+  const cards = sb.M.game.cards;
+  let a = 0, b = 1;                              // find two non-matching cards
+  for (let j=1;j<cards.length;j++){ if (cards[j].val !== cards[0].val){ a=0; b=j; break; } }
+  sb.onCardTap(a); sb.onCardTap(b);             // mismatch -> schedules a flip-back timer
+  assert.equal(sb.timers.length, 1);
+  assert.equal(Object.keys(sb.__pending).length, 1);
+  sb.startGame();                               // "New" mid-compare
+  assert.equal(sb.timers.length, 0);            // tracked timer cancelled
+  assert.equal(Object.keys(sb.__pending).length, 0);
+});
+
+test('UI: winGame does nothing when not on the game screen (no overlay over setup)', () => {
+  const sb = makeUiSandbox();
+  sb.toSetup();                                 // ensure game screen is off
+  sb.winGame();                                 // a stale win callback firing on setup
+  assert.ok(!sb.__els.win._cls.has('show'));    // overlay stays hidden
+});

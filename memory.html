@@ -30,7 +30,8 @@ body::before{
 @keyframes drift{0%,100%{transform:translate(0,0)}33%{transform:translate(12px,-10px)}66%{transform:translate(-8px,6px)}}
 
 .scr{display:none;flex-direction:column;align-items:center;width:100%;max-width:520px;
-  padding:14px 14px 26px;position:relative;z-index:1;}
+  padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(26px + env(safe-area-inset-bottom,0px));
+  position:relative;z-index:1;}
 .scr.on{display:flex;}
 
 /* ---------- header / titles ---------- */
@@ -97,7 +98,15 @@ body::before{
 .gbtn.alt:active{box-shadow:0 1px 0 #2563eb;}
 
 /* ---------- board + cards ---------- */
-#board{display:grid;gap:10px;width:min(94vw,440px);margin:0 auto;}
+/* Width is capped by viewport width AND by available height (so the taller
+   layouts — e.g. Easy's big 2-col board — fit on load without scrolling).
+   --cols/--rows are set per game in buildBoard(). */
+#board{
+  --cols:2; --rows:3;
+  display:grid;gap:10px;margin:0 auto;
+  width:min(94vw, 440px,
+    calc((100svh - 120px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * var(--cols) / var(--rows)));
+}
 .card{
   aspect-ratio:1;border:none;background:transparent;padding:0;cursor:pointer;
   -webkit-appearance:none;touch-action:manipulation;perspective:700px;container-type:size;
@@ -243,8 +252,20 @@ function isWin(matchedPairs, totalPairs){ return matchedPairs >= totalPairs; }
 /* UI_START */
 var M = { deckId:'animals', size:'medium', game:null, flipped:[], matched:0, moves:0, lock:false };
 var boardCards = [];
+var timers = [];   // pending gameplay timeouts, so a reset/leave can cancel them
 
 function $(id){ return document.getElementById(id); }
+
+// setTimeout that auto-deregisters on fire and can be bulk-cancelled by clearTimers().
+function later(fn, ms){
+  var id = setTimeout(function(){
+    var k = timers.indexOf(id); if (k>=0) timers.splice(k,1);
+    fn();
+  }, ms);
+  timers.push(id);
+  return id;
+}
+function clearTimers(){ for (var i=0;i<timers.length;i++) clearTimeout(timers[i]); timers=[]; }
 
 function faceHTML(kind, val){
   if (kind==='color') return '<span class="swatch" style="background:'+val+'"></span>';
@@ -290,17 +311,32 @@ function showScreen(id){
 }
 
 function startGame(){
+  clearTimers();
   M.game = buildGame(M.deckId, SIZES[M.size].pairs);
   M.flipped=[]; M.matched=0; M.moves=0; M.lock=false;
   $('win').classList.remove('show');
+  $('confetti').innerHTML='';
   buildBoard();
   renderStats();
   showScreen('game');
 }
 
+// Leave the board for the setup screen, cancelling any in-flight timers/overlay.
+function toSetup(){
+  clearTimers();
+  M.flipped=[]; M.lock=false;
+  $('win').classList.remove('show');
+  $('confetti').innerHTML='';
+  showScreen('setup');
+}
+
 function buildBoard(){
   var b=$('board');
-  b.style.gridTemplateColumns = 'repeat('+SIZES[M.size].cols+',1fr)';
+  var cols = SIZES[M.size].cols;
+  var rows = Math.ceil(M.game.cards.length / cols);
+  b.style.setProperty('--cols', cols);
+  b.style.setProperty('--rows', rows);
+  b.style.gridTemplateColumns = 'repeat('+cols+',1fr)';
   b.innerHTML='';
   boardCards=[];
   M.game.cards.forEach(function(card){
@@ -329,13 +365,13 @@ function onCardTap(i){
     M.moves++; renderStats(); M.lock=true;
     var a=M.flipped[0], b=M.flipped[1];
     if (cardsMatch(M.game.cards, a, b)){
-      setTimeout(function(){
+      later(function(){
         boardCards[a].classList.add('done'); boardCards[b].classList.add('done');
         M.flipped=[]; M.lock=false; M.matched++; renderStats();
-        if (isWin(M.matched, SIZES[M.size].pairs)) setTimeout(winGame, 360);
+        if (isWin(M.matched, SIZES[M.size].pairs)) later(winGame, 360);
       }, 420);
     } else {
-      setTimeout(function(){
+      later(function(){
         boardCards[a].classList.remove('up'); boardCards[b].classList.remove('up');
         M.flipped=[]; M.lock=false;
       }, 820);
@@ -344,6 +380,7 @@ function onCardTap(i){
 }
 
 function winGame(){
+  if (!$('game').classList.contains('on')) return;   // left the board before this fired — ignore
   $('winMsg').textContent = 'Found all '+SIZES[M.size].pairs+' pairs in '+M.moves+' moves!';
   $('win').classList.add('show');
   confetti();
@@ -360,15 +397,15 @@ function confetti(){
     s.style.animationDuration = (1.6 + Math.random()*1.5)+'s';
     c.appendChild(s);
   }
-  setTimeout(function(){ c.innerHTML=''; }, 4200);
+  later(function(){ c.innerHTML=''; }, 4200);
 }
 
 buildSetup();
 $('playBtn').addEventListener('click', startGame);
 $('btnNew').addEventListener('click', startGame);
-$('btnChange').addEventListener('click', function(){ showScreen('setup'); });
+$('btnChange').addEventListener('click', toSetup);
 $('winAgain').addEventListener('click', startGame);
-$('winDeck').addEventListener('click', function(){ $('win').classList.remove('show'); showScreen('setup'); });
+$('winDeck').addEventListener('click', toSetup);
 showScreen('setup');
 /* UI_END */
   </script>
