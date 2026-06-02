@@ -226,6 +226,15 @@
       box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 2px 0 #6E4A2C, 0 5px 10px rgba(120, 80, 45, 0.3)
     }
 
+    .w-card.memory {
+      background: linear-gradient(145deg, #F472B6, #EC4899);
+      box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.3), 0 8px 0 #BE185D, 0 15px 30px rgba(236, 72, 153, 0.4)
+    }
+
+    .w-card.memory:active {
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.2), 0 2px 0 #BE185D, 0 5px 10px rgba(236, 72, 153, 0.3)
+    }
+
     .wc-ico {
       font-size: 3.2rem
     }
@@ -1661,6 +1670,11 @@
       animation-delay: 1.5s
     }
 
+    .w-card.memory {
+      animation: cardFloat 4s ease-in-out infinite;
+      animation-delay: 2s
+    }
+
     @keyframes cardFloat {
 
       0%,
@@ -1839,6 +1853,10 @@
       <button class="w-card chess" id="wX">
         <div class="wc-ico">♞</div>
         <div class="wc-lbl">Chess</div>
+      </button>
+      <button class="w-card memory" id="wMem">
+        <div class="wc-ico">🃏</div>
+        <div class="wc-lbl">Memory</div>
       </button>
     </div>
   </div>
@@ -3708,6 +3726,7 @@
       $('wE').addEventListener('click', function () { S.world = 'eng'; S.week = 1; showLvls() });
       $('wC').addEventListener('click', function () { S.world = 'crit'; S.week = 1; showLvls() });
       $('wX').addEventListener('click', function () { location.href = 'chess.html' });
+      $('wMem').addEventListener('click', function () { location.href = 'memory.html' });
       $('lBk').addEventListener('click', function () { show('home') });
       $('gBk').addEventListener('click', function () { showLvls() });
       $('dcR').addEventListener('click', function () { startLvl(S.lvl) });

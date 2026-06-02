@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Viaan is a children's learning app (Math, English, Critical Thinking + Chess) hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline; the **Chess** game is a separate self-contained page (`chess.html`, inline CSS+JS) linked from the home screen. Audio files are served separately from the `audio/` directory. No frameworks, no build tools. Only external dependency: Google Fonts (Baloo 2 + Nunito).
+Viaan is a children's learning app (Math, English, Critical Thinking) plus two standalone games (Chess, Memory Match), hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline; the **Chess** (`chess.html`) and **Memory Match** (`memory.html`) games are separate self-contained pages (each with inline CSS+JS) linked from the home screen. Audio files are served separately from the `audio/` directory. No frameworks, no build tools. Only external dependency: Google Fonts (Baloo 2 + Nunito).
 
-There is no build or lint step. Open `index.html` in a browser (or push to GitHub Pages) to run. The curriculum app has no tests; the Chess rules engine in `chess.html` has a headless unit test — `node --test chess.test.mjs` (17 tests) — which extracts the code between its `/* LOGIC_START */`…`/* LOGIC_END */` markers and runs it in a Node `vm` sandbox.
+There is no build or lint step. Open `index.html` in a browser (or push to GitHub Pages) to run. The curriculum app has no tests; the standalone games keep their game logic between `/* LOGIC_START */`…`/* LOGIC_END */` markers and have headless unit tests that extract that block and run it in a Node `vm` sandbox — `node --test chess.test.mjs` (17 tests) and `node --test memory.test.mjs` (7 tests).
 
 ## Architecture
 
@@ -94,9 +94,19 @@ node generate-audio.js   # reads OPENAI_API_KEY from .env or env; writes audio/*
 - **Mobile-first:** board sizes to `min(96vw, calc(100svh − 150px))`, tap-to-move, `touch-action:manipulation`.
 - **Tests:** `node --test chess.test.mjs` (17 tests) covers move generation, captures, the AI, and the UI timer/lifecycle (via a stubbed-DOM `vm` sandbox). Run it after any change to `chess.html`.
 
+## Memory Match (standalone game)
+
+`memory.html` is a self-contained card-matching game (bright/bubbly kid styling, silent), reached from the home screen's Memory world card (`#wMem`).
+
+- **Two marked sections** like Chess: pure logic between `/* LOGIC_START */`…`/* LOGIC_END */` (deck data, `shuffle`, `buildGame`, `cardsMatch`, `isWin` — the `memory.test.mjs` surface) and the DOM/UI between `/* UI_START */`…`/* UI_END */`.
+- **Decks:** `DECKS` map, grouped by `cat` (`Pictures`: animals/food/vehicles/faces — emoji; `Learning`: letters/numbers/shapes — emoji/char, and `colors` with `kind:'color'` rendered as CSS swatches). Each deck needs ≥8 items (Hard = 8 pairs).
+- **Difficulty:** `SIZES` (easy 3 / medium 6 / hard 8 pairs; `cols` 2/3/4). Player picks deck + size on the setup screen each game; no progress persisted.
+- **Gameplay:** tap-to-flip with 3D CSS flip (`.card.up`/`.card.done`), input locked during the compare delay, matched pairs get a golden-ring pop, confetti on win. Card faces scale via container queries (`cqmin`) with a `rem` fallback.
+- **Tests:** `node --test memory.test.mjs` (7 tests) covers deck integrity, `buildGame` pair/count correctness, deterministic seeded shuffle, and match/win logic. Run it after any change to `memory.html`.
+
 ## Key Conventions
 
-- The curriculum app (Math / English / Thinking) stays in the single `index.html` file — no splitting *its* code into separate JS/CSS files; new curriculum features go in `index.html`. The one exception is the standalone **Chess** game, which lives in its own self-contained `chess.html` (inline CSS+JS) plus `chess.test.mjs`, reached via the Chess world card (`#wX` → `location.href='chess.html'`); `chess.html` has a "← Menu" link back to `index.html`.
+- The curriculum app (Math / English / Thinking) stays in the single `index.html` file — no splitting *its* code into separate JS/CSS files; new curriculum features go in `index.html`. The exceptions are the standalone **games**: **Chess** (`chess.html` + `chess.test.mjs`) and **Memory Match** (`memory.html` + `memory.test.mjs`), each self-contained (inline CSS+JS) and reached from its own world card (`#wX` → `chess.html`, `#wMem` → `memory.html`). Each game page has a "← Menu" link back to `index.html`.
 - Variable names are intentionally terse (single-letter state `S`, short function names) to keep file size small.
 - CSS classes use 2–3 letter abbreviations (`.scr` = screen, `.qv` = question visual, `.cb` = choice button, `.bl-bub` = blend bubble, `.wb-lt` = word-build letter tile, `.wk-cd` = week card, `.wk-stp` = week step button).
 - Colors always use CSS variables from `:root`.
