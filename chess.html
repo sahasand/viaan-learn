@@ -43,8 +43,8 @@ button.act{background:#cf8c3a;}
 }
 .sq.lt{background:var(--lt);}
 .sq.dk{background:var(--dk);}
-.sq.wp{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55);-webkit-text-stroke:1.4px #2a2a2a;}
-.sq.bp{color:#181818;-webkit-text-stroke:1.4px #000;}
+.sq.wp{color:#fcfcfa;-webkit-text-stroke:.7px #3a3a3a;text-shadow:0 1px 2px rgba(0,0,0,.35);}
+.sq.bp{color:#1a1a1a;-webkit-text-stroke:.4px #000;text-shadow:0 1px 1px rgba(255,255,255,.12);}
 .sq.sel{box-shadow:inset 0 0 0 4px var(--sel);}
 .sq.last{box-shadow:inset 0 0 0 4px var(--last);}
 .sq.sel.last{box-shadow:inset 0 0 0 4px var(--sel);}
@@ -56,8 +56,8 @@ button.act{background:#cf8c3a;}
   width:86%;height:86%;background:transparent;border:5px solid var(--dot);
 }
 .tray{display:flex;flex-wrap:wrap;gap:1px;font-size:20px;line-height:1;min-height:22px;justify-content:center;}
-.tray .wp{color:#fff;-webkit-text-stroke:1px #2a2a2a;}
-.tray .bp{color:#181818;-webkit-text-stroke:1px #000;}
+.tray .wp{color:#fcfcfa;-webkit-text-stroke:.6px #3a3a3a;}
+.tray .bp{color:#1a1a1a;-webkit-text-stroke:.4px #000;}
 </style>
 </head>
 <body>
@@ -193,7 +193,15 @@ var S = { board: initBoard(), turn:'w', selected:null, legal:[],
 
 var aiTimer = null;   // pending AI-move timeout handle, so resets can cancel it
 
-var GLYPH = {P:'♟',R:'♜',N:'♞',B:'♝',Q:'♛',K:'♚'};
+// Per-color glyphs: white uses the OUTLINE set (U+2654–2659), black the FILLED
+// set (U+265A–265F). The trailing ︎ forces text (non-emoji) rendering so the
+// CSS color/stroke applies — without it iOS renders these as dark emoji.
+var GLYPH = {
+  P:['♙︎','♟︎'], R:['♖︎','♜︎'],
+  N:['♘︎','♞︎'], B:['♗︎','♝︎'],
+  Q:['♕︎','♛︎'], K:['♔︎','♚︎']
+};
+function glyphFor(p){ return GLYPH[p[1]][p[0]==='w'?0:1]; }   // p = "wP", "bK", …
 
 var boardEl = document.getElementById('board');
 var cells = [];
@@ -221,7 +229,7 @@ function render(){
     for (var c=0;c<8;c++){
       var d=cells[r][c];
       var p=S.board[r][c];
-      d.textContent = p ? GLYPH[p[1]] : '';
+      d.textContent = p ? glyphFor(p) : '';
       d.classList.toggle('wp', !!p && p[0]==='w');
       d.classList.toggle('bp', !!p && p[0]==='b');
       d.classList.toggle('sel', sameSq(S.selected,r,c));
@@ -240,8 +248,8 @@ function render(){
 
 function renderTray(){
   var top=document.getElementById('trayTop'), bot=document.getElementById('trayBot');
-  top.innerHTML = S.captured.b.map(function(t){return '<span class="bp">'+GLYPH[t]+'</span>';}).join('');
-  bot.innerHTML = S.captured.w.map(function(t){return '<span class="wp">'+GLYPH[t]+'</span>';}).join('');
+  top.innerHTML = S.captured.b.map(function(t){return '<span class="bp">'+GLYPH[t][1]+'</span>';}).join('');
+  bot.innerHTML = S.captured.w.map(function(t){return '<span class="wp">'+GLYPH[t][0]+'</span>';}).join('');
 }
 
 function onSquareTap(r,c){
