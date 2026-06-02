@@ -91,6 +91,11 @@ body::before{
 .g-bar{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
 .stat{font-weight:900;font-size:1rem;color:#5b4a7a;background:rgba(255,255,255,.7);
   padding:7px 12px;border-radius:12px;box-shadow:0 2px 6px rgba(120,90,170,.15);}
+#pairs{display:flex;align-items:center;gap:8px;}
+.prog-bar{width:60px;height:10px;border-radius:6px;background:rgba(123,106,160,.22);overflow:hidden;}
+.prog-fill{display:block;height:100%;width:0;border-radius:6px;
+  background:linear-gradient(90deg,#ec4899,#8b5cf6);transition:width .35s cubic-bezier(.34,1.56,.64,1);}
+.prog-txt{font-weight:900;font-size:.82rem;color:#5b4a7a;min-width:28px;}
 .gbtn{border:none;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;font-weight:800;font-size:.92rem;
   color:#fff;padding:9px 13px;border-radius:12px;background:#34d399;box-shadow:0 4px 0 #059669;}
 .gbtn.alt{background:#60a5fa;box-shadow:0 4px 0 #2563eb;}
@@ -118,7 +123,20 @@ body::before{
   backface-visibility:hidden;-webkit-backface-visibility:hidden;
   box-shadow:0 5px 0 rgba(0,0,0,.14), 0 9px 16px rgba(0,0,0,.16);}
 .cf-d{color:rgba(255,255,255,.92);font-size:2rem;font-size:40cqmin;}
-.cf-u{transform:rotateY(180deg);background:#fff;}
+.cf-d::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background-image:
+  radial-gradient(1.6px 1.6px at 16% 22%, rgba(255,255,255,.9), transparent),
+  radial-gradient(1.2px 1.2px at 34% 46%, rgba(255,255,255,.65), transparent),
+  radial-gradient(1.4px 1.4px at 66% 26%, rgba(255,255,255,.85), transparent),
+  radial-gradient(1.1px 1.1px at 82% 68%, rgba(255,255,255,.6), transparent),
+  radial-gradient(1.6px 1.6px at 26% 76%, rgba(255,255,255,.8), transparent),
+  radial-gradient(1.3px 1.3px at 60% 62%, rgba(255,255,255,.7), transparent);}
+.cf-u{transform:rotateY(180deg);background:#fff;border:4px solid rgba(58,42,90,.06);}
+.g0 .cf-u{border-color:rgba(225,29,72,.16)}
+.g1 .cf-u{border-color:rgba(37,99,235,.16)}
+.g2 .cf-u{border-color:rgba(5,150,105,.16)}
+.g3 .cf-u{border-color:rgba(217,119,6,.16)}
+.g4 .cf-u{border-color:rgba(124,58,237,.16)}
+.g5 .cf-u{border-color:rgba(8,145,178,.16)}
 .sym{font-size:2.3rem;font-size:50cqmin;line-height:1;}
 .swatch{width:62%;height:62%;border-radius:15px;
   box-shadow:inset 0 4px 0 rgba(255,255,255,.45), inset 0 -5px 8px rgba(0,0,0,.16);}
@@ -126,6 +144,12 @@ body::before{
 .card.done .ci{animation:pop .42s ease;}
 .card.done .cf-u{box-shadow:0 0 0 4px #FACC15, 0 0 18px rgba(250,204,21,.6);}
 @keyframes pop{0%{transform:rotateY(180deg) scale(1)}45%{transform:rotateY(180deg) scale(1.14)}100%{transform:rotateY(180deg) scale(1)}}
+/* deal-in (start) — self-removed on animationend so it never fights .shake */
+@keyframes dealIn{from{opacity:0;transform:translateY(46px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
+.card.deal{animation:dealIn .5s cubic-bezier(.34,1.56,.64,1) both;}
+/* mismatch shake (wordless "not a match") */
+@keyframes shake{10%,90%{transform:translateX(-3px)}30%,70%{transform:translateX(5px)}50%{transform:translateX(-5px)}}
+.card.shake{animation:shake .34s ease both;}
 /* candy gradient card backs */
 .g0 .cf-d{background:linear-gradient(145deg,#fb7185,#e11d48);}
 .g1 .cf-d{background:linear-gradient(145deg,#60a5fa,#2563eb);}
@@ -140,9 +164,13 @@ body::before{
 #win.show{display:flex;animation:fade .3s ease;}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .win-card{background:#fff;border-radius:26px;padding:28px 26px;max-width:340px;width:100%;
-  box-shadow:0 16px 50px rgba(0,0,0,.3);}
+  box-shadow:0 16px 50px rgba(0,0,0,.3);animation:cardPop .42s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes cardPop{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
 .win-emoji{font-size:4.2rem;animation:bob 1.6s ease-in-out infinite;}
 .win-ttl{font-weight:900;font-size:1.7rem;margin:6px 0 2px;color:#ec4899;}
+.win-stars{font-size:2.6rem;letter-spacing:2px;margin:2px 0 10px;line-height:1;}
+.win-star{display:inline-block;animation:starPop .5s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes starPop{from{opacity:0;transform:scale(0) rotate(-160deg)}to{opacity:1;transform:scale(1) rotate(0)}}
 .win-msg{font-weight:700;color:#7c6aa0;margin-bottom:16px;}
 .win-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
 .win-btns button{border:none;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;
@@ -176,7 +204,7 @@ body::before{
   <!-- GAME -->
   <div class="scr" id="game">
     <div class="g-bar">
-      <span class="stat" id="pairs">0 / 0</span>
+      <span class="stat" id="pairs"><span class="prog-bar"><span class="prog-fill"></span></span><span class="prog-txt">0/0</span></span>
       <span class="stat" id="moves">Moves: 0</span>
       <button class="gbtn" id="btnNew">↻ New</button>
       <button class="gbtn alt" id="btnChange">Decks</button>
@@ -202,13 +230,15 @@ body::before{
 /* LOGIC_START */
 var DECKS = {
   animals:  { label:'Animals',     icon:'🐻', cat:'Pictures', kind:'sym',
-              items:['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐸'] },
+              items:['🐶','🐱','🐻','🐼','🐘','🦒','🦁','🐸','🐢','🦆','🦉','🐧'] },
   food:     { label:'Food',        icon:'🍎', cat:'Pictures', kind:'sym',
-              items:['🍎','🍌','🍇','🍓','🍕','🍔','🍩','🍦','🍪','🥕','🌽','🍉'] },
+              items:['🍎','🍌','🍊','🍓','🥕','🌽','🍕','🍔','🍟','🍦','🍪','🍰'] },
   vehicles: { label:'Vehicles',    icon:'🚗', cat:'Pictures', kind:'sym',
               items:['🚗','🚌','🚓','🚒','🚑','🚜','🚲','✈️','🚀','🚂','⛵','🚁'] },
   faces:    { label:'Silly Faces', icon:'😀', cat:'Pictures', kind:'sym',
               items:['😀','😎','🥳','😍','🤩','😜','🤓','😴','🤠','😺','🤖','👻'] },
+  nature:   { label:'Nature',      icon:'🌻', cat:'Pictures', kind:'sym',
+              items:['🌻','🌲','🌴','🌵','🍄','🍀','🌳','🌷','🌱','🍂','🌾','🌼'] },
   letters:  { label:'Letters',     icon:'🔤', cat:'Learning', kind:'sym',
               items:['A','B','C','D','E','F','G','H','I','J','K','L'] },
   numbers:  { label:'Numbers',     icon:'🔢', cat:'Learning', kind:'sym',
@@ -216,7 +246,9 @@ var DECKS = {
   shapes:   { label:'Shapes',      icon:'🔶', cat:'Learning', kind:'sym',
               items:['⭐','❤️','🔺','🔵','🟩','🔶','⬛','🌙','➕','🔷','🟣','⬜'] },
   colors:   { label:'Colors',      icon:'🎨', cat:'Learning', kind:'color',
-              items:['#EF4444','#F97316','#FACC15','#22C55E','#3B82F6','#A855F7','#EC4899','#14B8A6','#8B5CF6','#10B981','#F43F5E','#0EA5E9'] }
+              items:['#EF4444','#F97316','#FACC15','#22C55E','#3B82F6','#A855F7','#EC4899','#14B8A6','#8B5CF6','#10B981','#F43F5E','#0EA5E9'] },
+  weather:  { label:'Weather',     icon:'☀️', cat:'Learning', kind:'sym',
+              items:['☀️','⛅','☁️','🌧️','⛈️','❄️','🌈','🌙','⭐','🌪️','🌡️','💧'] }
 };
 
 var SIZES = {
@@ -248,6 +280,9 @@ function buildGame(deckId, pairs, rng){
 function cardsMatch(cards, a, b){ return a!==b && cards[a].val === cards[b].val; }
 
 function isWin(matchedPairs, totalPairs){ return matchedPairs >= totalPairs; }
+
+// Per-game reward (not persisted): 3 stars for a perfect run (no wasted moves), down to 1.
+function starsFor(moves, pairs){ if (moves <= pairs) return 3; if (moves <= pairs + 3) return 2; return 1; }
 /* LOGIC_END */
 /* UI_START */
 var M = { deckId:'animals', size:'medium', game:null, flipped:[], matched:0, moves:0, lock:false };
@@ -341,7 +376,10 @@ function buildBoard(){
   boardCards=[];
   M.game.cards.forEach(function(card){
     var el=document.createElement('button');
-    el.className='card g'+(card.i % 6);
+    el.className='card deal g'+(card.i % 6);
+    el.style.animationDelay = (card.i * 45) + 'ms';   // staggered deal-in
+    // remove .deal once it has played so it can't re-trigger when .shake is later removed
+    el.addEventListener('animationend', function(){ el.classList.remove('deal'); el.style.animationDelay=''; }, { once:true });
     el.innerHTML = '<div class="ci"><div class="cf cf-d">✨</div>'
                  + '<div class="cf cf-u">'+faceHTML(M.game.kind, card.val)+'</div></div>';
     (function(i){ el.addEventListener('click', function(){ onCardTap(i); }); })(card.i);
@@ -352,7 +390,9 @@ function buildBoard(){
 
 function renderStats(){
   $('moves').textContent = 'Moves: '+M.moves;
-  $('pairs').textContent = M.matched+' / '+SIZES[M.size].pairs;
+  var p = SIZES[M.size].pairs;
+  $('pairs').querySelector('.prog-fill').style.width = ((M.matched/p)*100)+'%';
+  $('pairs').querySelector('.prog-txt').textContent = M.matched+'/'+p;
 }
 
 function onCardTap(i){
@@ -371,8 +411,9 @@ function onCardTap(i){
         if (isWin(M.matched, SIZES[M.size].pairs)) later(winGame, 360);
       }, 420);
     } else {
+      boardCards[a].classList.add('shake'); boardCards[b].classList.add('shake');
       later(function(){
-        boardCards[a].classList.remove('up'); boardCards[b].classList.remove('up');
+        boardCards[a].classList.remove('up','shake'); boardCards[b].classList.remove('up','shake');
         M.flipped=[]; M.lock=false;
       }, 820);
     }
@@ -381,7 +422,11 @@ function onCardTap(i){
 
 function winGame(){
   if (!$('game').classList.contains('on')) return;   // left the board before this fired — ignore
-  $('winMsg').textContent = 'Found all '+SIZES[M.size].pairs+' pairs in '+M.moves+' moves!';
+  var p = SIZES[M.size].pairs, st = starsFor(M.moves, p), row = '';
+  for (var i=0;i<3;i++){
+    row += '<span class="win-star" style="animation-delay:'+(0.15 + i*0.12)+'s">'+(i<st?'⭐':'☆')+'</span>';
+  }
+  $('winMsg').innerHTML = '<div class="win-stars">'+row+'</div>Found all '+p+' pairs in '+M.moves+' moves!';
   $('win').classList.add('show');
   confetti();
 }

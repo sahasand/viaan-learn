@@ -86,6 +86,16 @@ test('isWin: true only when all pairs are matched', () => {
   assert.equal(sandbox.isWin(7, 6), true);
 });
 
+test('starsFor: 3 for a perfect run, 2 within pairs+3, else 1', () => {
+  assert.equal(sandbox.starsFor(6, 6), 3);    // perfect (moves === pairs)
+  assert.equal(sandbox.starsFor(3, 6), 3);    // better than perfect still caps at 3
+  assert.equal(sandbox.starsFor(9, 6), 2);    // pairs + 3
+  assert.equal(sandbox.starsFor(10, 6), 1);   // beyond pairs + 3
+  assert.equal(sandbox.starsFor(8, 8), 3);
+  assert.equal(sandbox.starsFor(11, 8), 2);
+  assert.equal(sandbox.starsFor(12, 8), 1);
+});
+
 // ---- UI control-flow (LOGIC + UI evaluated against a stubbed DOM + fake timers) ----
 const logicSrc = html.match(/\/\* LOGIC_START \*\/([\s\S]*?)\/\* LOGIC_END \*\//)[1];
 const uiSrc = html.match(/\/\* UI_START \*\/([\s\S]*?)\/\* UI_END \*\//)[1];
@@ -100,7 +110,7 @@ function makeEl(){
       toggle:(c,f)=>{ if(f===undefined){ cls.has(c)?cls.delete(c):cls.add(c); } else if(f){ cls.add(c); } else { cls.delete(c); } }
     },
     setAttribute(){}, getAttribute(){ return null; },
-    addEventListener(){}, appendChild(){}, querySelectorAll(){ return []; }
+    addEventListener(){}, appendChild(){}, querySelectorAll(){ return []; }, querySelector(){ return makeEl(); }
   };
 }
 
