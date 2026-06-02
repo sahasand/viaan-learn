@@ -6,8 +6,8 @@
 <title>Chess</title>
 <style>
 :root{
-  --lt:#e9d7b5; --dk:#a06a3f; --bg:#241c14; --fg:#f3ecde;
-  --sel:#7ad17a; --last:rgba(255,221,87,.55); --dot:rgba(30,24,16,.42);
+  --lt:#f0d9b5; --dk:#b58863; --bg:#302e2b; --fg:#f3ecde;
+  --sel:#86d76f; --last:rgba(255,221,87,.5); --dot:rgba(20,18,15,.30);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;height:100%;}
@@ -33,31 +33,36 @@ button.act{background:#cf8c3a;}
   width:min(96vw, calc(100svh - 150px));
   height:min(96vw, calc(100svh - 150px));
   display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);
-  border:5px solid #3a2c1c;border-radius:7px;overflow:hidden;touch-action:manipulation;
+  border:4px solid #5a3d28;border-radius:6px;overflow:hidden;touch-action:manipulation;
   box-shadow:0 10px 30px rgba(0,0,0,.45);
 }
 .sq{
-  display:flex;align-items:center;justify-content:center;position:relative;
-  font-size:min(8.2vw, calc((100svh - 150px)/8 * .82));line-height:1;
-  user-select:none;-webkit-user-select:none;cursor:pointer;
+  position:relative;cursor:pointer;
+  background-repeat:no-repeat;background-position:center;background-size:84% 84%;
+  user-select:none;-webkit-user-select:none;
 }
-.sq.lt{background:var(--lt);}
-.sq.dk{background:var(--dk);}
-.sq.wp{color:#fcfcfa;-webkit-text-stroke:.7px #3a3a3a;text-shadow:0 1px 2px rgba(0,0,0,.35);}
-.sq.bp{color:#1a1a1a;-webkit-text-stroke:.4px #000;text-shadow:0 1px 1px rgba(255,255,255,.12);}
+.sq.lt{background-color:var(--lt);}
+.sq.dk{background-color:var(--dk);}
 .sq.sel{box-shadow:inset 0 0 0 4px var(--sel);}
 .sq.last{box-shadow:inset 0 0 0 4px var(--last);}
 .sq.sel.last{box-shadow:inset 0 0 0 4px var(--sel);}
 .sq.mv::after{
-  content:'';position:absolute;width:30%;height:30%;border-radius:50%;
-  background:var(--dot);pointer-events:none;
+  content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:30%;height:30%;border-radius:50%;background:var(--dot);pointer-events:none;
 }
 .sq.mv.cap::after{
-  width:86%;height:86%;background:transparent;border:5px solid var(--dot);
+  width:90%;height:90%;background:transparent;border:5px solid var(--dot);
 }
-.tray{display:flex;flex-wrap:wrap;gap:1px;font-size:20px;line-height:1;min-height:22px;justify-content:center;}
-.tray .wp{color:#fcfcfa;-webkit-text-stroke:.6px #3a3a3a;}
-.tray .bp{color:#1a1a1a;-webkit-text-stroke:.4px #000;}
+.coord{
+  position:absolute;font-size:min(2.4vw,11px);font-weight:800;line-height:1;
+  pointer-events:none;font-family:-apple-system,system-ui,sans-serif;
+}
+.coord.file{right:3px;bottom:2px;}
+.coord.rank{left:3px;top:2px;}
+.sq.lt .coord{color:var(--dk);}
+.sq.dk .coord{color:var(--lt);}
+.tray{display:flex;flex-wrap:wrap;gap:1px;min-height:26px;justify-content:center;align-items:center;}
+.tray img{width:23px;height:23px;display:block;}
 </style>
 </head>
 <body>
@@ -193,15 +198,9 @@ var S = { board: initBoard(), turn:'w', selected:null, legal:[],
 
 var aiTimer = null;   // pending AI-move timeout handle, so resets can cancel it
 
-// Per-color glyphs: white uses the OUTLINE set (U+2654–2659), black the FILLED
-// set (U+265A–265F). The trailing ︎ forces text (non-emoji) rendering so the
-// CSS color/stroke applies — without it iOS renders these as dark emoji.
-var GLYPH = {
-  P:['♙︎','♟︎'], R:['♖︎','♜︎'],
-  N:['♘︎','♞︎'], B:['♗︎','♝︎'],
-  Q:['♕︎','♛︎'], K:['♔︎','♚︎']
-};
-function glyphFor(p){ return GLYPH[p[1]][p[0]==='w'?0:1]; }   // p = "wP", "bK", …
+// Pieces are SVG artwork (cburnett / Lichess) self-hosted in pieces/.
+// A square's piece is its 2-char code, e.g. "wP" -> pieces/wP.svg.
+function pieceSrc(p){ return 'pieces/' + p + '.svg'; }
 
 var boardEl = document.getElementById('board');
 var cells = [];
@@ -215,6 +214,8 @@ function buildGrid(){
       var d=document.createElement('div');
       d.className='sq '+(((r+c)%2===0)?'lt':'dk');
       (function(rr,cc){ d.addEventListener('click', function(){ onSquareTap(rr,cc); }); })(r,c);
+      if (r===7){ var fl=document.createElement('span'); fl.className='coord file'; fl.textContent=String.fromCharCode(97+c); d.appendChild(fl); }
+      if (c===0){ var rk=document.createElement('span'); rk.className='coord rank'; rk.textContent=String(8-r); d.appendChild(rk); }
       boardEl.appendChild(d);
       rowCells.push(d);
     }
@@ -229,9 +230,7 @@ function render(){
     for (var c=0;c<8;c++){
       var d=cells[r][c];
       var p=S.board[r][c];
-      d.textContent = p ? glyphFor(p) : '';
-      d.classList.toggle('wp', !!p && p[0]==='w');
-      d.classList.toggle('bp', !!p && p[0]==='b');
+      d.style.backgroundImage = p ? "url('"+pieceSrc(p)+"')" : "none";
       d.classList.toggle('sel', sameSq(S.selected,r,c));
       var isLast = S.lastMove && (sameSq(S.lastMove.from,r,c) || sameSq(S.lastMove.to,r,c));
       d.classList.toggle('last', !!isLast);
@@ -248,8 +247,8 @@ function render(){
 
 function renderTray(){
   var top=document.getElementById('trayTop'), bot=document.getElementById('trayBot');
-  top.innerHTML = S.captured.b.map(function(t){return '<span class="bp">'+GLYPH[t][1]+'</span>';}).join('');
-  bot.innerHTML = S.captured.w.map(function(t){return '<span class="wp">'+GLYPH[t][0]+'</span>';}).join('');
+  top.innerHTML = S.captured.b.map(function(t){return '<img src="'+pieceSrc('b'+t)+'" alt="">';}).join('');
+  bot.innerHTML = S.captured.w.map(function(t){return '<img src="'+pieceSrc('w'+t)+'" alt="">';}).join('');
 }
 
 function onSquareTap(r,c){

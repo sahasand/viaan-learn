@@ -211,7 +211,7 @@ const uiSrc = html.match(/\/\* UI_START \*\/([\s\S]*?)\/\* UI_END \*\//)[1];
 
 function makeUiSandbox(){
   const timers = [];
-  const el = () => ({ classList:{ toggle(){} }, addEventListener(){}, appendChild(){}, innerHTML:'', textContent:'' });
+  const el = () => ({ classList:{ toggle(){} }, addEventListener(){}, appendChild(){}, querySelectorAll:()=>[], style:{}, innerHTML:'', textContent:'' });
   const sb = {
     document:{ getElementById:()=>el(), createElement:()=>el() },
     setTimeout:(fn)=>{ timers.push(fn); return timers.length; },   // 1-based id

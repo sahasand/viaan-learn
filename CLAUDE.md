@@ -86,11 +86,12 @@ node generate-audio.js   # reads OPENAI_API_KEY from .env or env; writes audio/*
 
 ## Chess (standalone game)
 
-`chess.html` is a self-contained core-rules chess game (no frameworks/build), reached from the home screen's Chess world card. Design philosophy and conventions are documented in `docs/superpowers/specs/2026-06-01-chess-game-design.md` and `docs/superpowers/plans/2026-06-01-chess-game.md`.
+`chess.html` is a core-rules chess game (no frameworks/build), reached from the home screen's Chess world card. It loads piece artwork from the `pieces/` folder (so it's not a single self-contained file). Design philosophy and conventions are documented in `docs/superpowers/specs/2026-06-01-chess-game-design.md` and `docs/superpowers/plans/2026-06-01-chess-game.md`.
 
 - **Two marked sections** inside the single `<script>`: a pure, DOM-free rules engine between `/* LOGIC_START */`…`/* LOGIC_END */` (the unit-test surface), and the UI/state/render/interaction code between `/* UI_START */`…`/* UI_END */`. Keep this split — `chess.test.mjs` extracts the LOGIC block via these exact markers.
 - **Rules:** core movement + captures + turn enforcement only. No castling, en passant, promotion, or check/checkmate — a game ends when a **king is captured** (`applyMove` returns a `winner`).
 - **Modes:** Two Players (hotseat) and vs Computer (a greedy depth-1 material AI, `aiPickMove`). The AI reply is on a `setTimeout` stored in `aiTimer` and cancelled by `newGame()`; `aiTurn` guards against stale callbacks (`mode==='ai' && turn===aiColor`).
+- **Pieces & board:** pieces are SVG artwork (cburnett / Lichess set, GPLv2+) self-hosted in `pieces/` (`pieces/<color><type>.svg`, e.g. `pieces/wP.svg`), rendered as each square's `background-image` via `pieceSrc(p)`; captured pieces in the trays are `<img>`. Board uses the Lichess palette (`--lt:#f0d9b5` / `--dk:#b58863`) with a–h / 1–8 coordinate labels. (Earlier Unicode-glyph rendering was replaced because iOS rendered the filled glyphs as dark emoji.)
 - **Mobile-first:** board sizes to `min(96vw, calc(100svh − 150px))`, tap-to-move, `touch-action:manipulation`.
 - **Tests:** `node --test chess.test.mjs` (17 tests) covers move generation, captures, the AI, and the UI timer/lifecycle (via a stubbed-DOM `vm` sandbox). Run it after any change to `chess.html`.
 
@@ -108,7 +109,7 @@ node generate-audio.js   # reads OPENAI_API_KEY from .env or env; writes audio/*
 
 ## Key Conventions
 
-- The curriculum app (Math / English / Thinking) stays in the single `index.html` file — no splitting *its* code into separate JS/CSS files; new curriculum features go in `index.html`. The exceptions are the standalone **games**: **Chess** (`chess.html` + `chess.test.mjs`) and **Memory Match** (`memory.html` + `memory.test.mjs`), each self-contained (inline CSS+JS) and reached from its own world card (`#wX` → `chess.html`, `#wMem` → `memory.html`). Each game page has a "← Menu" link back to `index.html`.
+- The curriculum app (Math / English / Thinking) stays in the single `index.html` file — no splitting *its* code into separate JS/CSS files; new curriculum features go in `index.html`. The exceptions are the standalone **games**: **Chess** (`chess.html` + `chess.test.mjs` + `pieces/` SVG artwork) and **Memory Match** (`memory.html` + `memory.test.mjs`), each self-contained (inline CSS+JS) and reached from its own world card (`#wX` → `chess.html`, `#wMem` → `memory.html`). Each game page has a "← Menu" link back to `index.html`.
 - Variable names are intentionally terse (single-letter state `S`, short function names) to keep file size small.
 - CSS classes use 2–3 letter abbreviations (`.scr` = screen, `.qv` = question visual, `.cb` = choice button, `.bl-bub` = blend bubble, `.wb-lt` = word-build letter tile, `.wk-cd` = week card, `.wk-stp` = week step button).
 - Colors always use CSS variables from `:root`.
