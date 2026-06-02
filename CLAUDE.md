@@ -55,6 +55,12 @@ A third world (`S.world === 'crit'`, `CRIT[]`) with five reasoning skill-units, 
 
 All picture content is emoji (via `EM`); `silly` scenes embed literal emoji combos. Audio is prompt-only.
 
+### Thinking gamification (mastery & collection)
+
+The Thinking level-select screen renders a **Brain-Power map** above the unit tabs — `renderCritMap(d)` builds it into `#critMap` (shown only when `isCrit`). Per unit (`lv.w`): a medallion with a progress fill (stars earned / 40), a **gold** ring + ✓ when all 4 levels are perfect (10/10), and a **done** state when all 4 are merely completed; tapping a medallion jumps to that unit (`S.week`). Below it a **sticker shelf** shows one earned sticker per completed unit plus a 🏆 grand prize (greyed until all 5 units are complete). All of this is **derived from `S.best`** — no new persisted data except the best streak.
+
+A **streak combo** is app-wide (in the shared `onOk`/`onNo`): `S.streak` counts consecutive correct answers, shows a `🔥 ×N` badge (`#combo`, `showCombo()`) at ≥2, and resets on a miss or at `startLvl`. The best streak persists as `S.best.__streak` (a non-level key, ignored by the per-level star totals which iterate the level arrays) and is shown on the done screen (`#dcStreak`, with a "New best streak!" variant via `S.newRecord`). No timers/speed scoring — mastery and persistence only, by design (don't rush reasoning).
+
 ## Audio Pipeline
 
 The app serves ~381 MP3 clips from the `audio/` directory. Categories by ID prefix:

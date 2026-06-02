@@ -1824,6 +1824,188 @@
     .wk-cd:nth-child(n+7) {
       animation-delay: 0.33s
     }
+
+    /* ===== Thinking: Brain-Power map + sticker shelf + streak combo ===== */
+    .crit-map {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto 4px;
+      padding: 4px 16px 0;
+      position: relative;
+      z-index: 1
+    }
+
+    .cm-ttl {
+      font-family: var(--fn-d);
+      font-weight: 800;
+      color: var(--purple);
+      font-size: 0.92rem;
+      letter-spacing: 0.5px;
+      text-align: center;
+      margin: 2px 0 8px
+    }
+
+    .cm-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap
+    }
+
+    .cm-med {
+      position: relative;
+      border: none;
+      background: white;
+      border-radius: 16px;
+      padding: 8px 6px 9px;
+      width: 64px;
+      cursor: pointer;
+      -webkit-appearance: none;
+      touch-action: manipulation;
+      box-shadow: 0 4px 0 rgba(124, 58, 237, 0.18);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)
+    }
+
+    .cm-med:active {
+      transform: scale(0.92) translateY(2px)
+    }
+
+    .cm-ic {
+      font-size: 1.7rem;
+      line-height: 1;
+      filter: grayscale(0.7) opacity(0.8)
+    }
+
+    .cm-med.done .cm-ic,
+    .cm-med.gold .cm-ic {
+      filter: none
+    }
+
+    .cm-ring {
+      width: 100%;
+      height: 7px;
+      border-radius: 4px;
+      background: rgba(124, 58, 237, 0.14);
+      overflow: hidden
+    }
+
+    .cm-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)
+    }
+
+    .cm-med.gold {
+      box-shadow: 0 0 0 3px #FACC15, 0 4px 0 rgba(124, 58, 237, 0.18), 0 0 16px rgba(250, 204, 21, 0.5)
+    }
+
+    .cm-chk {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      background: #FACC15;
+      color: #7c4a00;
+      font-weight: 900;
+      font-size: 0.78rem;
+      width: 21px;
+      height: 21px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2)
+    }
+
+    .cm-shelf {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 10px
+    }
+
+    .cm-stk {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      background: rgba(124, 58, 237, 0.07);
+      border: 2px dashed rgba(124, 58, 237, 0.25)
+    }
+
+    .cm-stk.got {
+      background: #fff;
+      border: 2px solid var(--mc, #8b5cf6);
+      box-shadow: 0 3px 8px rgba(124, 58, 237, 0.25);
+      animation: stkPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)
+    }
+
+    .cm-stk.grand {
+      filter: grayscale(1) opacity(0.4)
+    }
+
+    .cm-stk.grand.got {
+      filter: none;
+      border-color: #FACC15;
+      box-shadow: 0 3px 10px rgba(250, 204, 21, 0.5)
+    }
+
+    @keyframes stkPop {
+      from {
+        transform: scale(0) rotate(-90deg)
+      }
+
+      to {
+        transform: scale(1) rotate(0)
+      }
+    }
+
+    .combo {
+      font-family: var(--fn-d);
+      font-weight: 900;
+      font-size: 1rem;
+      color: #F97316;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 0.2s
+    }
+
+    .combo.show {
+      opacity: 1
+    }
+
+    .combo.pop {
+      animation: comboPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)
+    }
+
+    @keyframes comboPop {
+      0% {
+        transform: scale(0.6)
+      }
+
+      55% {
+        transform: scale(1.28)
+      }
+
+      100% {
+        transform: scale(1)
+      }
+    }
+
+    .dc-streak {
+      font-family: var(--fn-d);
+      font-weight: 800;
+      color: #F97316;
+      font-size: 1.05rem;
+      min-height: 1.2em
+    }
   </style>
 </head>
 
@@ -1868,6 +2050,7 @@
       <div class="ls-title" id="lT"></div>
       <div class="ls-stars" id="lS"></div>
     </div>
+    <div class="crit-map" id="critMap" style="display:none"></div>
     <div class="wk-tabs" id="wkT"></div>
     <div class="lv-grid" id="lG"></div>
     <div class="ph-list" id="phL" style="display:none"></div>
@@ -1878,6 +2061,7 @@
     <div class="g-bar">
       <button class="g-bk" id="gBk">&#8592;</button>
       <div class="g-tt" id="gTt"></div>
+      <span class="combo" id="combo"></span>
       <div class="g-st" id="gSt"></div>
     </div>
     <div class="g-prog">
@@ -1892,6 +2076,7 @@
     <div class="dc-t" id="dcT">Level Complete!</div>
     <div class="dc-s" id="dcS"></div>
     <div class="dc-sc" id="dcSc"></div>
+    <div class="dc-streak" id="dcStreak"></div>
     <div class="dc-m" id="dcM"></div>
     <div class="dc-b">
       <button class="btn btn-sm btn-c" id="dcR">Play Again</button>
@@ -1906,7 +2091,7 @@
       /* ============================================
          STATE
          ============================================ */
-      var S = { world: null, lvl: null, qi: 0, stars: 0, best: {}, busy: false, week: 1, phase: 1 };
+      var S = { world: null, lvl: null, qi: 0, stars: 0, best: {}, busy: false, week: 1, phase: 1, streak: 0, newRecord: false };
       try { var sv = localStorage.getItem('vla4'); if (sv) S.best = JSON.parse(sv) } catch (e) { }
       function save() { try { localStorage.setItem('vla4', JSON.stringify(S.best)) } catch (e) { } }
 
@@ -3750,6 +3935,8 @@
         var te = 0; d.forEach(function (lv) { te += (S.best[lv.id] || 0) });
         $('lS').textContent = '\u2B50 ' + te;
 
+        if (isCrit) { $('critMap').style.display = ''; renderCritMap(d); } else { $('critMap').style.display = 'none'; }
+
         if (isGrid) {
           // Math + Critical Thinking: week/unit tabs + grid
           $('wkT').style.display = ''; $('lG').style.display = ''; $('phL').style.display = 'none';
@@ -3780,6 +3967,44 @@
           $('wkT').style.display = 'none'; $('lG').style.display = 'none'; $('phL').style.display = '';
           renderEngLvls(d);
         }
+      }
+
+      function renderCritMap(d) {
+        var map = $('critMap');
+        var units = [];
+        d.forEach(function (lv) {
+          var u = units.find(function (x) { return x.w === lv.w });
+          if (!u) { u = { w: lv.w, emoji: lv.emoji, color: lv.color, levels: [] }; units.push(u) }
+          u.levels.push(lv);
+        });
+        function uStats(u) {
+          var earned = 0, total = 0, done = 0, perfect = 0;
+          u.levels.forEach(function (lv) {
+            var b = S.best[lv.id] || 0, mx = lv.q.length * 2;
+            earned += b; total += mx; if (b > 0) done++; if (b >= mx) perfect++;
+          });
+          return { pct: total ? Math.round(earned / total * 100) : 0, done: done === u.levels.length, gold: perfect === u.levels.length };
+        }
+        var meds = units.map(function (u) {
+          var s = uStats(u);
+          return '<button class="cm-med' + (s.gold ? ' gold' : (s.done ? ' done' : '')) + '" data-w="' + u.w + '" style="--mc:' + u.color + '">'
+            + '<div class="cm-ic">' + u.emoji + '</div>'
+            + '<div class="cm-ring"><div class="cm-fill" style="width:' + s.pct + '%;background:' + u.color + '"></div></div>'
+            + (s.gold ? '<div class="cm-chk">✓</div>' : '')
+            + '</button>';
+        }).join('');
+        var stks = units.map(function (u) {
+          var got = uStats(u).done;
+          return '<div class="cm-stk' + (got ? ' got' : '') + '" style="--mc:' + u.color + '">' + (got ? u.emoji : '') + '</div>';
+        }).join('');
+        var allDone = units.every(function (u) { return uStats(u).done });
+        stks += '<div class="cm-stk grand' + (allDone ? ' got' : '') + '">🏆</div>';
+        map.innerHTML = '<div class="cm-ttl">🧠 Brain Power</div>'
+          + '<div class="cm-row">' + meds + '</div>'
+          + '<div class="cm-shelf">' + stks + '</div>';
+        map.querySelectorAll('.cm-med').forEach(function (b) {
+          b.addEventListener('click', function () { S.week = parseInt(b.getAttribute('data-w'), 10); showLvls() });
+        });
       }
 
       function renderEngLvls(d) {
@@ -3857,7 +4082,8 @@
          GAME ENGINE
          ============================================ */
       function startLvl(i) {
-        S.lvl = i; S.qi = 0; S.stars = 0; S.busy = false;
+        S.lvl = i; S.qi = 0; S.stars = 0; S.busy = false; S.streak = 0; S.newRecord = false;
+        showCombo();
         var lv = data()[i];
         $('gTt').textContent = lv.emoji + ' ' + lv.title;
         $('gSt').textContent = '\u2B50 0';
@@ -4275,11 +4501,23 @@
 
       function onOk(el) {
         S.stars += 2; $('gSt').textContent = '\u2B50 ' + S.stars;
+        S.streak++;
+        if (S.streak > (S.best.__streak || 0)) { S.best.__streak = S.streak; S.newRecord = true; save() }
+        showCombo();
         flash('fc'); fstar(el); cheer();
         setTimeout(function () { S.busy = false; nxt() }, 900);
       }
 
+      function showCombo() {
+        var c = $('combo');
+        if (S.streak >= 2) {
+          c.textContent = '\uD83D\uDD25 ' + S.streak;
+          c.classList.add('show'); c.classList.remove('pop'); void c.offsetWidth; c.classList.add('pop');
+        } else { c.textContent = ''; c.classList.remove('show', 'pop'); }
+      }
+
       function onNo(ar, cv) {
+        S.streak = 0; showCombo();
         flash('fw');
         playClip('sfx_oops');
         if (cv !== undefined) setTimeout(function () { ar.querySelectorAll('.cb').forEach(function (b) { if (b.getAttribute('data-v') === String(cv)) b.classList.add('ok') }) }, 400);
@@ -4296,6 +4534,8 @@
         else if (pc >= 0.6) { sd = '\u2B50\u2B50'; mg = 'Great job, Viaan! Almost perfect!' }
         else { sd = '\u2B50'; mg = "Good try! Let's practice more!" }
         $('dcS').textContent = sd; $('dcSc').textContent = e + ' / ' + mx + ' points'; $('dcM').textContent = mg;
+        var bs = S.best.__streak || 0;
+        $('dcStreak').textContent = S.newRecord ? ('🔥 New best streak: ' + bs + '!') : (bs >= 2 ? ('🔥 Best streak: ' + bs) : '');
         $('dcT').style.color = S.world === 'math' ? 'var(--teal)' : S.world === 'crit' ? 'var(--purple)' : 'var(--blue)';
         $('gF').style.width = '100%'; show('done');
         if (pc >= 0.6) conf();
