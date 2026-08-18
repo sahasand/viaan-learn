@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Viaan is a children's learning app (Math, English, Critical Thinking) plus two standalone games (Chess, Memory Match), hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline; the **Chess** (`chess.html`) and **Memory Match** (`memory.html`) games are separate self-contained pages (each with inline CSS+JS) linked from the home screen. Audio files are served separately from the `audio/` directory. No frameworks, no build tools. Only external dependency: Google Fonts (Baloo 2 + Nunito).
+Viaan is a children's learning app (Math, English, Critical Thinking) plus three standalone games (Chess, Memory Match, Plane Factory), hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline; the **Chess** (`chess.html`), **Memory Match** (`memory.html`) and **Plane Factory** (`plane.html`) games are separate self-contained pages (each with inline CSS+JS) linked from the home screen. Audio files are served separately from the `audio/` directory. No frameworks, no build tools. Only external dependency: Google Fonts (Baloo 2 + Nunito).
 
-There is no build or lint step. Open `index.html` in a browser (or push to GitHub Pages) to run. The curriculum app has no tests; the standalone games keep their game logic between `/* LOGIC_START */`…`/* LOGIC_END */` markers and have headless unit tests that extract that block and run it in a Node `vm` sandbox — `node --test chess.test.mjs` (17 tests) and `node --test memory.test.mjs` (11 tests).
+There is no build or lint step. Open `index.html` in a browser (or push to GitHub Pages) to run. The curriculum app has no tests; the standalone games keep their game logic between `/* LOGIC_START */`…`/* LOGIC_END */` markers and have headless unit tests that extract that block and run it in a Node `vm` sandbox — `node --test chess.test.mjs` (17 tests), `node --test memory.test.mjs` (11 tests) and `node --test plane.test.mjs` (14 tests).
 
 ## Architecture
 
@@ -114,9 +114,21 @@ node generate-audio.js   # reads OPENAI_API_KEY from .env or env; writes audio/*
 - **Mobile fit:** `#board` width is capped by both viewport width and available height via per-game `--cols`/`--rows` (set in `buildBoard`), and `.scr` padding respects `env(safe-area-inset-*)` for notched phones.
 - **Tests:** `node --test memory.test.mjs` (11 tests) covers deck integrity (incl. ≥8 distinct items per deck), `buildGame` pair/count correctness, deterministic seeded shuffle, match/win logic, `starsFor`, and UI control-flow (load, timer cancellation, win guard via a stubbed-DOM `vm` sandbox). Run it after any change to `memory.html`.
 
+## Plane Factory (standalone game)
+
+`plane.html` is a self-contained game that teaches the build-with-AI loop (describe → generate → check → refine) to a pre-reader, reached from the home screen's Planes world card (`#wPl`). Design doc: `docs/superpowers/specs/2026-08-17-plane-factory-design.md`.
+
+- **Concept:** the child "prompts" a robot engineer (🤖) by tapping picture tiles in 4 categories (`CATS`: color / wings / engine / sticker); `robotBuild` fills any UNCHOSEN category with a random guess and marks it (🎲 chip badge) — the deliberate AI lesson: vague instructions → surprises. No real AI calls (static site), no reading required, silent like Memory Match, no persistence.
+- **Two marked sections** like Chess/Memory: pure logic between `/* LOGIC_START */`…`/* LOGIC_END */` (`CATS`, `randomSpec`, `robotBuild`, `compareSpec`, `starsFor`, `flightStep`, `starHit` — the `plane.test.mjs` surface; RNG always injectable) and the DOM/UI between `/* UI_START */`…`/* UI_END */`.
+- **Modes:** **Customer Orders** (5 orders per game: a customer animal shows a random target plane; the child must pick the instructions that produce it; `compareSpec` marks per-part ✓/✗ chips; attempts → `starsFor` 3/2/1; after 2 misses the correct tiles glow via `R.hints`) and **Free Build** (sandbox, endless).
+- **Plane artwork:** one `planeSVG(spec)` builder draws a top-down SVG plane (fuselage/cockpit/wings/tailplane, propeller blur or twin jet pods, sticker glyphs) parameterised by the spec; used for targets, builds, and the flight sprite (rotated 90° via CSS in flight).
+- **Flight:** after a good build the plane flies (hold-to-climb, release-to-glide, collect 5 scrolling 🌟; no fail state). Physics is the pure `flightStep` with **dt from real elapsed time** (capped at 0.12s) so throttled timers can't cause slow motion; the loop runs on `requestAnimationFrame` with a `later()` fallback so the vm tests can drive it.
+- **Timer lifecycle:** same `later()`/`clearTimers()` pattern as Memory; `startOrders`/`startFree`/`toSetup` cancel pending build-reveal and flight-start timers, and `winGame()` guards on the workshop screen being active.
+- **Tests:** `node --test plane.test.mjs` (14 tests) covers catalogue integrity, deterministic `randomSpec`, `robotBuild` keep/guess behaviour, `compareSpec`, star thresholds, flight physics clamps, `starHit`, and UI control-flow (load, first-try 3 stars, two-miss hints, timer cancellation, win guard via a stubbed-DOM `vm` sandbox). vm objects have foreign prototypes — compare with the `plain()` JSON round-trip helper, not `deepStrictEqual`. Run it after any change to `plane.html`.
+
 ## Key Conventions
 
-- The curriculum app (Math / English / Thinking) stays in the single `index.html` file — no splitting *its* code into separate JS/CSS files; new curriculum features go in `index.html`. The exceptions are the standalone **games**: **Chess** (`chess.html` + `chess.test.mjs` + `pieces/` SVG artwork) and **Memory Match** (`memory.html` + `memory.test.mjs`), each self-contained (inline CSS+JS) and reached from its own world card (`#wX` → `chess.html`, `#wMem` → `memory.html`). Each game page has a "← Menu" link back to `index.html`.
+- The curriculum app (Math / English / Thinking) stays in the single `index.html` file — no splitting *its* code into separate JS/CSS files; new curriculum features go in `index.html`. The exceptions are the standalone **games**: **Chess** (`chess.html` + `chess.test.mjs` + `pieces/` SVG artwork), **Memory Match** (`memory.html` + `memory.test.mjs`) and **Plane Factory** (`plane.html` + `plane.test.mjs`), each self-contained (inline CSS+JS) and reached from its own world card (`#wX` → `chess.html`, `#wMem` → `memory.html`, `#wPl` → `plane.html`). Each game page has a "← Menu" link back to `index.html`.
 - Variable names are intentionally terse (single-letter state `S`, short function names) to keep file size small.
 - CSS classes use 2–3 letter abbreviations (`.scr` = screen, `.qv` = question visual, `.cb` = choice button, `.bl-bub` = blend bubble, `.wb-lt` = word-build letter tile, `.wk-cd` = week card, `.wk-stp` = week step button).
 - Colors always use CSS variables from `:root`.

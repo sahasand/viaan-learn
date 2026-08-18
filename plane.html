@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Plane Factory</title>
+<style>
+:root{
+  --ink:#1e3a5f; --paper:#fff;
+  --sky1:#dff2ff; --sky2:#eaf7ff; --sky3:#fef9e7;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;height:100%;}
+body{
+  min-height:100svh;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(180deg,#D6EFFF 0%,#EAF7FF 45%,#FFF4DC 100%);
+  display:flex;flex-direction:column;align-items:center;
+  overflow-x:hidden;
+}
+/* drifting clouds in the page background */
+body::before{
+  content:'';position:fixed;inset:-60px;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 300px 130px at 15% 16%, rgba(255,255,255,.75), transparent 70%),
+    radial-gradient(ellipse 260px 110px at 85% 28%, rgba(255,255,255,.65), transparent 70%),
+    radial-gradient(ellipse 320px 140px at 45% 70%, rgba(255,255,255,.5), transparent 70%);
+  animation:drift 20s ease-in-out infinite;
+}
+@keyframes drift{0%,100%{transform:translate(0,0)}33%{transform:translate(16px,-8px)}66%{transform:translate(-10px,6px)}}
+
+.scr{display:none;flex-direction:column;align-items:center;width:100%;max-width:520px;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(24px + env(safe-area-inset-bottom,0px));
+  position:relative;z-index:1;}
+.scr.on{display:flex;}
+
+/* ---------- shared header ---------- */
+.topline{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;}
+.menu-lnk,.back-btn{
+  font-size:14px;font-weight:800;text-decoration:none;color:#fff;background:#0ea5e9;border:none;cursor:pointer;
+  padding:9px 13px;border-radius:12px;box-shadow:0 4px 0 #0369a1;touch-action:manipulation;-webkit-appearance:none;
+  font-family:inherit;
+}
+.menu-lnk:active,.back-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #0369a1;}
+.title{font-weight:900;font-size:1.9rem;letter-spacing:.5px;margin:6px 0 0;
+  background:linear-gradient(90deg,#0ea5e9,#6366f1,#f59e0b);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.08));}
+.subtitle{font-weight:700;color:#527a9e;margin:2px 0 12px;font-size:.98rem;text-align:center;}
+
+/* ---------- setup ---------- */
+.hero-bot{font-size:4.6rem;line-height:1;margin:8px 0 2px;animation:bob 2.6s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.hero-say{font-weight:800;color:#33618f;background:var(--paper);padding:10px 16px;border-radius:16px;
+  box-shadow:0 4px 0 rgba(50,100,160,.15);position:relative;margin-bottom:18px;max-width:320px;text-align:center;}
+.hero-say::before{content:'';position:absolute;top:-8px;left:50%;transform:translateX(-50%);
+  border:9px solid transparent;border-bottom-color:var(--paper);border-top:none;}
+.mode-col{display:flex;flex-direction:column;gap:14px;width:100%;max-width:340px;}
+.mode{
+  display:flex;align-items:center;gap:14px;padding:16px 18px;border:none;border-radius:22px;cursor:pointer;
+  -webkit-appearance:none;touch-action:manipulation;background:var(--paper);text-align:left;font-family:inherit;
+  box-shadow:0 6px 0 rgba(50,100,160,.16), 0 12px 20px rgba(50,100,160,.12);
+  transition:transform .15s cubic-bezier(.34,1.56,.64,1);
+}
+.mode:active{transform:scale(.95) translateY(3px);}
+.mode-ic{font-size:2.6rem;line-height:1;}
+.mode-t{font-weight:900;font-size:1.15rem;color:#1e3a5f;}
+.mode-d{font-weight:700;font-size:.8rem;color:#7593b3;margin-top:2px;}
+
+/* ---------- workshop ---------- */
+.info-pill{font-weight:900;font-size:.95rem;color:#33618f;background:rgba(255,255,255,.8);
+  padding:8px 13px;border-radius:12px;box-shadow:0 2px 6px rgba(50,100,160,.15);}
+/* customer order card */
+.order-card{width:100%;display:flex;align-items:center;justify-content:center;gap:12px;
+  background:var(--paper);border-radius:20px;padding:10px 14px;margin:6px 0 4px;
+  box-shadow:0 5px 0 rgba(50,100,160,.14), 0 10px 18px rgba(50,100,160,.1);}
+.cust{font-size:2.7rem;line-height:1;animation:bob 2.2s ease-in-out infinite;}
+.order-txt{font-weight:800;font-size:.82rem;color:#527a9e;text-align:center;}
+.target-svg{width:104px;height:104px;}
+.target-svg svg{width:100%;height:100%;}
+/* robot + speech */
+.robot-row{width:100%;display:flex;align-items:center;gap:10px;margin:8px 0 2px;}
+.robot{font-size:2.6rem;line-height:1;transition:transform .2s;}
+.robot.busy{animation:botWork .5s ease infinite;}
+@keyframes botWork{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg) translateY(-3px)}}
+.speech{flex:1;font-weight:800;font-size:.92rem;color:#33618f;background:var(--paper);
+  padding:9px 13px;border-radius:14px;box-shadow:0 3px 0 rgba(50,100,160,.14);position:relative;min-height:1.3em;}
+.speech::before{content:'';position:absolute;left:-7px;top:50%;transform:translateY(-50%);
+  border:8px solid transparent;border-right-color:var(--paper);border-left:none;}
+/* built-plane stage */
+.stage{width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;
+  background:linear-gradient(180deg,rgba(255,255,255,.65),rgba(255,255,255,.35));
+  border-radius:22px;padding:8px 10px 10px;min-height:150px;justify-content:center;
+  box-shadow:inset 0 2px 8px rgba(50,100,160,.08);}
+.stage-hint{font-weight:800;color:#8fb3d4;font-size:.9rem;}
+#planeBox{width:158px;height:158px;display:none;}
+#planeBox.show{display:block;animation:planePop .5s cubic-bezier(.34,1.56,.64,1);}
+#planeBox svg{width:100%;height:100%;}
+@keyframes planePop{from{opacity:0;transform:scale(.5) rotate(-14deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+/* result chips */
+.chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;min-height:34px;}
+.chip{display:flex;align-items:center;gap:5px;font-weight:900;font-size:.95rem;color:#33618f;
+  background:var(--paper);padding:5px 10px;border-radius:12px;box-shadow:0 3px 0 rgba(50,100,160,.13);}
+.chip.ok{background:#d8f8e5;color:#0a7a52;box-shadow:0 3px 0 rgba(10,122,82,.25);}
+.chip.bad{background:#ffe1e1;color:#c22;box-shadow:0 3px 0 rgba(200,40,40,.22);animation:wig .4s ease 2;}
+.chip.guess{background:#fdf3d0;color:#976a06;box-shadow:0 3px 0 rgba(180,130,20,.25);}
+@keyframes wig{25%{transform:rotate(-4deg)}75%{transform:rotate(4deg)}}
+/* instruction strip = the "prompt" */
+.strip{width:100%;display:flex;align-items:center;gap:8px;margin-top:10px;
+  background:var(--paper);border-radius:16px;padding:8px 12px;box-shadow:0 4px 0 rgba(50,100,160,.14);}
+.strip-l{font-weight:900;font-size:.8rem;color:#8fb3d4;letter-spacing:.5px;text-transform:uppercase;}
+.slots{display:flex;gap:7px;flex:1;justify-content:flex-end;}
+.slot{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;
+  background:#eef6fd;box-shadow:inset 0 2px 4px rgba(50,100,160,.12);font-size:1.05rem;font-weight:900;color:#b6cfe4;}
+.slot.filled{background:#fff;box-shadow:0 0 0 2px #7dd3fc, inset 0 1px 2px rgba(50,100,160,.08);}
+/* tiles */
+#tiles{width:100%;margin-top:8px;display:flex;flex-direction:column;gap:7px;}
+.cat-row{display:flex;align-items:center;gap:8px;}
+.cat-h{width:64px;display:flex;flex-direction:column;align-items:center;gap:1px;flex:none;}
+.cat-ic{font-size:1.25rem;line-height:1;}
+.cat-lb{font-weight:900;font-size:.62rem;color:#7593b3;letter-spacing:.5px;text-transform:uppercase;}
+.opt-row{display:flex;gap:7px;flex:1;}
+.opt{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:none;cursor:pointer;
+  -webkit-appearance:none;touch-action:manipulation;padding:7px 2px 5px;border-radius:14px;background:var(--paper);
+  box-shadow:0 4px 0 rgba(50,100,160,.15);outline:3px solid transparent;outline-offset:1px;font-family:inherit;
+  transition:transform .14s cubic-bezier(.34,1.56,.64,1), outline-color .14s, box-shadow .14s;min-height:52px;
+}
+.opt:active{transform:scale(.92) translateY(3px);}
+.opt.sel{outline-color:#f59e0b;transform:translateY(-2px);
+  box-shadow:0 5px 0 rgba(245,158,11,.4), 0 9px 15px rgba(245,158,11,.25);}
+.opt.hint{animation:hintGlow .8s ease-in-out infinite;}
+@keyframes hintGlow{0%,100%{outline-color:rgba(245,158,11,.15)}50%{outline-color:#fbbf24}}
+.opt-lb{font-weight:800;font-size:.62rem;color:#7593b3;line-height:1;}
+.paint{width:24px;height:24px;border-radius:50%;
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.5), inset 0 -3px 5px rgba(0,0,0,.18);}
+.mini{width:38px;height:24px;}
+.glyph{font-size:1.25rem;line-height:1;}
+/* action buttons */
+.act-row{display:flex;gap:10px;margin-top:14px;justify-content:center;flex-wrap:wrap;}
+.bigbtn{
+  border:none;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;font-family:inherit;
+  font-weight:900;font-size:1.15rem;color:#fff;padding:14px 30px;border-radius:20px;letter-spacing:.4px;
+  background:linear-gradient(145deg,#38bdf8,#0284c7);box-shadow:0 6px 0 #075985, 0 12px 20px rgba(2,132,199,.35);
+}
+.bigbtn:active{transform:translateY(4px);box-shadow:0 2px 0 #075985;}
+.bigbtn.fly{background:linear-gradient(145deg,#fbbf24,#f59e0b);box-shadow:0 6px 0 #b45309, 0 12px 20px rgba(245,158,11,.4);
+  animation:bob 2s ease-in-out infinite;}
+.bigbtn.fly:active{animation:none;box-shadow:0 2px 0 #b45309;}
+.bigbtn[disabled]{opacity:.45;pointer-events:none;}
+
+/* ---------- flight ---------- */
+#fly{padding-left:0;padding-right:0;max-width:none;}
+#flyWrap{width:100%;max-width:560px;padding:0 12px;}
+#flySky{
+  position:relative;width:100%;height:min(64svh,540px);border-radius:24px;overflow:hidden;cursor:pointer;
+  background:linear-gradient(180deg,#7cc7f5 0%,#a8dcff 55%,#d8f2ff 100%);
+  box-shadow:0 8px 0 rgba(20,80,140,.18), 0 16px 30px rgba(20,80,140,.25);
+  touch-action:none;user-select:none;-webkit-user-select:none;
+}
+.cloud{position:absolute;background:rgba(255,255,255,.85);border-radius:50px;pointer-events:none;
+  animation:cloudMove linear infinite;}
+.cloud::before{content:'';position:absolute;left:20%;top:-55%;width:55%;height:120%;background:inherit;border-radius:50%;}
+@keyframes cloudMove{from{transform:translateX(110cqw);transform:translateX(600px)}to{transform:translateX(-160px)}}
+#flyGround{position:absolute;left:0;right:0;bottom:0;height:12%;
+  background:linear-gradient(180deg,#8ed86a,#5fb84a);}
+#flyPlane{position:absolute;left:10%;width:86px;height:86px;margin-top:-43px;pointer-events:none;z-index:3;
+  transition:transform .12s linear;}
+#flyPlane svg{width:100%;height:100%;transform:rotate(90deg);}
+.skystar{position:absolute;font-size:1.9rem;line-height:1;margin-left:-16px;margin-top:-16px;pointer-events:none;z-index:2;
+  filter:drop-shadow(0 2px 3px rgba(120,90,0,.35));}
+.skystar.got{animation:starGot .45s ease both;}
+@keyframes starGot{40%{transform:scale(1.7)}100%{transform:scale(0);opacity:0}}
+#flyCount{position:absolute;top:10px;left:12px;z-index:4;font-weight:900;font-size:1.05rem;color:#1e3a5f;
+  background:rgba(255,255,255,.85);padding:6px 12px;border-radius:12px;box-shadow:0 3px 8px rgba(20,80,140,.2);}
+#flyHint{position:absolute;bottom:16%;left:0;right:0;z-index:4;text-align:center;font-weight:900;color:#fff;
+  font-size:1.05rem;text-shadow:0 2px 4px rgba(20,80,140,.5);animation:bob 1.6s ease-in-out infinite;pointer-events:none;}
+#flyPanel{position:absolute;inset:0;z-index:5;display:none;align-items:center;justify-content:center;
+  background:rgba(30,58,95,.4);backdrop-filter:blur(3px);}
+#flyPanel.show{display:flex;}
+.fp-card{background:#fff;border-radius:22px;padding:22px 24px;text-align:center;max-width:280px;
+  animation:cardPop .4s cubic-bezier(.34,1.56,.64,1) both;box-shadow:0 14px 40px rgba(0,0,0,.3);}
+.fp-msg{font-weight:900;font-size:1.2rem;color:#0284c7;margin-bottom:4px;}
+.fp-sub{font-weight:700;color:#7593b3;font-size:.9rem;margin-bottom:14px;}
+
+/* ---------- win overlay + confetti ---------- */
+#win{position:fixed;inset:0;z-index:5;display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:14px;padding:24px;background:rgba(30,58,95,.55);backdrop-filter:blur(4px);text-align:center;}
+#win.show{display:flex;animation:fade .3s ease;}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.win-card{background:#fff;border-radius:26px;padding:28px 26px;max-width:340px;width:100%;
+  box-shadow:0 16px 50px rgba(0,0,0,.3);animation:cardPop .42s cubic-bezier(.34,1.56,.64,1) both;}
+@keyframes cardPop{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
+.win-emoji{font-size:4.2rem;animation:bob 1.6s ease-in-out infinite;}
+.win-ttl{font-weight:900;font-size:1.6rem;margin:6px 0 2px;color:#0284c7;}
+.win-msg{font-weight:700;color:#527a9e;margin-bottom:16px;font-size:1.02rem;}
+.win-msg b{color:#b45309;font-size:1.3rem;}
+.win-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.win-btns button{border:none;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;font-family:inherit;
+  font-weight:900;font-size:1rem;color:#fff;padding:13px 20px;border-radius:16px;}
+#winAgain{background:linear-gradient(145deg,#fbbf24,#f59e0b);box-shadow:0 5px 0 #b45309;}
+#winMenu{background:linear-gradient(145deg,#38bdf8,#0284c7);box-shadow:0 5px 0 #075985;}
+.win-btns button:active{transform:translateY(3px);}
+#confetti{position:fixed;inset:0;z-index:6;pointer-events:none;overflow:hidden;}
+#confetti span{position:absolute;top:-14px;width:11px;height:14px;border-radius:2px;animation:fall linear forwards;}
+@keyframes fall{to{transform:translateY(112vh) rotate(720deg);}}
+</style>
+</head>
+<body>
+
+  <!-- SETUP -->
+  <div class="scr on" id="setup">
+    <div class="topline">
+      <a class="menu-lnk" href="index.html">&#8592; Menu</a>
+      <span></span>
+    </div>
+    <div class="title">Plane Factory</div>
+    <div class="subtitle">Tell the robot what to build!</div>
+    <div class="hero-bot">🤖</div>
+    <div class="hero-say">Beep boop! I build planes.<br>Give me instructions with the picture tiles!</div>
+    <div class="mode-col">
+      <button class="mode" id="modeOrders">
+        <span class="mode-ic">📋</span>
+        <span><span class="mode-t">Customer Orders</span><br>
+        <span class="mode-d">Build the exact plane a customer wants</span></span>
+      </button>
+      <button class="mode" id="modeFree">
+        <span class="mode-ic">🎨</span>
+        <span><span class="mode-t">Free Build</span><br>
+        <span class="mode-d">Invent any plane and fly it</span></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- WORKSHOP -->
+  <div class="scr" id="shop">
+    <div class="topline">
+      <button class="back-btn" id="sBack">&#8592;</button>
+      <span class="info-pill" id="sInfo"></span>
+      <span class="info-pill" id="sStars">⭐ 0</span>
+    </div>
+    <div class="order-card" id="orderCard">
+      <span class="cust" id="custEmoji">🐻</span>
+      <span class="order-txt" id="orderTxt">wants<br>this plane!</span>
+      <span class="target-svg" id="targetSvg"></span>
+    </div>
+    <div class="robot-row">
+      <span class="robot" id="robot">🤖</span>
+      <span class="speech" id="speech"></span>
+    </div>
+    <div class="stage" id="stage">
+      <span class="stage-hint" id="stageHint">Your plane will appear here</span>
+      <span id="planeBox"></span>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div class="strip">
+      <span class="strip-l">My plan</span>
+      <span class="slots" id="slots"></span>
+    </div>
+    <div id="tiles"></div>
+    <div class="act-row">
+      <button class="bigbtn" id="buildBtn">🤖 Build it!</button>
+      <button class="bigbtn fly" id="flyBtn" style="display:none">✈️ Fly!</button>
+    </div>
+  </div>
+
+  <!-- FLIGHT -->
+  <div class="scr" id="fly">
+    <div id="flyWrap">
+      <div id="flySky">
+        <span class="cloud" style="width:90px;height:26px;top:16%;animation-duration:11s;"></span>
+        <span class="cloud" style="width:64px;height:20px;top:42%;animation-duration:8s;animation-delay:-4s;"></span>
+        <span class="cloud" style="width:110px;height:30px;top:66%;animation-duration:14s;animation-delay:-9s;"></span>
+        <div id="flyGround"></div>
+        <div id="flyPlane"></div>
+        <div id="flyStarBox"></div>
+        <span id="flyCount">🌟 0</span>
+        <span id="flyHint">Press and hold to fly up!</span>
+        <div id="flyPanel"><div class="fp-card">
+          <div class="fp-msg" id="fpMsg"></div>
+          <div class="fp-sub" id="fpSub"></div>
+          <button class="bigbtn" id="fpBtn">Next</button>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WIN -->
+  <div id="win">
+    <div class="win-card">
+      <div class="win-emoji">🏆</div>
+      <div class="win-ttl">All planes delivered!</div>
+      <div class="win-msg" id="winMsg"></div>
+      <div class="win-btns">
+        <button id="winAgain">Play again</button>
+        <button id="winMenu">Workshop menu</button>
+      </div>
+    </div>
+  </div>
+  <div id="confetti"></div>
+
+  <script>
+/* LOGIC_START */
+/* The parts catalogue: the child's whole "prompt vocabulary". Every option a
+   tile can say. Colors carry main + dark paint used by the SVG builder. */
+var CATS = [
+  { id:'color',  label:'Color',   icon:'🎨', opts:[
+      { id:'red',    label:'Red',    sw:'#EF4444', dk:'#B91C1C' },
+      { id:'blue',   label:'Blue',   sw:'#3B82F6', dk:'#1D4ED8' },
+      { id:'yellow', label:'Yellow', sw:'#FACC15', dk:'#CA8A04' },
+      { id:'green',  label:'Green',  sw:'#22C55E', dk:'#15803D' } ] },
+  { id:'wings',  label:'Wings',   icon:'🪁', opts:[
+      { id:'big',   label:'Big' },
+      { id:'small', label:'Small' } ] },
+  { id:'engine', label:'Engine',  icon:'⚙️', opts:[
+      { id:'prop', label:'Propeller' },
+      { id:'jet',  label:'Jets' } ] },
+  { id:'decal',  label:'Sticker', icon:'✨', opts:[
+      { id:'star',  label:'Stars',  glyph:'⭐' },
+      { id:'heart', label:'Hearts', glyph:'❤️' },
+      { id:'none',  label:'Plain',  glyph:'—' } ] }
+];
+
+var NUM_ORDERS = 5;
+var CUSTOMERS = ['🐻','🐰','🦊','🐼','🐸','🦁','🐨','🐷'];
+
+function catById(id){
+  for (var i=0;i<CATS.length;i++) if (CATS[i].id===id) return CATS[i];
+  return null;
+}
+function optById(catId, optId){
+  var c = catById(catId);
+  if (!c) return null;
+  for (var i=0;i<c.opts.length;i++) if (c.opts[i].id===optId) return c.opts[i];
+  return null;
+}
+
+// A full random plane spec — used for customer orders and robot guesses.
+function randomSpec(rng){
+  rng = rng || Math.random;
+  var s = {};
+  CATS.forEach(function(c){ s[c.id] = c.opts[Math.floor(rng()*c.opts.length)].id; });
+  return s;
+}
+
+/* The "AI" moment: the robot fills every instruction the child did NOT give
+   with its own guess, and reports which parts were guessed. */
+function robotBuild(choices, rng){
+  rng = rng || Math.random;
+  var spec = {}, guessed = {};
+  CATS.forEach(function(c){
+    if (choices && choices[c.id]){ spec[c.id] = choices[c.id]; }
+    else { spec[c.id] = c.opts[Math.floor(rng()*c.opts.length)].id; guessed[c.id] = true; }
+  });
+  return { spec:spec, guessed:guessed };
+}
+
+function compareSpec(target, spec){
+  var match = {}, wrong = [];
+  CATS.forEach(function(c){
+    match[c.id] = target[c.id] === spec[c.id];
+    if (!match[c.id]) wrong.push(c.id);
+  });
+  return { ok: wrong.length===0, wrong:wrong, match:match };
+}
+
+// Build reward per order: nail it first try for 3 stars.
+function starsFor(attempts){ if (attempts<=1) return 3; if (attempts===2) return 2; return 1; }
+
+/* Flight physics: y is altitude 0 (top) .. 1 (ground), one pure tick.
+   Holding climbs, releasing glides down; velocity and altitude are clamped. */
+var FLY_G = 1.6, FLY_CLIMB = 3.4, FLY_VMAX = 0.85;
+function flightStep(st, hold, dt){
+  var vy = st.vy + (hold ? -FLY_CLIMB : FLY_G) * dt;
+  if (vy >  FLY_VMAX) vy =  FLY_VMAX;
+  if (vy < -FLY_VMAX) vy = -FLY_VMAX;
+  var y = st.y + vy * dt;
+  if (y < 0){ y = 0; vy = 0; }
+  if (y > 1){ y = 1; vy = 0; }
+  return { y:y, vy:vy };
+}
+function starHit(planeY, starY){ return Math.abs(planeY - starY) < 0.11; }
+/* LOGIC_END */
+/* UI_START */
+var R = { mode:null, orderN:0, attempts:0, target:null, cust:'🐻',
+          choices:{}, built:null, guessed:null, marks:null,
+          buildStars:0, skyStars:0, phase:'pick', hints:null };
+var F = null;                 // flight state while flying
+var timers = [];              // pending gameplay timeouts (cancellable)
+
+function $(id){ return document.getElementById(id); }
+
+// setTimeout that auto-deregisters on fire and can be bulk-cancelled.
+function later(fn, ms){
+  var id = setTimeout(function(){
+    var k = timers.indexOf(id); if (k>=0) timers.splice(k,1);
+    fn();
+  }, ms);
+  timers.push(id);
+  return id;
+}
+function clearTimers(){ for (var i=0;i<timers.length;i++) clearTimeout(timers[i]); timers=[]; }
+
+/* ---------- plane artwork (top-down view, nose up) ---------- */
+function planeSVG(spec){
+  var col = optById('color', spec.color) || CATS[0].opts[0];
+  var main = col.sw, dark = col.dk;
+  var big = spec.wings === 'big';
+  var s = '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">';
+  // wings (behind fuselage)
+  if (big){
+    s += '<polygon points="96,88 12,120 16,138 96,118" fill="'+dark+'"/>'
+       + '<polygon points="104,88 188,120 184,138 104,118" fill="'+dark+'"/>';
+  } else {
+    s += '<polygon points="96,94 46,116 49,130 96,116" fill="'+dark+'"/>'
+       + '<polygon points="104,94 154,116 151,130 104,116" fill="'+dark+'"/>';
+  }
+  // tailplane
+  s += '<polygon points="94,152 62,170 64,180 94,166" fill="'+dark+'"/>'
+     + '<polygon points="106,152 138,170 136,180 106,166" fill="'+dark+'"/>';
+  // fuselage
+  s += '<path d="M100,18 C114,30 116,52 116,86 L116,150 C116,166 110,176 100,180 '
+     + 'C90,176 84,166 84,150 L84,86 C84,52 86,30 100,18 Z" fill="'+main+'"/>'
+     + '<path d="M100,18 C107,24 111,36 113,52 L87,52 C89,36 93,24 100,18 Z" fill="rgba(255,255,255,.35)"/>';
+  // cockpit
+  s += '<ellipse cx="100" cy="66" rx="9" ry="13" fill="#DFF3FF" stroke="#fff" stroke-width="2.5"/>';
+  // engine
+  if (spec.engine === 'prop'){
+    s += '<ellipse cx="100" cy="17" rx="30" ry="4.5" fill="#94A3B8" opacity=".75"/>'
+       + '<circle cx="100" cy="17" r="6" fill="#475569"/>';
+  } else {
+    var px = big ? 46 : 56;
+    s += '<rect x="'+px+'" y="100" width="15" height="32" rx="7" fill="#64748B"/>'
+       + '<rect x="'+(200-px-15)+'" y="100" width="15" height="32" rx="7" fill="#64748B"/>'
+       + '<ellipse cx="'+(px+7.5)+'" cy="101" rx="6" ry="3" fill="#1E293B"/>'
+       + '<ellipse cx="'+(200-px-7.5)+'" cy="101" rx="6" ry="3" fill="#1E293B"/>';
+  }
+  // stickers on the fuselage
+  if (spec.decal && spec.decal !== 'none'){
+    var g = optById('decal', spec.decal).glyph;
+    s += '<text x="100" y="104" font-size="15" text-anchor="middle">'+g+'</text>'
+       + '<text x="100" y="126" font-size="15" text-anchor="middle">'+g+'</text>';
+  }
+  // tail fin tip
+  s += '<ellipse cx="100" cy="172" rx="6" ry="9" fill="'+dark+'"/>';
+  return s + '</svg>';
+}
+
+/* ---------- workshop rendering ---------- */
+function optIconHTML(cat, o){
+  if (cat.id==='color') return '<span class="paint" style="background:'+o.sw+'"></span>';
+  if (cat.id==='wings'){
+    var w = o.id==='big' ? 34 : 16, x = (38-w)/2;
+    return '<svg class="mini" viewBox="0 0 38 24"><rect x="'+x+'" y="9" width="'+w+'" height="7" rx="3.5" fill="#64748B"/>'
+         + '<rect x="16" y="2" width="6" height="20" rx="3" fill="#94A3B8"/></svg>';
+  }
+  if (cat.id==='engine'){
+    if (o.id==='prop') return '<svg class="mini" viewBox="0 0 38 24"><circle cx="19" cy="12" r="4" fill="#475569"/>'
+         + '<ellipse cx="19" cy="12" rx="16" ry="2.6" fill="#94A3B8"/><ellipse cx="19" cy="12" rx="2.6" ry="10" fill="#94A3B8"/></svg>';
+    return '<svg class="mini" viewBox="0 0 38 24"><rect x="7" y="6" width="10" height="14" rx="5" fill="#64748B"/>'
+         + '<rect x="21" y="6" width="10" height="14" rx="5" fill="#64748B"/>'
+         + '<ellipse cx="12" cy="7" rx="4" ry="2" fill="#1E293B"/><ellipse cx="26" cy="7" rx="4" ry="2" fill="#1E293B"/></svg>';
+  }
+  return '<span class="glyph">'+o.glyph+'</span>';
+}
+
+function buildTiles(){
+  var html = '';
+  CATS.forEach(function(c){
+    html += '<div class="cat-row"><div class="cat-h"><span class="cat-ic">'+c.icon+'</span>'
+          + '<span class="cat-lb">'+c.label+'</span></div><div class="opt-row">';
+    c.opts.forEach(function(o){
+      var sel = R.choices[c.id]===o.id ? ' sel' : '';
+      var hint = (R.hints && R.hints[c.id]===o.id) ? ' hint' : '';
+      html += '<button class="opt'+sel+hint+'" data-cat="'+c.id+'" data-opt="'+o.id+'">'
+            + optIconHTML(c,o) + '<span class="opt-lb">'+o.label+'</span></button>';
+    });
+    html += '</div></div>';
+  });
+  $('tiles').innerHTML = html;
+  $('tiles').querySelectorAll('.opt').forEach(function(b){
+    b.addEventListener('click', function(){
+      onTileTap(b.getAttribute('data-cat'), b.getAttribute('data-opt'));
+    });
+  });
+  renderSlots();
+}
+
+function renderSlots(){
+  var html = '';
+  CATS.forEach(function(c){
+    var chosen = R.choices[c.id];
+    if (chosen){
+      var o = optById(c.id, chosen);
+      html += '<span class="slot filled">'+(c.id==='color'
+        ? '<span class="paint" style="width:20px;height:20px;background:'+o.sw+'"></span>'
+        : (c.id==='decal' ? '<span style="font-size:1rem">'+ (o.glyph==='—' ? '▫️' : o.glyph) +'</span>'
+                          : '<span style="font-size:.62rem;font-weight:900;color:#33618f">'+o.label+'</span>'))
+        + '</span>';
+    } else {
+      html += '<span class="slot">?</span>';
+    }
+  });
+  $('slots').innerHTML = html;
+}
+
+function renderTop(){
+  $('sInfo').textContent = R.mode==='orders' ? ('Order '+R.orderN+' of '+NUM_ORDERS) : 'Free Build';
+  $('sStars').textContent = '⭐ ' + (R.buildStars + R.skyStars);
+}
+
+function say(t){ $('speech').textContent = t; }
+
+function renderChips(){
+  var html = '';
+  if (R.built){
+    CATS.forEach(function(c){
+      var cls = '', mark = '';
+      if (R.marks){
+        cls = R.marks.match[c.id] ? 'ok' : 'bad';
+        mark = R.marks.match[c.id] ? '✓' : '✗';
+      }
+      if (R.guessed && R.guessed[c.id]){ cls = cls==='bad' ? 'bad' : 'guess'; mark = '🎲' + (mark==='✓' ? '✓' : mark); }
+      html += '<span class="chip '+cls+'">'+c.icon+' '+mark+'</span>';
+    });
+  }
+  $('chips').innerHTML = html;
+}
+
+/* ---------- screens & modes ---------- */
+function showScreen(id){
+  ['setup','shop','fly'].forEach(function(s){ $(s).classList.toggle('on', s===id); });
+}
+
+function startOrders(){
+  clearTimers();
+  R.mode='orders'; R.orderN=0; R.buildStars=0; R.skyStars=0;
+  $('win').classList.remove('show'); $('confetti').innerHTML='';
+  nextOrder();
+  showScreen('shop');
+}
+
+function startFree(){
+  clearTimers();
+  R.mode='free'; R.orderN=0; R.buildStars=0; R.skyStars=0;
+  R.target=null; R.choices={}; R.built=null; R.guessed=null; R.marks=null; R.hints=null;
+  R.attempts=0; R.phase='pick';
+  $('win').classList.remove('show'); $('confetti').innerHTML='';
+  $('orderCard').style.display='none';
+  resetStage('Tap tiles, then Build. Skip some and I will guess!');
+  showScreen('shop');
+}
+
+function nextOrder(){
+  R.orderN++;
+  R.attempts=0; R.choices={}; R.built=null; R.guessed=null; R.marks=null; R.hints=null;
+  R.phase='pick';
+  R.target = randomSpec();
+  R.cust = CUSTOMERS[Math.floor(Math.random()*CUSTOMERS.length)];
+  $('orderCard').style.display='flex';
+  $('custEmoji').textContent = R.cust;
+  $('targetSvg').innerHTML = planeSVG(R.target);
+  resetStage('Look at the order. What should I build?');
+}
+
+function resetStage(msg){
+  $('planeBox').className=''; $('planeBox').innerHTML='';
+  $('stageHint').style.display='';
+  $('chips').innerHTML='';
+  $('flyBtn').style.display='none';
+  $('buildBtn').style.display='';
+  say(msg);
+  buildTiles();
+  renderTop();
+}
+
+function toSetup(){
+  clearTimers();
+  F = null;
+  $('win').classList.remove('show'); $('confetti').innerHTML='';
+  showScreen('setup');
+}
+
+function onTileTap(catId, optId){
+  if (R.phase==='flying') return;
+  R.choices[catId] = (R.choices[catId]===optId) ? null : optId;
+  if (!R.choices[catId]) delete R.choices[catId];
+  buildTiles();
+}
+
+/* ---------- the build ---------- */
+function onBuild(){
+  if (R.phase==='flying') return;
+  var out = robotBuild(R.choices);
+  R.built = out.spec; R.guessed = out.guessed;
+  var gN = Object.keys(out.guessed).length;
+
+  if (R.mode==='orders'){
+    R.attempts++;
+    R.marks = compareSpec(R.target, R.built);
+  } else {
+    R.marks = null;
+  }
+
+  // robot "works", then the plane pops in
+  $('robot').classList.add('busy');
+  say('Beep boop… building!');
+  $('planeBox').className=''; $('planeBox').innerHTML='';
+  $('chips').innerHTML='';
+  later(function(){
+    $('robot').classList.remove('busy');
+    $('stageHint').style.display='none';
+    $('planeBox').innerHTML = planeSVG(R.built);
+    $('planeBox').className='show';
+    renderChips();
+    afterBuildSpeech(gN);
+  }, 650);
+}
+
+function afterBuildSpeech(guessCount){
+  if (R.mode==='free'){
+    R.phase='built';
+    say(guessCount>0 ? 'You skipped '+guessCount+', so I guessed! Like it?' : 'Just what you asked for!');
+    $('flyBtn').style.display='';
+    return;
+  }
+  if (R.marks.ok){
+    R.phase='built';
+    var st = starsFor(R.attempts);
+    R.buildStars += st;
+    R.hints = null;
+    renderTop();
+    say('Perfect! '+R.cust+' loves it! You earned '+st+' star'+(st>1?'s':'')+'!');
+    $('buildBtn').style.display='none';
+    $('flyBtn').style.display='';
+  } else {
+    R.phase='pick';
+    var wrongCat = catById(R.marks.wrong[0]);
+    var pre = guessCount>0 ? 'I had to guess some parts! ' : 'Hmm, not quite. ';
+    say(pre + 'Check the ' + wrongCat.label + '!');
+    if (R.attempts>=2){
+      R.hints = {};
+      R.marks.wrong.forEach(function(cid){ R.hints[cid] = R.target[cid]; });
+      buildTiles();     // re-render with glowing correct tiles
+    }
+  }
+}
+
+/* ---------- flight ---------- */
+var FLY_DT = 0.033, FLY_SPEED = 0.2, FLY_PLANE_X = 0.16;
+
+function startFlight(){
+  if (!R.built) return;
+  R.phase='flying';
+  var stars = [];
+  for (var i=0;i<5;i++){
+    stars.push({ x: 1.15 + i*0.42, y: 0.12 + Math.random()*0.6, got:false });
+  }
+  F = { y:0.45, vy:0, hold:false, stars:stars, collected:0, running:true, last:0 };
+  $('flyPlane').innerHTML = planeSVG(R.built);
+  $('flyCount').textContent = '🌟 0';
+  $('flyHint').style.display='';
+  $('flyPanel').classList.remove('show');
+  var box = $('flyStarBox'); box.innerHTML='';
+  stars.forEach(function(st,i){
+    var el=document.createElement('span');
+    el.className='skystar'; el.textContent='🌟'; el.id='sky'+i;
+    box.appendChild(el);
+  });
+  showScreen('fly');
+  paintFlight();
+  later(flightTick, 500);   // small breath before physics start
+}
+
+function flightTick(){
+  if (!F || !F.running) return;
+  // real elapsed time (capped), so throttled timers don't turn into slow motion
+  var now = Date.now();
+  var dt = F.last ? Math.min((now - F.last)/1000, 0.12) : FLY_DT;
+  F.last = now;
+  var next = flightStep(F, F.hold, dt);
+  F.y = next.y; F.vy = next.vy;
+  var allGone = true;
+  F.stars.forEach(function(st,i){
+    if (!st.got){
+      st.x -= FLY_SPEED * dt;
+      if (st.x > -0.1) allGone = false;
+      if (Math.abs(st.x - FLY_PLANE_X) < 0.05 && starHit(F.y, st.y)){
+        st.got = true;
+        F.collected++;
+        $('flyCount').textContent = '🌟 ' + F.collected;
+        var el = $('sky'+i); if (el) el.classList.add('got');
+      }
+    }
+  });
+  if (F.hold) $('flyHint').style.display='none';
+  paintFlight();
+  if (allGone){ endFlight(); return; }
+  // rAF for smooth, non-throttled animation; later() fallback keeps it testable
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(flightTick);
+  else later(flightTick, 33);
+}
+
+function paintFlight(){
+  if (!F) return;
+  $('flyPlane').style.top = (6 + F.y*76) + '%';
+  $('flyPlane').style.transform = 'rotate(' + (F.vy*28) + 'deg)';
+  F.stars.forEach(function(st,i){
+    var el = $('sky'+i); if (!el) return;
+    el.style.left = (st.x*100) + '%';
+    el.style.top = (6 + st.y*76) + '%';
+  });
+}
+
+function endFlight(){
+  if (!F) return;
+  F.running = false;
+  R.skyStars += F.collected;
+  renderTop();
+  $('fpMsg').textContent = F.collected>=5 ? 'WOW! All 5 sky stars!' : ('You caught '+F.collected+' sky star'+(F.collected===1?'':'s')+'!');
+  var last = R.mode==='orders' && R.orderN>=NUM_ORDERS;
+  $('fpSub').textContent = R.mode==='orders' ? (last ? 'That was the last delivery!' : 'Delivered to '+R.cust+'!') : 'Great flying!';
+  $('fpBtn').textContent = R.mode==='orders' ? (last ? 'See my prize! 🏆' : 'Next order ▶') : 'Build another ▶';
+  $('flyPanel').classList.add('show');
+}
+
+function nextAfterFlight(){
+  F = null;
+  if (R.mode==='orders'){
+    if (R.orderN>=NUM_ORDERS){ showScreen('shop'); winGame(); return; }
+    nextOrder();
+    showScreen('shop');
+  } else {
+    R.phase='pick';
+    resetStage('What shall we build next?');
+    showScreen('shop');
+  }
+}
+
+function winGame(){
+  if (!$('shop').classList.contains('on')) return;   // stale callback — ignore
+  $('winMsg').innerHTML = 'You told the robot just what to build!<br>'
+    + '⭐ Build stars: <b>'+R.buildStars+'</b> &nbsp; 🌟 Sky stars: <b>'+R.skyStars+'</b>';
+  $('win').classList.add('show');
+  confetti();
+}
+
+function confetti(){
+  var c=$('confetti'); c.innerHTML='';
+  var cols=['#EF4444','#F97316','#FACC15','#22C55E','#3B82F6','#A855F7','#EC4899'];
+  for (var i=0;i<70;i++){
+    var s=document.createElement('span');
+    s.style.left = (Math.random()*100)+'%';
+    s.style.background = cols[i % cols.length];
+    s.style.animationDelay = (Math.random()*0.6)+'s';
+    s.style.animationDuration = (1.6 + Math.random()*1.5)+'s';
+    c.appendChild(s);
+  }
+  later(function(){ c.innerHTML=''; }, 4200);
+}
+
+/* ---------- wiring ---------- */
+$('modeOrders').addEventListener('click', startOrders);
+$('modeFree').addEventListener('click', startFree);
+$('sBack').addEventListener('click', toSetup);
+$('buildBtn').addEventListener('click', onBuild);
+$('flyBtn').addEventListener('click', startFlight);
+$('fpBtn').addEventListener('click', nextAfterFlight);
+$('winAgain').addEventListener('click', startOrders);
+$('winMenu').addEventListener('click', toSetup);
+var skyEl = $('flySky');
+skyEl.addEventListener('pointerdown', function(e){ if(F) F.hold=true; e.preventDefault(); });
+skyEl.addEventListener('pointerup',   function(){ if(F) F.hold=false; });
+skyEl.addEventListener('pointercancel', function(){ if(F) F.hold=false; });
+skyEl.addEventListener('pointerleave',  function(){ if(F) F.hold=false; });
+showScreen('setup');
+/* UI_END */
+  </script>
+</body>
+</html>
