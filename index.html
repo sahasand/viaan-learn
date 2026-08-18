@@ -2020,6 +2020,87 @@
       font-size: 1.05rem;
       min-height: 1.2em
     }
+
+    .adv-btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 6px;
+      padding: 14px 32px 16px 24px;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-appearance: none;
+      font-family: var(--fn);
+      text-align: left;
+      color: white;
+      background: linear-gradient(135deg, var(--coral) 0%, var(--pink) 55%, var(--purple) 100%);
+      box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.35), 0 8px 0 var(--pink-sh), 0 15px 30px rgba(236, 72, 153, 0.45);
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .adv-btn:active {
+      transform: scale(0.94) translateY(5px);
+      box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25), 0 2px 0 var(--pink-sh), 0 5px 10px rgba(236, 72, 153, 0.3)
+    }
+
+    @media(hover:hover) {
+      .adv-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.35), 0 11px 0 var(--pink-sh), 0 20px 36px rgba(236, 72, 153, 0.5)
+      }
+    }
+
+    .adv-b-ico {
+      font-size: 2.5rem;
+      animation: advBob 2.2s ease-in-out infinite
+    }
+
+    @keyframes advBob {
+
+      0%,
+      100% {
+        transform: translateY(0)
+      }
+
+      50% {
+        transform: translateY(-4px)
+      }
+    }
+
+    .adv-b-tx {
+      display: flex;
+      flex-direction: column;
+      gap: 2px
+    }
+
+    .adv-b-lbl {
+      font-family: var(--fn-d);
+      font-weight: 800;
+      font-size: 1.65rem;
+      line-height: 1
+    }
+
+    .adv-b-sub {
+      font-size: 0.85rem;
+      font-weight: 700;
+      opacity: 0.92
+    }
+
+    .scr.vis .adv-btn {
+      animation: fadeUp 0.4s ease both;
+      animation-delay: 0.25s
+    }
+
+    .dc-adv {
+      font-family: var(--fn-d);
+      font-weight: 800;
+      font-size: 1.05rem;
+      letter-spacing: 3px;
+      color: var(--gray-dk);
+      min-height: 1.2em
+    }
   </style>
 </head>
 
@@ -2033,6 +2114,13 @@
     <div class="h-pre">LEARNING ADVENTURE</div>
     <div class="h-name">Viaan</div>
     <div class="h-sub">Pick your adventure!</div>
+    <button class="adv-btn" id="advB">
+      <span class="adv-b-ico">🌈</span>
+      <span class="adv-b-tx">
+        <span class="adv-b-lbl">Play!</span>
+        <span class="adv-b-sub" id="advSub"></span>
+      </span>
+    </button>
     <div class="worlds">
       <button class="w-card math" id="wM">
         <div class="wc-ico">🚀</div>
@@ -2096,6 +2184,7 @@
     <div class="dc-sc" id="dcSc"></div>
     <div class="dc-streak" id="dcStreak"></div>
     <div class="dc-m" id="dcM"></div>
+    <div class="dc-adv" id="dcAdv"></div>
     <div class="dc-b">
       <button class="btn btn-sm btn-c" id="dcR">Play Again</button>
       <button class="btn btn-sm btn-t" id="dcL">More Levels</button>
@@ -3906,6 +3995,7 @@
       function show(id) {
         clearTimers();
         cancelAudio();
+        if (id === 'home') updateAdvBtn();
         document.querySelectorAll('.scr').forEach(function (s) { s.classList.remove('vis'); s.classList.remove('on') });
         var el = $(id);
         el.classList.add('on');
@@ -3958,18 +4048,76 @@
 
 
       // Navigation
-      $('wM').addEventListener('click', function () { S.world = 'math'; S.week = 1; showLvls() });
-      $('wE').addEventListener('click', function () { S.world = 'eng'; S.week = 1; showLvls() });
-      $('wC').addEventListener('click', function () { S.world = 'crit'; S.week = 1; showLvls() });
+      $('wM').addEventListener('click', function () { S.adv = null; S.world = 'math'; S.week = 1; showLvls() });
+      $('wE').addEventListener('click', function () { S.adv = null; S.world = 'eng'; S.week = 1; showLvls() });
+      $('wC').addEventListener('click', function () { S.adv = null; S.world = 'crit'; S.week = 1; showLvls() });
       $('wX').addEventListener('click', function () { location.href = 'chess.html' });
       $('wMem').addEventListener('click', function () { location.href = 'memory.html' });
       $('wPl').addEventListener('click', function () { location.href = 'plane.html' });
       $('lBk').addEventListener('click', function () { show('home') });
-      $('gBk').addEventListener('click', function () { showLvls() });
+      $('gBk').addEventListener('click', function () { if (S.adv) { S.adv = null; show('home') } else showLvls() });
       $('dcR').addEventListener('click', function () { startLvl(S.lvl) });
-      $('dcL').addEventListener('click', function () { showLvls() });
+      $('dcL').addEventListener('click', function () { if (S.adv) advNext(); else showLvls() });
+      $('advB').addEventListener('click', function () { advNext() });
 
       function data() { return S.world === 'math' ? MATH : S.world === 'crit' ? CRIT : ENG }
+
+      /* ============================================
+         DAILY ADVENTURE — one Play! button serves
+         today's mix: Eng, Math, Eng, Thinking, then
+         a game as dessert. Plan persists in
+         S.best.__adv (non-level key, ignored by the
+         star totals which iterate the level arrays).
+         ============================================ */
+      var ADV_GAMES = ['memory', 'plane', 'chess'];
+      var ADV_GICO = { memory: '🃏', plane: '✈️', chess: '♞' };
+      function dayStr() { var t = new Date(); return t.getFullYear() + '-' + (t.getMonth() + 1) + '-' + t.getDate() }
+      function dayNum() { return Math.floor(Date.now() / 864e5) }
+      function worldArr(w) { return w === 'math' ? MATH : w === 'crit' ? CRIT : ENG }
+      // Next level worth playing: first unplayed, else first not-yet-perfect,
+      // else rotate by day so a finished curriculum stays fresh.
+      function frontier(arr, skipId) {
+        var first = -1, redo = -1;
+        for (var i = 0; i < arr.length; i++) {
+          if (arr[i].id === skipId) continue;
+          var b = S.best[arr[i].id] || 0;
+          if (!b) { if (first < 0) first = i }
+          else if (b < arr[i].q.length * 2 * 0.9 && redo < 0) redo = i;
+        }
+        return first >= 0 ? first : (redo >= 0 ? redo : dayNum() % arr.length);
+      }
+      function advPlan() {
+        var e1 = ENG[frontier(ENG)], e2 = ENG[frontier(ENG, e1.id)];
+        return {
+          d: dayStr(), n: 0, g: ADV_GAMES[dayNum() % ADV_GAMES.length],
+          s: [{ w: 'eng', id: e1.id }, { w: 'math', id: MATH[frontier(MATH)].id },
+          { w: 'eng', id: e2.id }, { w: 'crit', id: CRIT[frontier(CRIT)].id }]
+        };
+      }
+      function advToday() {
+        var A = S.best.__adv;
+        var ok = A && A.d === dayStr() && A.s && A.s.length === 4 && A.s.every(function (st) {
+          return worldArr(st.w).some(function (lv) { return lv.id === st.id });
+        });
+        if (!ok) { A = advPlan(); S.best.__adv = A; save() }
+        return A;
+      }
+      function advNext() {
+        var A = advToday();
+        if (A.n >= 4) { location.href = A.g + '.html'; return }
+        var st = A.s[A.n], arr = worldArr(st.w), idx = 0;
+        arr.forEach(function (lv, i) { if (lv.id === st.id) idx = i });
+        S.adv = { step: A.n };
+        S.world = st.w; S.week = arr[idx].w || 1;
+        startLvl(idx);
+      }
+      function updateAdvBtn() {
+        var A = S.best.__adv, fresh = !(A && A.d === dayStr());
+        var n = fresh ? 0 : A.n, g = fresh ? ADV_GAMES[dayNum() % ADV_GAMES.length] : A.g;
+        $('advSub').textContent = n >= 4 ? ('🏆 All done! Dessert: ' + ADV_GICO[g]) :
+          n > 0 ? ('⭐ ' + n + ' of 4 done — keep going!') : "Today's quest: 4 stops + a game!";
+      }
+      updateAdvBtn();
 
       /* ============================================
          LEVEL SELECT — with week tabs
@@ -4587,6 +4735,17 @@
         $('dcS').textContent = sd; $('dcSc').textContent = e + ' / ' + mx + ' points'; $('dcM').textContent = mg;
         var bs = S.best.__streak || 0;
         $('dcStreak').textContent = S.newRecord ? ('🔥 New best streak: ' + bs + '!') : (bs >= 2 ? ('🔥 Best streak: ' + bs) : '');
+        if (S.adv) {
+          var A = S.best.__adv;
+          if (A && S.adv.step === A.n) { A.n++; save() }
+          var done = A ? A.n : 0, trail = '';
+          for (var ti = 0; ti < 4; ti++) trail += ti < done ? '⭐' : '◦';
+          $('dcAdv').textContent = '🗺 ' + trail + ' ' + (A ? ADV_GICO[A.g] : '');
+          $('dcL').textContent = done >= 4 ? '🍦 Dessert time!' : 'Next stop ➡';
+        } else {
+          $('dcAdv').textContent = '';
+          $('dcL').textContent = 'More Levels';
+        }
         $('dcT').style.color = S.world === 'math' ? 'var(--teal)' : S.world === 'crit' ? 'var(--purple)' : 'var(--blue)';
         $('gF').style.width = '100%'; show('done');
         if (pc >= 0.6) conf();

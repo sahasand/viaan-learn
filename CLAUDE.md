@@ -61,6 +61,14 @@ The Thinking level-select screen renders a **Brain-Power map** above the unit ta
 
 A **streak combo** is app-wide (in the shared `onOk`/`onNo`): `S.streak` counts consecutive correct answers, shows a `🔥 ×N` badge (`#combo`, `showCombo()`) at ≥2, and resets on a miss or at `startLvl`. The best streak persists as `S.best.__streak` (a non-level key, ignored by the per-level star totals which iterate the level arrays) and is shown on the done screen (`#dcStreak`, with a "New best streak!" variant via `S.newRecord`). No timers/speed scoring — mastery and persistence only, by design (don't rush reasoning).
 
+## Daily Adventure (Play! button)
+
+The home screen's big **Play!** button (`#advB`, `.adv-btn`, subtitle `#advSub`) serves a ~10–15 min daily mix so a pre-reader never has to navigate world → week → level. The JS lives in a marked `DAILY ADVENTURE` block right after `data()`:
+
+- **Plan**: `advPlan()` builds 4 stops — Eng, Math, Eng, Thinking (interleaved on purpose) — plus a dessert game rotating by day (`ADV_GAMES`: memory/plane/chess, `dayNum() % 3`). Level picks use `frontier(arr, skipId)`: first unplayed level, else first not-yet-perfect (< 90% of max stars), else rotate by day; the second English pick skips the first via `skipId`.
+- **Persistence**: today's plan lives at `S.best.__adv = { d: dayStr(), n: <steps done>, g: <game>, s: [{w,id}×4] }` — a non-level `__` key like `__streak`, invisible to star totals. `advToday()` validates date + that every step id still exists (rebuilds if stale), so day rollover or curriculum edits self-heal.
+- **Flow**: `advNext()` starts stop `n` (sets `S.adv = {step}` runtime flag, `S.world`, then `startLvl`); when `n ≥ 4` it redirects to the dessert game page. In `fin()`, adventure mode increments `A.n` once (guarded by `S.adv.step === A.n`, so Play Again can't double-count), shows a `🗺 ⭐⭐◦◦ ✈️` trail in `#dcAdv`, and relabels `#dcL` "Next stop ➡" / "🍦 Dessert time!" (`dcL` click routes to `advNext()` when `S.adv` is set; it and `#dcAdv` are reset in the non-adventure branch). `gBk` in adventure mode exits home (not level select); entering a world card manually clears `S.adv`. `show('home')` refreshes the button subtitle via `updateAdvBtn()`.
+
 ## Audio Pipeline
 
 The app serves ~381 MP3 clips from the `audio/` directory. Categories by ID prefix:
