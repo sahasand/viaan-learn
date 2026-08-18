@@ -107,6 +107,10 @@ const clips = [
   { id: 'phon_aw', text: 'aw' },
   { id: 'phon_ph', text: 'f' },
   { id: 'phon_oe', text: 'oh' },
+  { id: 'phon_zz', text: 'zzz' },
+  { id: 'phon_qu', text: 'kw' },
+  { id: 'phon_ure', text: 'yer' },
+  { id: 'phon_au', text: 'aw' },
 
   // === Decodable words (~120) ===
   ...['sat','tap','pat','pan','pin','tin','tip','nap','map','mat','man','pit',
@@ -133,7 +137,7 @@ const clips = [
   ].map(w => ({ id: 'word_' + w, text: w })),
 
   // === Rhyme targets + picture words not already covered ===
-  ...['apple','bug','dip','hat','ice','mop','net','pig','sit','star','sun','tree'
+  ...['apple','ball','bug','car','cure','dip','hat','ice','mop','net','nut','pig','sit','star','sun','tree','van'
   ].map(w => ({ id: 'word_' + w, text: w })),
 
   // === Numbers (referenced by Math renderers) ===

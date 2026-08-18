@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Viaan">
@@ -2694,8 +2694,8 @@
           id: 'e9d', w: 9, ph: 3, title: 'y z zz qu', color: '#F97316', emoji: '\uD83D\uDD24', q: [
             { t: 'lr', p: 'Which letter is this?', show: 'y', ch: ['y', 'v', 'w'], a: 'y' },
             { t: 'lr', p: 'Which letter is this?', show: 'z', ch: ['z', 'x', 's'], a: 'z' },
-            { t: 'snd', p: 'Tap the letter you hear!', sound: 'Y', ch: ['y', 'v', 'w'], a: 'y' },
-            { t: 'snd', p: 'Tap the letter you hear!', sound: 'Z', ch: ['z', 's', 'x'], a: 'z' },
+            { t: 'snd', p: 'Tap the sound you hear!', sound: 'zz', ch: ['zz', 'ch', 'ss'], a: 'zz' },
+            { t: 'snd', p: 'Tap the sound you hear!', sound: 'qu', ch: ['qu', 'ch', 'sh'], a: 'qu' },
             { t: 'bl', p: 'Blend the sounds!', w: 'zip', ph: ['z', 'i', 'p'], ch: ['zip', 'yam', 'vet'], a: 'zip' }]
         },
         // W10: ch,sh
@@ -2964,10 +2964,10 @@
         // W18-20: ure,er + Phase 3 review
         {
           id: 'e18a', w: 18, ph: 3, title: 'ure er', color: '#EC4899', emoji: '\uD83D\uDD17', q: [
+            { t: 'snd', p: 'Tap the sound you hear!', sound: 'ure', ch: ['ure', 'er', 'ur'], a: 'ure' },
             { t: 'snd', p: 'Tap the sound you hear!', sound: 'er', ch: ['er', 'ar', 'ur'], a: 'er' },
-            { t: 'bl', p: 'Blend the sounds!', w: 'chip', ph: ['ch', 'i', 'p'], ch: ['chip', 'ship', 'thin'], a: 'chip' },
+            { t: 'ml', p: 'Missing letter!', w: 'cure', show: 'c_re', ch: ['ure', 'er', 'ar'], a: 'ure' },
             { t: 'bl', p: 'Blend the sounds!', w: 'food', ph: ['f', 'oo', 'd'], ch: ['food', 'fork', 'feet'], a: 'food' },
-            { t: 'bl', p: 'Blend the sounds!', w: 'night', ph: ['n', 'igh', 't'], ch: ['night', 'boat', 'wait'], a: 'night' },
             { t: 'pm', p: 'Tap the picture!', w: 'food', ch: ['food', 'fork', 'feet'], a: 'food' }]
         },
         {
@@ -3408,7 +3408,7 @@
         {
           id: 'e31c', w: 31, ph: 5, title: 'aw au', color: '#0D9488', emoji: '\uD83D\uDD00', q: [
             { t: 'bl', p: 'Blend the sounds!', w: 'paw', ph: ['p', 'aw'], ch: ['paw', 'bird', 'glue'], a: 'paw' },
-            { t: 'pm', p: 'Tap the picture!', w: 'paw', ch: ['paw', 'bird', 'glue'], a: 'paw' },
+            { t: 'snd', p: 'Tap the sound you hear!', sound: 'au', ch: ['au', 'aw', 'oi'], a: 'au' },
             { t: 'ml', p: 'Missing letter!', w: 'paw', show: 'p__', ch: ['aw', 'ew', 'ue'], a: 'aw' },
             { t: 'wb', p: 'Build it!', w: 'paw', ph: ['p', 'aw'], pool: ['p', 'aw', 'ew', 'ue', 'b', 'd'] },
             { t: 'fw', p: 'The dog ___ the bird.', blank: 'got', ch: ['got', 'the', 'oh'], a: 'got' }]
@@ -3427,7 +3427,7 @@
             { t: 'bl', p: 'Blend the sounds!', w: 'phone', ph: ['ph', 'o_e', 'n'], ch: ['phone', 'toe', 'bird'], a: 'phone' },
             { t: 'bl', p: 'Blend the sounds!', w: 'toe', ph: ['t', 'oe'], ch: ['toe', 'phone', 'bird'], a: 'toe' },
             { t: 'pm', p: 'Tap the picture!', w: 'phone', ch: ['phone', 'toe', 'bird'], a: 'phone' },
-            { t: 'pm', p: 'Tap the picture!', w: 'toe', ch: ['toe', 'phone', 'paw'], a: 'toe' },
+            { t: 'ml', p: 'Missing letter!', w: 'when', show: 'w_en', ch: ['wh', 'ph', 'th'], a: 'wh' },
             { t: 'ml', p: 'Missing letter!', w: 'phone', show: '_one', ch: ['ph', 'wh', 'th'], a: 'ph' }]
         },
         {
@@ -3571,7 +3571,7 @@
           id: 'e36c', w: 36, ph: 5, title: 'Big review 3', color: '#0D9488', emoji: '\uD83C\uDFC6', q: [
             { t: 'sw', p: 'Which word says "because"?', target: 'because', ch: ['because', 'many', 'could'], a: 'because' },
             { t: 'sw', p: 'Which word says "people"?', target: 'people', ch: ['people', 'play', 'pie'], a: 'people' },
-            { t: 'fw', p: 'Because many people ___ there.', blank: 'were', ch: ['were', 'the', 'oh'], a: 'were' },
+            { t: 'fw', p: 'Many people ___ there.', blank: 'were', ch: ['were', 'the', 'oh'], a: 'were' },
             { t: 'bl', p: 'Blend the sounds!', w: 'bone', ph: ['b', 'o_e', 'n'], ch: ['bone', 'tube', 'cake'], a: 'bone' },
             { t: 'pm', p: 'Tap the picture!', w: 'bone', ch: ['bone', 'tube', 'cake'], a: 'bone' }]
         },
@@ -3579,7 +3579,7 @@
           id: 'e36d', w: 36, ph: 5, title: 'Big review 4', color: '#F97316', emoji: '\uD83C\uDFC6', q: [
             { t: 'sw', p: 'Which word says "where"?', target: 'where', ch: ['where', 'were', 'when'], a: 'where' },
             { t: 'sw', p: 'Which word says "who"?', target: 'who', ch: ['who', 'where', 'when'], a: 'who' },
-            { t: 'fw', p: 'Who could see ___ the bird?', blank: 'where', ch: ['where', 'the', 'oh'], a: 'where' },
+            { t: 'fw', p: '___ could see the bird?', blank: 'Who', ch: ['Who', 'Where', 'When'], a: 'Who' },
             { t: 'wb', p: 'Build it!', w: 'paw', ph: ['p', 'aw'], pool: ['p', 'aw', 'oe', 'ew', 't', 'g'] },
             { t: 'pm', p: 'Tap the picture!', w: 'paw', ch: ['paw', 'toe', 'glue'], a: 'paw' }]
         },
@@ -3635,7 +3635,7 @@
           id: 'e38c', w: 38, ph: 5, title: 'Phase 5 test 3', color: '#0D9488', emoji: '\uD83C\uDFC6', q: [
             { t: 'sw', p: 'Which word says "because"?', target: 'because', ch: ['because', 'many', 'people'], a: 'because' },
             { t: 'sw', p: 'Which word says "could"?', target: 'could', ch: ['could', 'called', 'come'], a: 'could' },
-            { t: 'fw', p: 'Because the boy ___ loud.', blank: 'was', ch: ['was', 'the', 'oh'], a: 'was' },
+            { t: 'fw', p: 'The boy ___ loud.', blank: 'was', ch: ['was', 'the', 'oh'], a: 'was' },
             { t: 'bl', p: 'Blend the sounds!', w: 'glue', ph: ['g', 'l', 'ue'], ch: ['glue', 'stew', 'bird'], a: 'glue' },
             { t: 'pm', p: 'Tap the picture!', w: 'glue', ch: ['glue', 'stew', 'bird'], a: 'glue' }]
         },
@@ -3709,7 +3709,7 @@
             { t: 'sw', p: 'Which word says "because"?', target: 'because', ch: ['because', 'many', 'people'], a: 'because' },
             { t: 'sw', p: 'Which word says "could"?', target: 'could', ch: ['could', 'called', 'come'], a: 'could' },
             { t: 'fw', p: 'All the people ___ out.', blank: 'go', ch: ['go', 'the', 'oh'], a: 'go' },
-            { t: 'fw', p: 'Because the boy ___ loud.', blank: 'was', ch: ['was', 'the', 'oh'], a: 'was' },
+            { t: 'fw', p: 'The boy ___ loud.', blank: 'was', ch: ['was', 'the', 'oh'], a: 'was' },
             { t: 'fw', p: 'Where could we ___ the bird?', blank: 'see', ch: ['see', 'the', 'oh'], a: 'see' }]
         }
       ];
@@ -3890,26 +3890,59 @@
          DOM + NAV
          ============================================ */
       var $ = function (i) { return document.getElementById(i) };
-      function show(id) { document.querySelectorAll('.scr').forEach(function (s) { s.classList.remove('vis'); s.classList.remove('on') }); var el = $(id); el.classList.add('on'); requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('vis') }) }) }
+      var _timers = [];
+      function later(fn, ms) {
+        var id = setTimeout(function () {
+          _timers = _timers.filter(function (t) { return t !== id });
+          fn();
+        }, ms);
+        _timers.push(id);
+        return id;
+      }
+      function clearTimers() {
+        _timers.forEach(function (id) { clearTimeout(id) });
+        _timers = [];
+      }
+      function show(id) {
+        clearTimers();
+        cancelAudio();
+        document.querySelectorAll('.scr').forEach(function (s) { s.classList.remove('vis'); s.classList.remove('on') });
+        var el = $(id);
+        el.classList.add('on');
+        requestAnimationFrame(function () {
+          requestAnimationFrame(function () { el.classList.add('vis') });
+        });
+      }
 
       /* AUDIO_START */
       var _curAudio = null;
+      var _audioSeq = 0;
+      function cancelAudio() {
+        _audioSeq++;
+        if (_curAudio) {
+          try { _curAudio.pause(); _curAudio.currentTime = 0 } catch (e) { }
+          _curAudio = null;
+        }
+      }
       function playClip(id) {
-        if (_curAudio) { try { _curAudio.pause(); _curAudio.currentTime = 0 } catch (e) { } _curAudio = null }
+        cancelAudio();
         if (!id) return;
         _curAudio = new Audio('audio/' + id + '.mp3');
         _curAudio.play();
       }
       function playSeq(ids, gap) {
         gap = gap || 250;
+        cancelAudio();
+        var seq = _audioSeq;
         var i = 0;
         function next() {
+          if (seq !== _audioSeq) return;
           while (i < ids.length && !ids[i]) i++;
           if (i >= ids.length) return;
           if (_curAudio) { try { _curAudio.pause() } catch (e) { } }
           _curAudio = new Audio('audio/' + ids[i] + '.mp3');
-          _curAudio.onended = function () { i++; setTimeout(next, gap); };
-          _curAudio.onerror = function () { i++; setTimeout(next, gap); };
+          _curAudio.onended = function () { i++; later(function () { if (seq === _audioSeq) next() }, gap); };
+          _curAudio.onerror = function () { i++; later(function () { if (seq === _audioSeq) next() }, gap); };
           _curAudio.play();
         }
         next();
@@ -4116,7 +4149,7 @@
         $('gF').style.width = Math.round(S.qi / lv.q.length * 100) + '%';
         $('gSt').textContent = '\u2B50 ' + S.stars;
         ar.classList.add('q-out');
-        setTimeout(function () {
+        later(function () {
           ar.innerHTML = '';
           var r = {
             c: rCount, m: rMiss, b: rBig, cm: rCmp, cl: rCmp, ad: rAdd, eq: rEq,
@@ -4143,7 +4176,7 @@
       function chsRhy(ch, ans) {
         var h = '<div class="ch">';
         ch.forEach(function (c) {
-          h += '<button class="cb cb-rhy" data-v="' + c + '" data-a="' + ans + '">' +
+          h += '<button class="cb cb-rhy" aria-label="' + c + '" data-v="' + c + '" data-a="' + ans + '">' +
             '<span class="cb-hear" data-w="' + c + '">🔊</span>' +
             '<span class="cb-text">' + c + '</span>' +
             '</button>';
@@ -4165,7 +4198,7 @@
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv">' + dots(q.d, q.dc) + '</div>' + chs(q.ch, q.a);
         var seq = [promptId(q.p)];
         for (var i = 1; i <= q.d; i++) seq.push('num_' + i);
-        setTimeout(function () { playSeq(seq, 400) }, 400);
+        later(function () { playSeq(seq, 400) }, 400);
         bindCh(ar);
       }
 
@@ -4177,7 +4210,7 @@
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv"><div class="sr">' + sh + '</div></div>' + chs(q.ch, q.a);
         var seq = [promptId(q.p)];
         q.s.forEach(function (v) { if (v != null) seq.push('num_' + v); });
-        setTimeout(function () { playSeq(seq, 350) }, 400);
+        later(function () { playSeq(seq, 350) }, 400);
         bindCh(ar);
       }
 
@@ -4189,7 +4222,7 @@
           '<div style="text-align:center"><div style="font-weight:900;font-size:2.4rem;color:var(--coral)">' + q.y + '</div>' +
           '<div style="display:flex;gap:3px;justify-content:center;margin-top:4px;flex-wrap:wrap;max-width:110px">' + dots(Math.min(q.y, 10), '#F97316', true) + '</div></div></div>' +
           chs(q.ch, q.a);
-        setTimeout(function () { playSeq([promptId(q.p), 'num_' + q.x, 'num_' + q.y]) }, 400);
+        later(function () { playSeq([promptId(q.p), 'num_' + q.x, 'num_' + q.y]) }, 400);
         bindCh(ar);
       }
 
@@ -4199,7 +4232,7 @@
           '<div style="font-weight:800;font-size:0.85rem;color:var(--gray);align-self:center">or</div>' +
           '<div class="cg" data-s="r" data-a="' + q.a + '"><div class="cd">' + dots(q.r, q.rc, true) + '</div><div class="cc">' + q.r + '</div></div>' +
           '</div></div>';
-        setTimeout(function () { playSeq([promptId(q.p), 'num_' + q.l, 'num_' + q.r]) }, 400);
+        later(function () { playSeq([promptId(q.p), 'num_' + q.l, 'num_' + q.r]) }, 400);
         bindCmp(ar);
       }
 
@@ -4210,7 +4243,7 @@
           '<div class="dg dr">' + dots(q.y, '#F97316') + '</div>' +
           '<div class="op">=</div><div class="op" style="color:var(--gray)">?</div></div>' +
           chs(q.ch, q.a);
-        setTimeout(function () { playSeq([promptId(q.p), 'num_' + q.x, 'num_' + q.y]) }, 400);
+        later(function () { playSeq([promptId(q.p), 'num_' + q.x, 'num_' + q.y]) }, 400);
         bindCh(ar);
       }
 
@@ -4225,14 +4258,14 @@
       /* ENGLISH RENDERERS */
       function rLR(ar, q, lv) {
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv"><div class="ltr-big" style="color:' + lv.color + '">' + q.show + '</div></div>' + chs(q.ch, q.a);
-        setTimeout(function () { playSeq([promptId(q.p), 'phon_' + q.show.toUpperCase()]) }, 400);
+        later(function () { playSeq([promptId(q.p), 'phon_' + q.show.toUpperCase()]) }, 400);
         bindCh(ar);
       }
 
       function rLS(ar, q) {
         var em = EM[q.img] || '\u2753';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:6px"><div class="emoji-big">' + em + '</div><div class="emoji-label">' + q.img + '</div></div>' + chs(q.ch, q.a);
-        setTimeout(function () { playSeq([promptId(q.p), 'word_' + q.img]) }, 400);
+        later(function () { playSeq([promptId(q.p), 'word_' + q.img]) }, 400);
         bindCh(ar);
       }
 
@@ -4242,7 +4275,7 @@
           '<div class="op" style="font-size:1.3rem;color:var(--gray)">=</div>' +
           '<div class="op" style="font-size:2rem;color:var(--coral)">?</div></div></div>' +
           chs(q.ch, q.a);
-        setTimeout(function () { playSeq(['prompt_Match_the_lowercase_', 'phon_' + q.upper.toUpperCase()]) }, 400);
+        later(function () { playSeq(['prompt_Match_the_lowercase_', 'phon_' + q.upper.toUpperCase()]) }, 400);
         bindCh(ar);
       }
 
@@ -4253,7 +4286,7 @@
           chs(q.ch, q.a);
         var sndId = 'phon_' + (q.sound.length === 1 ? q.sound.toUpperCase() : q.sound);
         $('sB').addEventListener('click', function () { speakSound(q.sound) });
-        setTimeout(function () { playSeq([promptId(q.p), sndId]) }, 400);
+        later(function () { playSeq([promptId(q.p), sndId]) }, 400);
         bindCh(ar);
       }
 
@@ -4265,7 +4298,7 @@
           '<button class="snd-btn" id="sB"><span class="snd-ico">🔊</span> Hear it</button>' +
           '</div>' + chsRhy(q.ch, q.a);
         $('sB').addEventListener('click', function () { speakWord(target) });
-        setTimeout(function () { playSeq([promptId(q.p), 'word_' + target]) }, 400);
+        later(function () { playSeq([promptId(q.p), 'word_' + target]) }, 400);
         bindHear(ar);
         bindCh(ar);
       }
@@ -4276,13 +4309,12 @@
           chs(q.ch, q.a);
         var wId = 'word_' + q.target.replace(/[^a-zA-Z]/g, '_');
         $('sB').addEventListener('click', function () { speakWord(q.target) });
-        setTimeout(function () { playSeq([promptId(q.p), wId]) }, 400);
+        later(function () { playSeq([promptId(q.p), wId]) }, 400);
         bindCh(ar);
       }
 
       function rFW(ar, q) {
-        var parts = q.p.split('_');
-        var html = parts.length > 1 ? '<span>' + parts[0] + '</span><span class="word-blank"></span><span>' + parts[1] + '</span>' : q.p;
+        var html = q.p.replace(/_{2,}/, '<span class="word-blank" aria-label="missing word"></span>');
         ar.innerHTML = '<div class="qp">Fill in the blank!</div><div class="qv"><div class="sentence">' + html + '</div></div>' + chs(q.ch, q.a);
         bindCh(ar);
       }
@@ -4293,12 +4325,12 @@
         var imgs = '<div class="ch">';
         q.ch.forEach(function (c) {
           var em = EM[c] || '\u2753';
-          imgs += '<button class="cb cb-img" data-v="' + c + '" data-a="' + q.a + '">' + em + '</button>';
+          imgs += '<button class="cb cb-img" aria-label="' + c + '" data-v="' + c + '" data-a="' + q.a + '">' + em + '</button>';
         });
         imgs += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv"><div class="word-big">' + q.w + '</div></div>' + imgs;
         var wId = 'word_' + q.w.replace(/[^a-zA-Z]/g, '_');
-        setTimeout(function () { playSeq([promptId(q.p), wId]) }, 400);
+        later(function () { playSeq([promptId(q.p), wId]) }, 400);
         bindCh(ar);
       }
 
@@ -4312,7 +4344,7 @@
         boxes += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv">' + boxes + '</div>' + chs(q.ch, q.a);
         var wId = q.w ? 'word_' + q.w.replace(/[^a-zA-Z]/g, '_') : null;
-        setTimeout(function () { playSeq([promptId(q.p), wId]) }, 400);
+        later(function () { playSeq([promptId(q.p), wId]) }, 400);
         bindCh(ar);
       }
 
@@ -4335,12 +4367,12 @@
           if (bbs[idx]) bbs[idx].classList.add('bl-hl');
           speakSound(ph[idx]);
           idx++;
-          setTimeout(playNext, 600);
+          later(playNext, 600);
         }
-        setTimeout(function () {
+        later(function () {
           var pa = new Audio('audio/' + promptId(q.p) + '.mp3');
-          pa.onended = function () { setTimeout(playNext, 300); };
-          pa.onerror = function () { setTimeout(playNext, 100); };
+          pa.onended = function () { later(playNext, 300); };
+          pa.onerror = function () { later(playNext, 100); };
           if (_curAudio) { try { _curAudio.pause() } catch (e) { } }
           _curAudio = pa;
           pa.play();
@@ -4376,7 +4408,7 @@
           '<button class="snd-btn" id="wbH"><span class="snd-ico">\uD83D\uDD0A</span> Hear it</button>' +
           slots + tiles + '</div>';
         var wId = 'word_' + q.w.replace(/[^a-zA-Z]/g, '_');
-        setTimeout(function () { playSeq([promptId(q.p), wId]) }, 400);
+        later(function () { playSeq([promptId(q.p), wId]) }, 400);
         $('wbH').addEventListener('click', function () { speakWord(q.w) });
         var ci = 0;
         ar.querySelectorAll('.wb-lt').forEach(function (btn) {
@@ -4393,7 +4425,7 @@
             } else {
               btn.classList.add('wb-wrong');
               flash('fw');
-              setTimeout(function () { btn.classList.remove('wb-wrong') }, 400);
+              later(function () { btn.classList.remove('wb-wrong') }, 400);
             }
           });
         });
@@ -4404,40 +4436,40 @@
       // Which One Doesn't Belong — 4 picture choices, tap the odd one out
       function rOdd(ar, q) {
         var imgs = '<div class="ch">';
-        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" aria-label="' + c + '" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
         imgs += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="min-height:40px"></div>' + imgs;
-        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        later(function () { playSeq([promptId(q.p)]) }, 400);
         bindCh(ar);
       }
 
       // What Goes Together — show a stimulus picture, pick its partner
       function rGoes(ar, q) {
         var imgs = '<div class="ch">';
-        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" aria-label="' + c + '" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
         imgs += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:6px"><div class="emoji-big">' + (EM[q.w] || '❓') + '</div><div class="emoji-label">' + q.w + '</div></div>' + imgs;
-        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        later(function () { playSeq([promptId(q.p)]) }, 400);
         bindCh(ar);
       }
 
       // What Happens Next — show a cause, pick the effect
       function rNext(ar, q) {
         var imgs = '<div class="ch">';
-        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" aria-label="' + c + '" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
         imgs += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:6px"><div class="emoji-big">' + (EM[q.w] || '❓') + '</div><div class="emoji-label">→</div></div>' + imgs;
-        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        later(function () { playSeq([promptId(q.p)]) }, 400);
         bindCh(ar);
       }
 
       // What's Silly Here — choices are literal emoji scenes, tap the absurd one
       function rSilly(ar, q) {
         var imgs = '<div class="ch">';
-        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img cb-combo" data-v="' + c.v + '" data-a="' + q.a + '">' + c.e + '</button>' });
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img cb-combo" aria-label="' + c.v + '" data-v="' + c.v + '" data-a="' + q.a + '">' + c.e + '</button>' });
         imgs += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="min-height:40px"></div>' + imgs;
-        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        later(function () { playSeq([promptId(q.p)]) }, 400);
         bindCh(ar);
       }
 
@@ -4450,10 +4482,10 @@
         });
         strip += '<span class="sa">→</span><div class="sb sx">?</div>';
         var imgs = '<div class="ch">';
-        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
+        q.ch.forEach(function (c) { imgs += '<button class="cb cb-img" aria-label="' + c + '" data-v="' + c + '" data-a="' + q.a + '">' + (EM[c] || '❓') + '</button>' });
         imgs += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv"><div class="sr">' + strip + '</div></div>' + imgs;
-        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        later(function () { playSeq([promptId(q.p)]) }, 400);
         bindCh(ar);
       }
 
@@ -4465,10 +4497,10 @@
         order.forEach(function () { slots += '<div class="wb-sl"></div>' });
         slots += '</div>';
         var tiles = '<div class="wb-pool" id="wbP">';
-        pool.forEach(function (it, i) { tiles += '<button class="wb-lt wb-img" data-it="' + it + '" data-ti="' + i + '">' + (EM[it] || '❓') + '</button>' });
+        pool.forEach(function (it, i) { tiles += '<button class="wb-lt wb-img" aria-label="' + it + '" data-it="' + it + '" data-ti="' + i + '">' + (EM[it] || '❓') + '</button>' });
         tiles += '</div>';
         ar.innerHTML = '<div class="qp">' + q.p + '</div><div class="qv" style="flex-direction:column;gap:12px">' + slots + tiles + '</div>';
-        setTimeout(function () { playSeq([promptId(q.p)]) }, 400);
+        later(function () { playSeq([promptId(q.p)]) }, 400);
         var ci = 0;
         ar.querySelectorAll('.wb-lt').forEach(function (btn) {
           btn.addEventListener('click', function () {
@@ -4483,7 +4515,7 @@
             } else {
               btn.classList.add('wb-wrong');
               flash('fw');
-              setTimeout(function () { btn.classList.remove('wb-wrong') }, 400);
+              later(function () { btn.classList.remove('wb-wrong') }, 400);
             }
           });
         });
@@ -4511,7 +4543,7 @@
             if (side === ans) { el.classList.add('ok'); onOk(el) }
             else {
               el.classList.add('no');
-              setTimeout(function () { ar.querySelectorAll('.cg').forEach(function (g) { if (g.getAttribute('data-s') === ans) g.classList.add('ok') }) }, 350);
+              later(function () { ar.querySelectorAll('.cg').forEach(function (g) { if (g.getAttribute('data-s') === ans) g.classList.add('ok') }) }, 350);
               onNo(ar);
             }
           });
@@ -4524,7 +4556,7 @@
         if (S.streak > (S.best.__streak || 0)) { S.best.__streak = S.streak; S.newRecord = true; save() }
         showCombo();
         flash('fc'); fstar(el); cheer();
-        setTimeout(function () { S.busy = false; nxt() }, 900);
+        later(function () { S.busy = false; nxt() }, 900);
       }
 
       function showCombo() {
@@ -4539,8 +4571,8 @@
         S.streak = 0; showCombo();
         flash('fw');
         playClip('sfx_oops');
-        if (cv !== undefined) setTimeout(function () { ar.querySelectorAll('.cb').forEach(function (b) { if (b.getAttribute('data-v') === String(cv)) b.classList.add('ok') }) }, 400);
-        setTimeout(function () { S.busy = false; nxt() }, 1300);
+        if (cv !== undefined) later(function () { ar.querySelectorAll('.cb').forEach(function (b) { if (b.getAttribute('data-v') === String(cv)) b.classList.add('ok') }) }, 400);
+        later(function () { S.busy = false; nxt() }, 1300);
       }
 
       function nxt() { S.qi++; if (S.qi >= data()[S.lvl].q.length) fin(); else showQ() }
@@ -4558,7 +4590,7 @@
         $('dcT').style.color = S.world === 'math' ? 'var(--teal)' : S.world === 'crit' ? 'var(--purple)' : 'var(--blue)';
         $('gF').style.width = '100%'; show('done');
         if (pc >= 0.6) conf();
-        setTimeout(function () {
+        later(function () {
           playClip(pc >= 0.9 ? 'praise_perfect' : (pc >= 0.6 ? 'praise_great' : 'praise_keepgoing'));
         }, 500);
       }
@@ -4566,13 +4598,13 @@
       /* ============================================
          EFFECTS
          ============================================ */
-      function flash(c) { var e = $('fla'); e.className = 'fla ' + c; setTimeout(function () { e.className = 'fla' }, 250) }
+      function flash(c) { var e = $('fla'); e.className = 'fla ' + c; later(function () { e.className = 'fla' }, 250) }
 
       function fstar(el) {
         var r = el.getBoundingClientRect(), s = document.createElement('div');
         s.className = 'fst'; s.textContent = '\u2B50';
         s.style.left = (r.left + r.width / 2 - 16) + 'px'; s.style.top = r.top + 'px';
-        document.body.appendChild(s); setTimeout(function () { s.remove() }, 800);
+        document.body.appendChild(s); later(function () { s.remove() }, 800);
       }
 
       function conf() {
@@ -4585,7 +4617,7 @@
             (1.3 + Math.random() * 1.6) + 's;animation-delay:' + (Math.random() * 0.4) + 's';
           bx.appendChild(p);
         }
-        setTimeout(function () { bx.innerHTML = '' }, 3200);
+        later(function () { bx.innerHTML = '' }, 3200);
       }
 
     })();
