@@ -89,10 +89,10 @@ body::before{
   border:8px solid transparent;border-right-color:var(--paper);border-left:none;}
 /* built-plane stage */
 .stage{width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;
-  background:linear-gradient(180deg,rgba(255,255,255,.65),rgba(255,255,255,.35));
+  background:linear-gradient(180deg,#a6d8f7 0%,#cdeafd 70%,#e9f7ff 100%);
   border-radius:22px;padding:8px 10px 10px;min-height:150px;justify-content:center;
-  box-shadow:inset 0 2px 8px rgba(50,100,160,.08);}
-.stage-hint{font-weight:800;color:#8fb3d4;font-size:.9rem;}
+  box-shadow:inset 0 2px 8px rgba(50,100,160,.14);}
+.stage-hint{font-weight:800;color:#fff;font-size:.9rem;text-shadow:0 1px 3px rgba(30,80,130,.4);}
 #planeBox{width:158px;height:158px;display:none;}
 #planeBox.show{display:block;animation:planePop .5s cubic-bezier(.34,1.56,.64,1);}
 #planeBox svg{width:100%;height:100%;}
@@ -129,8 +129,12 @@ body::before{
 .opt:active{transform:scale(.92) translateY(3px);}
 .opt.sel{outline-color:#f59e0b;transform:translateY(-2px);
   box-shadow:0 5px 0 rgba(245,158,11,.4), 0 9px 15px rgba(245,158,11,.25);}
-.opt.hint{animation:hintGlow .8s ease-in-out infinite;}
-@keyframes hintGlow{0%,100%{outline-color:rgba(245,158,11,.15)}50%{outline-color:#fbbf24}}
+/* hint = "try this one": green pulse + pointing finger, distinct from the
+   orange SELECTED outline so a pre-reader can't confuse the two */
+.opt.hint{animation:hintGlow .9s ease-in-out infinite;position:relative;overflow:visible;}
+@keyframes hintGlow{0%,100%{outline-color:rgba(16,185,129,.3);transform:translateY(0)}50%{outline-color:#10b981;transform:translateY(-3px)}}
+.opt.hint::after{content:'👉';position:absolute;left:-8px;top:-12px;font-size:1.15rem;line-height:1;
+  transform:rotate(90deg);filter:drop-shadow(0 2px 2px rgba(0,0,0,.2));}
 .opt-lb{font-weight:800;font-size:.62rem;color:#7593b3;line-height:1;}
 .paint{width:24px;height:24px;border-radius:50%;
   box-shadow:inset 0 3px 0 rgba(255,255,255,.5), inset 0 -3px 5px rgba(0,0,0,.18);}
@@ -409,11 +413,11 @@ function planeSVG(spec){
   var s = '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">';
   // wings (behind fuselage)
   if (big){
-    s += '<polygon points="96,88 12,120 16,138 96,118" fill="'+dark+'"/>'
-       + '<polygon points="104,88 188,120 184,138 104,118" fill="'+dark+'"/>';
+    s += '<polygon points="96,84 4,118 10,142 96,120" fill="'+dark+'"/>'
+       + '<polygon points="104,84 196,118 190,142 104,120" fill="'+dark+'"/>';
   } else {
-    s += '<polygon points="96,94 46,116 49,130 96,116" fill="'+dark+'"/>'
-       + '<polygon points="104,94 154,116 151,130 104,116" fill="'+dark+'"/>';
+    s += '<polygon points="96,98 58,112 60,124 96,114" fill="'+dark+'"/>'
+       + '<polygon points="104,98 142,112 140,124 104,114" fill="'+dark+'"/>';
   }
   // tailplane
   s += '<polygon points="94,152 62,170 64,180 94,166" fill="'+dark+'"/>'
@@ -429,17 +433,19 @@ function planeSVG(spec){
     s += '<ellipse cx="100" cy="17" rx="30" ry="4.5" fill="#94A3B8" opacity=".75"/>'
        + '<circle cx="100" cy="17" r="6" fill="#475569"/>';
   } else {
-    var px = big ? 46 : 56;
+    var px = big ? 38 : 62;
     s += '<rect x="'+px+'" y="100" width="15" height="32" rx="7" fill="#64748B"/>'
        + '<rect x="'+(200-px-15)+'" y="100" width="15" height="32" rx="7" fill="#64748B"/>'
        + '<ellipse cx="'+(px+7.5)+'" cy="101" rx="6" ry="3" fill="#1E293B"/>'
        + '<ellipse cx="'+(200-px-7.5)+'" cy="101" rx="6" ry="3" fill="#1E293B"/>';
   }
-  // stickers on the fuselage
+  // stickers on the fuselage — white backing discs so they read on any paint
   if (spec.decal && spec.decal !== 'none'){
     var g = optById('decal', spec.decal).glyph;
-    s += '<text x="100" y="104" font-size="15" text-anchor="middle">'+g+'</text>'
-       + '<text x="100" y="126" font-size="15" text-anchor="middle">'+g+'</text>';
+    s += '<circle cx="100" cy="99" r="12" fill="rgba(255,255,255,.9)"/>'
+       + '<circle cx="100" cy="128" r="12" fill="rgba(255,255,255,.9)"/>'
+       + '<text x="100" y="105" font-size="17" text-anchor="middle">'+g+'</text>'
+       + '<text x="100" y="134" font-size="17" text-anchor="middle">'+g+'</text>';
   }
   // tail fin tip
   s += '<ellipse cx="100" cy="172" rx="6" ry="9" fill="'+dark+'"/>';
@@ -450,7 +456,7 @@ function planeSVG(spec){
 function optIconHTML(cat, o){
   if (cat.id==='color') return '<span class="paint" style="background:'+o.sw+'"></span>';
   if (cat.id==='wings'){
-    var w = o.id==='big' ? 34 : 16, x = (38-w)/2;
+    var w = o.id==='big' ? 36 : 13, x = (38-w)/2;
     return '<svg class="mini" viewBox="0 0 38 24"><rect x="'+x+'" y="9" width="'+w+'" height="7" rx="3.5" fill="#64748B"/>'
          + '<rect x="16" y="2" width="6" height="20" rx="3" fill="#94A3B8"/></svg>';
   }
