@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Viaan is a children's learning app (Math, English, Critical Thinking) plus three games (Chess, Memory Match, Little Pilot), hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline. Chess (`chess.html`) and Memory Match (`memory.html`) keep their code inline and load local artwork; Little Pilot lives in `sky-playground/` with vendored Three.js and Blender assets. The old `plane.html` URL redirects to Little Pilot. Audio files are served from `audio/`. No build step. The curriculum loads Google Fonts (Baloo 2 + Nunito); Little Pilot serves all runtime dependencies locally.
+Viaan is a children's learning app (Math, English, Critical Thinking) plus three games (Chess, Memory Match, Little Pilot), hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline. Chess (`chess.html`) loads local modules from `chess-assets/`; Memory Match (`memory.html`) keeps its code inline and loads local artwork; Little Pilot lives in `sky-playground/` with vendored Three.js and Blender assets. The old `plane.html` URL redirects to Little Pilot. Audio files are served from `audio/`. No build step. The curriculum loads Google Fonts (Baloo 2 + Nunito); Little Pilot serves all runtime dependencies locally.
 
-There is no build or lint step. Serve the repository over HTTP to run Little Pilot (its GLB assets cannot load over `file://`). Chess and Memory Match keep pure logic between `/* LOGIC_START */`…`/* LOGIC_END */` markers for Node VM tests. Little Pilot has a separate pure `flight.js` module. Run `node --test chess.test.mjs memory.test.mjs sky-playground/flight.test.mjs` for all game tests.
+There is no build or lint step. Serve the repository over HTTP to run Little Pilot (its GLB assets cannot load over `file://`). Memory Match keeps pure logic between `/* LOGIC_START */`…`/* LOGIC_END */` markers for Node VM tests. Chess tests import its local ES modules. Little Pilot has a separate pure `flight.js` module. Run `node --test chess.test.mjs memory.test.mjs sky-playground/flight.test.mjs` for all game tests.
 
 ## Architecture
 
@@ -100,14 +100,13 @@ node generate-audio.js   # reads OPENAI_API_KEY from .env or env; writes audio/*
 
 ## Chess (standalone game)
 
-`chess.html` is a core-rules chess game (no frameworks/build), reached from the home screen's Chess world card. It loads piece artwork from the `pieces/` folder (so it's not a single self-contained file). Design philosophy and conventions are documented in `docs/superpowers/specs/2026-06-01-chess-game-design.md` and `docs/superpowers/plans/2026-06-01-chess-game.md`.
+`chess.html` is Little Chess Club, a guided learning game. Read `chess-assets/README.md` when changing chess rules, lesson content, artwork, speech, or UI lifecycle; the old design documents describe the replaced king-capture game.
 
-- **Two marked sections** inside the single `<script>`: a pure, DOM-free rules engine between `/* LOGIC_START */`…`/* LOGIC_END */` (the unit-test surface), and the UI/state/render/interaction code between `/* UI_START */`…`/* UI_END */`. Keep this split — `chess.test.mjs` extracts the LOGIC block via these exact markers.
-- **Rules:** core movement + captures + turn enforcement only. No castling, en passant, promotion, or check/checkmate — a game ends when a **king is captured** (`applyMove` returns a `winner`).
-- **Modes:** Two Players (hotseat) and vs Computer (a greedy depth-1 material AI, `aiPickMove`). The AI reply is on a `setTimeout` stored in `aiTimer` and cancelled by `newGame()`; `aiTurn` guards against stale callbacks (`mode==='ai' && turn===aiColor`).
-- **Pieces & board:** pieces are SVG artwork (cburnett / Lichess set, GPLv2+) self-hosted in `pieces/` (`pieces/<color><type>.svg`, e.g. `pieces/wP.svg`), rendered as each square's `background-image` via `pieceSrc(p)`; captured pieces in the trays are `<img>`. Board uses the Lichess palette (`--lt:#f0d9b5` / `--dk:#b58863`) with a–h / 1–8 coordinate labels. (Earlier Unicode-glyph rendering was replaced because iOS rendered the filled glyphs as dark emoji.)
-- **Mobile-first:** board sizes to `min(96vw, calc(100svh − 150px))`, tap-to-move, `touch-action:manipulation`.
-- **Tests:** `node --test chess.test.mjs` (17 tests) covers move generation, captures, the AI, and the UI timer/lifecycle (via a stubbed-DOM `vm` sandbox). Run it after any change to `chess.html`.
+- **Modules:** `chess-assets/learning.mjs` owns 18 movement challenges and pure practice helpers. `game.mjs` exports an injectable `createClub` controller for DOM/timer tests. `chess.mjs` is the pinned, locally vendored chess.js rules engine with its BSD license.
+- **Teaching:** six piece lessons, three one-move challenges each, then a badge saved in `viaan-chess-club-v1`. Puzzles are movement exercises rather than full positions. Practice enforces standard chess rules and offers four promotion choices; kings are never captured.
+- **Practice:** Teddy plays black, or two people share a fixed white-at-bottom board. Hints suggest a legal move without altering history. Undo removes the child/Teddy turn pair, or one move in two-player mode. Navigation and reset cancel AI callbacks using a timer plus epoch guard.
+- **Accessibility:** native square buttons, roving keyboard focus with arrow keys, explicit piece/square/move labels, on-demand device speech, and reduced-motion support. Mobile places the challenge above the board. Keep lesson goals and spoken directions aligned.
+- **Checks:** `node --test chess.test.mjs` tests lesson solvability, blockers/jumps, king safety, badge validation, standard-rule integration, hint non-mutation, promotion and UI lifecycle. Visually verify a full lesson and practice flow after changes.
 
 ## Memory Match (standalone game)
 

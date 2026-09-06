@@ -1,255 +1,86 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {Chess} from './chess-assets/chess.mjs';
+import {LESSONS,lessonBoard,lessonMoves,dangerSquares,validBadges,earnBadge,newPractice,suggestMove,teddyMove,gameStatus,practiceBoard,moveExplanation,position} from './chess-assets/learning.mjs';
+import {createClub} from './chess-assets/game.mjs';
 
-const htmlPath = fileURLToPath(new URL('./chess.html', import.meta.url));
-const html = readFileSync(htmlPath, 'utf8');
-const m = html.match(/\/\* LOGIC_START \*\/([\s\S]*?)\/\* LOGIC_END \*\//);
-if (!m) throw new Error('LOGIC markers not found in chess.html');
-
-const sandbox = {};
-vm.createContext(sandbox);
-vm.runInContext(m[1], sandbox);   // top-level function/var decls attach to sandbox global
-
-// ---- helpers ----
-function empty(){ return Array.from({length:8}, () => Array(8).fill(null)); }
-function has(moves, r, c){ return moves.some(mv => mv.r === r && mv.c === c); }
-
-// ---- initBoard ----
-test('initBoard places the standard starting position', () => {
-  const b = sandbox.initBoard();
-  assert.equal(b.length, 8);
-  assert.equal(b[0][0], 'bR');
-  assert.equal(b[0][4], 'bK');
-  assert.equal(b[1][3], 'bP');
-  assert.equal(b[6][3], 'wP');
-  assert.equal(b[7][4], 'wK');
-  assert.equal(b[7][0], 'wR');
-  assert.equal(b[3][3], null);
-  assert.equal(b[4][4], null);
-});
-
-// ---- sliding pieces ----
-test('rook: slides on open lines, stops before friendly, captures enemy', () => {
-  const b = empty();
-  b[4][4] = 'wR';
-  b[4][7] = 'bP';   // enemy to the right
-  b[4][1] = 'wP';   // friendly to the left
-  const mv = sandbox.legalMoves(b, 4, 4);
-  assert.ok(has(mv, 4, 5));
-  assert.ok(has(mv, 4, 6));
-  assert.ok(has(mv, 4, 7));   // capture enemy
-  assert.ok(!has(mv, 4, 1));  // friendly blocks
-  assert.ok(!has(mv, 4, 0));  // cannot pass friendly
-  assert.ok(has(mv, 0, 4));
-  assert.ok(has(mv, 7, 4));
-});
-
-test('bishop: diagonals only, blocked correctly', () => {
-  const b = empty();
-  b[4][4] = 'wB';
-  b[2][2] = 'bP';
-  const mv = sandbox.legalMoves(b, 4, 4);
-  assert.ok(has(mv, 3, 3));
-  assert.ok(has(mv, 2, 2));   // capture
-  assert.ok(!has(mv, 1, 1));  // cannot pass enemy
-  assert.ok(has(mv, 5, 5));
-  assert.ok(!has(mv, 4, 5));  // not a straight move
-});
-
-test('queen: combines rook + bishop directions', () => {
-  const b = empty();
-  b[4][4] = 'wQ';
-  const mv = sandbox.legalMoves(b, 4, 4);
-  assert.ok(has(mv, 4, 0));
-  assert.ok(has(mv, 0, 4));
-  assert.ok(has(mv, 0, 0));
-  assert.ok(has(mv, 7, 1));
-});
-
-// ---- knight & king ----
-test('knight: 8 L-moves from center, edge-clamped, no friendly landing', () => {
-  const b = empty();
-  b[4][4] = 'wN';
-  b[2][5] = 'wP';
-  const mv = sandbox.legalMoves(b, 4, 4);
-  assert.equal(mv.length, 7);
-  assert.ok(has(mv, 6, 5));
-  assert.ok(has(mv, 2, 3));
-  assert.ok(!has(mv, 2, 5));
-  const corner = empty();
-  corner[0][0] = 'bN';
-  const cm = sandbox.legalMoves(corner, 0, 0);
-  assert.equal(cm.length, 2);
-  assert.ok(has(cm, 1, 2));
-  assert.ok(has(cm, 2, 1));
-});
-
-test('king: 8 adjacent squares, edge-clamped, captures enemy', () => {
-  const b = empty();
-  b[4][4] = 'wK';
-  b[4][5] = 'bP';
-  b[3][3] = 'wP';
-  const mv = sandbox.legalMoves(b, 4, 4);
-  assert.equal(mv.length, 7);
-  assert.ok(has(mv, 4, 5));
-  assert.ok(!has(mv, 3, 3));
-  const cb = empty(); cb[0][0]='wK';
-  const corner = sandbox.legalMoves(cb, 0, 0);
-  assert.equal(corner.length, 3);
-});
-
-// ---- pawns ----
-test('white pawn: forward one and two from start, diagonal capture only', () => {
-  const b = empty();
-  b[6][4] = 'wP';
-  b[5][5] = 'bP';
-  const mv = sandbox.legalMoves(b, 6, 4);
-  assert.ok(has(mv, 5, 4));
-  assert.ok(has(mv, 4, 4));
-  assert.ok(has(mv, 5, 5));
-  assert.ok(!has(mv, 5, 3));  // empty diagonal not a move
-});
-
-test('white pawn: forward blocked by any piece, double blocked if path occupied', () => {
-  const b = empty();
-  b[6][4] = 'wP';
-  b[5][4] = 'bP';
-  const mv = sandbox.legalMoves(b, 6, 4);
-  assert.ok(!has(mv, 5, 4));
-  assert.ok(!has(mv, 4, 4));
-  const b2 = empty();
-  b2[6][4] = 'wP';
-  b2[4][4] = 'bP';
-  const mv2 = sandbox.legalMoves(b2, 6, 4);
-  assert.ok(has(mv2, 5, 4));
-  assert.ok(!has(mv2, 4, 4));
-});
-
-test('black pawn: moves down the board (increasing row)', () => {
-  const b = empty();
-  b[1][3] = 'bP';
-  b[2][2] = 'wP';
-  const mv = sandbox.legalMoves(b, 1, 3);
-  assert.ok(has(mv, 2, 3));
-  assert.ok(has(mv, 3, 3));
-  assert.ok(has(mv, 2, 2));
-  const mid = empty();
-  mid[4][3] = 'bP';
-  const mm = sandbox.legalMoves(mid, 4, 3);
-  assert.ok(has(mm, 5, 3));
-  assert.ok(!has(mm, 6, 3));
-});
-
-// ---- applyMove & allMoves ----
-test('applyMove: moves the piece, clears origin, is non-mutating', () => {
-  const b = empty();
-  b[6][4] = 'wP';
-  const res = sandbox.applyMove(b, {r:6,c:4}, {r:4,c:4});
-  assert.equal(res.board[4][4], 'wP');
-  assert.equal(res.board[6][4], null);
-  assert.equal(res.captured, null);
-  assert.equal(res.winner, null);
-  assert.equal(b[6][4], 'wP');   // original untouched
-  assert.equal(b[4][4], null);
-});
-
-test('applyMove: capturing a king sets winner to the mover color', () => {
-  const b = empty();
-  b[4][4] = 'wQ';
-  b[4][7] = 'bK';
-  const res = sandbox.applyMove(b, {r:4,c:4}, {r:4,c:7});
-  assert.equal(res.captured, 'bK');
-  assert.equal(res.winner, 'w');
-});
-
-test('allMoves: lists every legal move for a color as {from,to}', () => {
-  const b = empty();
-  b[7][4] = 'wK';
-  b[6][4] = 'wP';
-  const list = sandbox.allMoves(b, 'w');
-  assert.ok(list.length > 0);
-  assert.ok(list.every(mv => mv.from && mv.to));
-  assert.equal(sandbox.allMoves(b, 'b').length, 0);
-});
-
-// ---- AI ----
-test('aiPickMove: grabs the most valuable free capture', () => {
-  const b = empty();
-  b[4][4] = 'bN';
-  b[2][5] = 'wQ';   // reachable knight L-move, value 9
-  b[6][5] = 'wP';   // reachable knight L-move, value 1
-  const mv = sandbox.aiPickMove(b, 'b');
-  // Compare fields, not whole objects: vm-sandbox objects have a different
-  // realm prototype, which trips deepStrictEqual's reference-equal check.
-  assert.equal(mv.from.r, 4); assert.equal(mv.from.c, 4);
-  assert.equal(mv.to.r, 2);   assert.equal(mv.to.c, 5);
-});
-
-test('aiPickMove: takes the king when offered', () => {
-  const b = empty();
-  b[4][4] = 'bR';
-  b[4][0] = 'wK';
-  const mv = sandbox.aiPickMove(b, 'b');
-  assert.equal(mv.to.r, 4); assert.equal(mv.to.c, 0);
-  const res = sandbox.applyMove(b, mv.from, mv.to);
-  assert.equal(res.winner, 'b');
-});
-
-test('aiPickMove: returns null when the color has no pieces', () => {
-  const b = empty();
-  b[0][0] = 'wK';
-  assert.equal(sandbox.aiPickMove(b, 'b'), null);
-});
-
-// ---- UI control-flow (LOGIC + UI evaluated against a stubbed DOM + fake timers) ----
-// Reproduces the two bugs the adversarial review confirmed, to prove the fixes.
-const logicSrc = html.match(/\/\* LOGIC_START \*\/([\s\S]*?)\/\* LOGIC_END \*\//)[1];
-const uiSrc = html.match(/\/\* UI_START \*\/([\s\S]*?)\/\* UI_END \*\//)[1];
-
-function makeUiSandbox(){
-  const timers = [];
-  const el = () => ({ classList:{ toggle(){} }, addEventListener(){}, appendChild(){}, querySelectorAll:()=>[], style:{}, innerHTML:'', textContent:'' });
-  const sb = {
-    document:{ getElementById:()=>el(), createElement:()=>el() },
-    setTimeout:(fn)=>{ timers.push(fn); return timers.length; },   // 1-based id
-    clearTimeout:(id)=>{ if(id) timers[id-1]=null; },
-    __timers: timers,
-  };
-  vm.createContext(sb);
-  vm.runInContext(logicSrc + '\n' + uiSrc, sb);
-  return sb;
+function harness(stored=null){
+ const els=new Map(),timers=new Map();let next=1;const saved=new Map(stored?[['viaan-chess-club-v1',stored]]:[]);
+ function el(){const cls=new Set(),attrs={},listeners={};return {hidden:false,open:false,disabled:false,innerHTML:'',textContent:'',children:[],style:{},classList:{add:c=>cls.add(c),toggle:(c,f)=>f?cls.add(c):cls.delete(c),contains:c=>cls.has(c)},setAttribute:(k,v)=>attrs[k]=v,getAttribute:k=>attrs[k],addEventListener:(k,f)=>listeners[k]=f,appendChild(n){this.children.push(n);},focus(){},showModal(){this.open=true;},close(){this.open=false;},click(){listeners.click?.({});}};}
+ const document={getElementById(id){if(!els.has(id))els.set(id,el());return els.get(id);},createElement:el};
+ const club=createClub({document,storage:{getItem:k=>saved.get(k)??null,setItem:(k,v)=>saved.set(k,v)},schedule:fn=>{const id=next++;timers.set(id,fn);return id;},cancel:id=>timers.delete(id),rng:()=>0});
+ return {...club,els,timers,saved,flush(){const pending=[...timers.entries()];for(const [id,fn] of pending){timers.delete(id);fn();}}};
 }
 
-test('UI: New Game cancels a pending AI move, and a stale callback is a no-op', () => {
-  const sb = makeUiSandbox();
-  sb.setMode('ai');
-  sb.doMove({r:6,c:4}, {r:4,c:4});               // human (white) plays; schedules AI
-  assert.equal(sb.S.turn, 'b');                  // black (AI) to move
-  const pendingFn = sb.__timers[sb.__timers.length - 1];
-  assert.equal(typeof pendingFn, 'function');    // AI timer was scheduled
-
-  sb.newGame();                                  // user resets within the 350ms window
-  assert.equal(sb.__timers.filter(Boolean).length, 0);  // timer was cancelled
-  assert.equal(sb.S.turn, 'w');                  // fresh board, white to move
-
-  // Even if a stale callback leaked through, the guard makes it inert:
-  const before = JSON.stringify(sb.S.board);
-  pendingFn();
-  assert.equal(sb.S.turn, 'w');                  // no spurious AI move
-  assert.equal(JSON.stringify(sb.S.board), before);
+test('all eighteen distinct lessons have reachable one-move goals and local piece artwork',()=>{
+ assert.equal(LESSONS.length,6);assert.equal(new Set(LESSONS.map(l=>l.type)).size,6);
+ for(const l of LESSONS){assert.equal(l.tasks.length,3);assert.ok(readFileSync(new URL('./pieces/w'+l.type+'.svg',import.meta.url)).length>0);l.tasks.forEach((t,i)=>{assert.ok(lessonMoves(lessonBoard(l,i),t.from).includes(t.target),l.id+' challenge '+i);});}
+});
+test('rook and bishop cannot jump through a friend or an enemy',()=>{
+ const r=lessonBoard(LESSONS[0],1);assert.ok(!lessonMoves(r,'d4').includes('d7'));assert.ok(!lessonMoves(r,'d4').includes('d6'));
+ const b=lessonBoard(LESSONS[1],2);assert.ok(lessonMoves(b,'c3').includes('f6'));assert.ok(!lessonMoves(b,'c3').includes('g7'));
+});
+test('knight jumps over surrounding friends but cannot land on one',()=>{
+ const b=lessonBoard(LESSONS[3],1);assert.ok(lessonMoves(b,'d4').includes('f5'));const {r,c}=position('f5');b[r][c]='wP';assert.ok(!lessonMoves(b,'d4').includes('f5'));
+});
+test('king challenge rejects attacked squares and shows the threat',()=>{
+ const b=lessonBoard(LESSONS[4],1);assert.ok(dangerSquares(b).includes('d5'));assert.ok(!lessonMoves(b,'d4').includes('d5'));assert.ok(lessonMoves(b,'d4').includes('e4'));
+});
+test('pawn lessons distinguish straight movement from diagonal captures',()=>{
+ const b=lessonBoard(LESSONS[5],2);assert.deepEqual(lessonMoves(b,'d4').sort(),['d5','e5']);b[3][3]='bP';assert.ok(!lessonMoves(b,'d4').includes('d5'));
+});
+test('badges validate storage and never duplicate completions',()=>{
+ assert.deepEqual(validBadges('rook'),[]);assert.deepEqual(validBadges(['rook','rook','bogus']),['rook']);assert.deepEqual(earnBadge(['rook'],'rook'),['rook']);const h=harness('{bad json');assert.deepEqual(h.state.badges,[]);
+});
+test('practice starts with the normal 32 pieces and legal moves',()=>{
+ const g=newPractice();assert.equal(practiceBoard(g).flat().filter(Boolean).length,32);assert.equal(g.moves().length,20);assert.throws(()=>g.move({from:'e2',to:'e5'}));
+});
+test('practice prevents a pinned piece exposing the king',()=>{
+ const g=new Chess('4r1k1/8/8/8/8/8/4R3/4K3 w - - 0 1');assert.ok(!g.moves({square:'e2',verbose:true}).some(m=>m.to==='d2'));
+});
+test('practice ends by checkmate with both kings still on the board',()=>{
+ const g=newPractice();['f3','e5','g4','Qh4#'].forEach(m=>g.move(m));assert.equal(gameStatus(g).title,'Checkmate!');assert.equal(gameStatus(g).over,true);assert.equal(g.board().flat().filter(p=>p?.type==='k').length,2);
+});
+test('stalemate is a draw, not a win for the side with moves',()=>{
+ const g=new Chess('7k/5Q2/6K1/8/8/8/8/8 b - - 0 1');assert.equal(g.isStalemate(),true);assert.match(gameStatus(g).text,/stalemate/);assert.equal(gameStatus(g).over,true);
+});
+test('practice allows castling and explains that both pieces move',()=>{
+ const g=new Chess('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1');const m=g.move('O-O');assert.equal(g.get('f1').type,'r');assert.equal(g.get('g1').type,'k');assert.match(moveExplanation(m),/king and rook/);
+});
+test('en passant removes the passed pawn and is explained',()=>{
+ const g=newPractice();['e4','a6','e5','d5'].forEach(m=>g.move(m));const m=g.move('exd6');assert.equal(g.get('d5'),undefined);assert.match(moveExplanation(m),/En passant/);
+});
+test('hints and Teddy suggest legal moves without changing board, history or repetition state',()=>{
+ const g=newPractice();['Nf3','Nf6','Ng1','Ng8'].forEach(m=>g.move(m));const before=g.fen(),history=g.history();for(const fn of [suggestMove,teddyMove]){const m=fn(g,()=>0);assert.ok(g.moves().includes(m.san));assert.equal(g.fen(),before);assert.deepEqual(g.history(),history);assert.equal(g.isThreefoldRepetition(),false);}
+});
+test('lesson wrong move gives guidance without moving or awarding progress',()=>{
+ const h=harness();h.startLesson(0);const before=JSON.stringify(h.state.board);h.tap('d4');h.tap('e5');assert.equal(JSON.stringify(h.state.board),before);assert.equal(h.state.done,false);assert.equal(h.state.badges.length,0);
+ h.tap('e4');assert.match(h.els.get('coachTitle').textContent,/works/);assert.equal(h.state.done,false);
+});
+test('all three completed challenges award and persist one badge; a replay does not duplicate it',()=>{
+ const h=harness();for(let round=0;round<2;round++){h.startLesson(0);for(let i=0;i<3;i++){const t=LESSONS[0].tasks[i];h.tap(t.from);h.tap(t.target);assert.equal(h.state.done,true);h.nextLessonStep();}assert.deepEqual(h.state.badges,['rook']);}
+ assert.deepEqual(JSON.parse(h.saved.get('viaan-chess-club-v1')),['rook']);assert.equal(h.els.get('badgeDialog').open,true);
+});
+test('square labels expose piece, position and goal; selection adds available moves',()=>{
+ const h=harness();h.startLesson(0);assert.match(h.cells.get('d4').getAttribute('aria-label'),/white Rook/);assert.match(h.cells.get('d7').getAttribute('aria-label'),/star goal/);h.tap('d4');assert.match(h.cells.get('d7').getAttribute('aria-label'),/possible move/);
+});
+test('undo before Teddy moves cancels its callback; a stale callback cannot touch a new game',()=>{
+ const h=harness();h.startPractice();h.makeMove({from:'e2',to:'e4'});assert.equal(h.timers.size,1);const pending=[...h.timers.values()][0];h.undo();assert.equal(h.timers.size,0);assert.equal(h.state.engine.history().length,0);h.startLesson(0);const before=JSON.stringify(h.state.board);pending();assert.equal(JSON.stringify(h.state.board),before);
+});
+test('undo after Teddy moves returns both turns; two-player undo returns just one',()=>{
+ const h=harness();h.startPractice();h.makeMove({from:'e2',to:'e4'});h.flush();assert.equal(h.state.engine.history().length,2);h.undo();assert.equal(h.state.engine.history().length,0);assert.equal(h.state.engine.turn(),'w');h.startPractice('together');h.makeMove({from:'e2',to:'e4'});h.makeMove({from:'e7',to:'e5'});h.undo();assert.equal(h.state.engine.history().length,1);assert.equal(h.state.engine.turn(),'b');
+});
+test('home cancels AI work and preserves completed badges',()=>{
+ const h=harness('["rook"]');h.startPractice();h.makeMove({from:'d2',to:'d4'});h.home();assert.equal(h.timers.size,0);assert.equal(h.state.screen,'home');assert.deepEqual(h.state.badges,['rook']);
+});
+test('promotion waits for the child to choose and applies the chosen piece',()=>{
+ const h=harness();h.startPractice('together');h.state.engine.load('7k/P7/8/8/8/8/8/7K w - - 0 1');h.tap('a7');h.tap('a8');assert.equal(h.els.get('promotionDialog').open,true);assert.equal(h.state.engine.get('a7').type,'p');const opts=h.els.get('promotionOptions').children;assert.equal(opts.length,4);opts[0].click();assert.equal(h.state.engine.get('a8').type,'q');assert.equal(h.els.get('promotionDialog').open,false);
+});
+test('practice refuses interaction during Teddy turn and allows undo after checkmate',()=>{
+ const h=harness();h.startPractice();h.makeMove({from:'e2',to:'e4'});h.tap('d7');assert.equal(h.state.selected,null);h.startPractice('together');['f3','e5','g4','Qh4#'].forEach(m=>h.state.engine.move(m));h.undo();assert.equal(h.state.engine.isGameOver(),false);assert.equal(h.state.engine.history().length,3);
 });
 
-test('UI: aiTurn ends the game (no hang) when the AI has zero legal moves', () => {
-  const sb = makeUiSandbox();
-  sb.setMode('ai');
-  // Black king boxed by its own pawns; the back-rank pawn is immobile (no promotion).
-  const b = empty();
-  b[7][7] = 'bK'; b[7][6] = 'bP'; b[6][6] = 'bP'; b[6][7] = 'bP';
-  assert.equal(sb.allMoves(b, 'b').length, 0);   // precondition: AI truly has no move
-  sb.S.board = b; sb.S.turn = 'b'; sb.S.gameOver = null;
-  sb.aiTurn();
-  assert.equal(sb.S.gameOver, 'w');              // game ended (white wins), input unlocked — not frozen
+test('two-player pawn coaching describes black moving down the board',()=>{
+ const h=harness();h.startPractice('together');h.makeMove({from:'e2',to:'e4'});h.tap('e7');assert.match(h.els.get('coachText').textContent,/Black pawns move down/);
 });
