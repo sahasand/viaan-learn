@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-Viaan is a children's learning app (Math, English, Critical Thinking) plus three games (Chess, Memory Match, Little Pilot), hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline. Chess (`chess.html`) and Memory Match (`memory.html`) are self-contained pages; Little Pilot lives in `sky-playground/` with vendored Three.js and Blender assets. The old `plane.html` URL redirects to Little Pilot. Audio files are served from `audio/`. No build step. The curriculum loads Google Fonts (Baloo 2 + Nunito); Little Pilot serves all runtime dependencies locally.
+Viaan is a children's learning app (Math, English, Critical Thinking) plus three games (Chess, Memory Match, Little Pilot), hosted on GitHub Pages. The curriculum app is a single HTML file (`index.html`) with CSS and JS inline. Chess (`chess.html`) and Memory Match (`memory.html`) keep their code inline and load local artwork; Little Pilot lives in `sky-playground/` with vendored Three.js and Blender assets. The old `plane.html` URL redirects to Little Pilot. Audio files are served from `audio/`. No build step. The curriculum loads Google Fonts (Baloo 2 + Nunito); Little Pilot serves all runtime dependencies locally.
 
-There is no build or lint step. Serve the repository over HTTP to run Little Pilot (its GLB assets cannot load over `file://`). Chess and Memory Match keep pure logic between `/* LOGIC_START */`…`/* LOGIC_END */` markers for Node VM tests. Little Pilot has a separate pure `flight.js` module. Run `node --test chess.test.mjs memory.test.mjs sky-playground/flight.test.mjs` for all 39 game tests.
+There is no build or lint step. Serve the repository over HTTP to run Little Pilot (its GLB assets cannot load over `file://`). Chess and Memory Match keep pure logic between `/* LOGIC_START */`…`/* LOGIC_END */` markers for Node VM tests. Little Pilot has a separate pure `flight.js` module. Run `node --test chess.test.mjs memory.test.mjs sky-playground/flight.test.mjs` for all game tests.
 
 ## Architecture
 
@@ -111,16 +111,16 @@ node generate-audio.js   # reads OPENAI_API_KEY from .env or env; writes audio/*
 
 ## Memory Match (standalone game)
 
-`memory.html` is a self-contained card-matching game (bright/bubbly kid styling, silent), reached from the home screen's Memory world card (`#wMem`).
+`memory.html` is Little Friends, a cream-and-mint memory game reached from the home Memory card (`#wMem`).
 
-- **Two marked sections** like Chess: pure logic between `/* LOGIC_START */`…`/* LOGIC_END */` (deck data, `shuffle`, `buildGame`, `cardsMatch`, `isWin` — the `memory.test.mjs` surface) and the DOM/UI between `/* UI_START */`…`/* UI_END */`.
-- **Decks:** `DECKS` map, grouped by `cat` (`Pictures`: animals/food/vehicles/faces/nature — emoji; `Learning`: letters/numbers/shapes/weather — emoji/char, and `colors` with `kind:'color'` rendered as CSS swatches). Each deck needs ≥8 DISTINCT items (Hard = 8 pairs; `buildGame` slices distinct items, and the test asserts uniqueness).
-- **Difficulty:** `SIZES` (easy 3 / medium 6 / hard 8 pairs; `cols` 2/3/4). Player picks deck + size on the setup screen each game; no progress persisted.
-- **Gameplay:** tap-to-flip with 3D CSS flip (`.card.up`/`.card.done`), input locked during the compare delay, matched pairs get a golden-ring pop, confetti on win. Card faces scale via container queries (`cqmin`) with a `rem` fallback. Note: `.cf`/`.cf-d`/`.cf-u` are `position:absolute` overlays — do not add `position:relative` to `.cf-d` (it collapses the card height; the sparkle `::after` already works since an absolute parent is a containing block).
-- **Polish:** sparkle-dot card backs (`.cf-d::after`), color-echo face borders (per `.g0`–`.g5`), staggered deal-in on game start (`.card.deal`, self-removed on `animationend` so it can't re-trigger after a `.shake`), wordless mismatch shake (`.card.shake`), a live progress bar in the `#pairs` stat, and a per-game 1–3 star rating on the win overlay (`starsFor(moves,pairs)`, pure/tested, **not** persisted) with a spring pop-in.
-- **Timer lifecycle:** gameplay timeouts go through `later()` (tracked in `timers[]`) so `startGame()`/`toSetup()` can `clearTimers()` them — prevents a stale flip-back/match/win callback firing on a rebuilt board or the setup screen; `winGame()` also guards on the game screen being active.
-- **Mobile fit:** `#board` width is capped by both viewport width and available height via per-game `--cols`/`--rows` (set in `buildBoard`), and `.scr` padding respects `env(safe-area-inset-*)` for notched phones.
-- **Tests:** `node --test memory.test.mjs` (11 tests) covers deck integrity (incl. ≥8 distinct items per deck), `buildGame` pair/count correctness, deterministic seeded shuffle, match/win logic, `starsFor`, and UI control-flow (load, timer cancellation, win guard via a stubbed-DOM `vm` sandbox). Run it after any change to `memory.html`.
+- **Logic boundary:** preserve the `LOGIC_START` / `LOGIC_END` and `UI_START` / `UI_END` markers used by `memory.test.mjs`. Pure logic includes deck data, shuffle/matching, `normalizePreferences`, and `mergeAlbum`.
+- **Artwork:** Animals uses original transparent Blender renders in `memory-assets/`. Read `memory-assets/README.md` when changing art or regenerating the editable scene. Other decks retain emoji/letters/color swatches. Every deck needs at least eight distinct items.
+- **Setup and persistence:** default Animals with 3 pairs; 6 and 8 pairs remain available. Three featured decks precede seven additional decks in a disclosure. Validated deck, size and collected animal IDs persist in localStorage `memory-friends-v1`; unavailable/corrupt storage falls back safely.
+- **Rewards:** completing an animal round adds its distinct animals to the collection. Partial rounds add nothing. Every completed round receives the same celebration regardless of guesses; no star penalty or speed scoring.
+- **Interaction:** identical mint backs, native card buttons with masked accessible names until flipped, matched cards disabled and retained in position. A mismatch stays visible for 1500 ms. Sound is optional and off initially; a user gesture enables a quiet synthesized chime. Pause provides resume/restart/deck controls; native dialogs manage focus.
+- **Lifecycle:** all gameplay delays use `later()` and are cancelled by `startGame()` / `toSetup()`. Pause is temporarily disabled during comparisons and completion. `winGame()` requires a completed round on the active game screen.
+- **Responsive/accessibility checks:** verify portrait and landscape at every pair count, reduced motion, keyboard navigation, hidden-card names and completion focus. Landscape uses two rows to preserve large tap targets. The board uses absolute front/back faces; retain the square card geometry.
+- **Tests:** run `node --test memory.test.mjs` after game changes. It covers shuffle/decks, matches, validated preferences, album rules, accessible card labels, timer cancellation, completion, and asset presence.
 
 ## Little Pilot (current Planes game)
 

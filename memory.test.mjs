@@ -56,7 +56,7 @@ test('buildGame: 2*pairs cards, each chosen value appears exactly twice, values 
   distinct.forEach(v => assert.equal(c[v], 2));     // each appears as a pair
   distinct.forEach(v => assert.ok(sandbox.DECKS.animals.items.includes(v)));
   g.cards.forEach((card, i) => assert.equal(card.i, i)); // index matches position
-  assert.equal(g.kind, 'sym');
+  assert.equal(g.kind, 'image');
 });
 
 test('buildGame: Hard uses 8 pairs (16 cards) and is deterministic under a fixed seed', () => {
@@ -86,14 +86,19 @@ test('isWin: true only when all pairs are matched', () => {
   assert.equal(sandbox.isWin(7, 6), true);
 });
 
-test('starsFor: 3 for a perfect run, 2 within pairs+3, else 1', () => {
-  assert.equal(sandbox.starsFor(6, 6), 3);    // perfect (moves === pairs)
-  assert.equal(sandbox.starsFor(3, 6), 3);    // better than perfect still caps at 3
-  assert.equal(sandbox.starsFor(9, 6), 2);    // pairs + 3
-  assert.equal(sandbox.starsFor(10, 6), 1);   // beyond pairs + 3
-  assert.equal(sandbox.starsFor(8, 8), 3);
-  assert.equal(sandbox.starsFor(11, 8), 2);
-  assert.equal(sandbox.starsFor(12, 8), 1);
+test('collection keeps only real animals, without duplicates or mutation', () => {
+  const old=['bear','cat'];
+  assert.deepEqual(Array.from(sandbox.mergeAlbum(old,['bear','dog','bogus'])), ['dog','cat','bear']);
+  assert.deepEqual(old,['bear','cat']);
+});
+
+test('saved preferences validate unknown keys, invalid collections and missing storage', () => {
+  for(const value of [null,[],17,{deckId:'__proto__',size:'constructor',album:'bear'}]){
+    const p=sandbox.normalizePreferences(value);
+    assert.equal(p.deckId,'animals');assert.equal(p.size,'easy');assert.equal(p.album.length,0);
+  }
+  const p=sandbox.normalizePreferences({deckId:'food',size:'hard',album:['bear','bear','alien']});
+  assert.equal(p.deckId,'food');assert.equal(p.size,'hard');assert.deepEqual(Array.from(p.album),['bear']);
 });
 
 // ---- UI control-flow (LOGIC + UI evaluated against a stubbed DOM + fake timers) ----
@@ -101,7 +106,7 @@ const logicSrc = html.match(/\/\* LOGIC_START \*\/([\s\S]*?)\/\* LOGIC_END \*\//
 const uiSrc = html.match(/\/\* UI_START \*\/([\s\S]*?)\/\* UI_END \*\//)[1];
 
 function makeEl(){
-  const cls = new Set();
+  const cls = new Set(), attrs = {};
   return {
     _cls: cls, innerHTML:'', textContent:'', className:'',
     style:{ setProperty(){} },
@@ -109,7 +114,8 @@ function makeEl(){
       add:c=>cls.add(c), remove:c=>cls.delete(c), contains:c=>cls.has(c),
       toggle:(c,f)=>{ if(f===undefined){ cls.has(c)?cls.delete(c):cls.add(c); } else if(f){ cls.add(c); } else { cls.delete(c); } }
     },
-    setAttribute(){}, getAttribute(){ return null; },
+    setAttribute(k,v){attrs[k]=v;}, getAttribute(k){return attrs[k]??null;},
+    focus(){}, open:false, showModal(){this.open=true;}, close(){this.open=false;},
     addEventListener(){}, appendChild(){}, querySelectorAll(){ return []; }, querySelector(){ return makeEl(); }
   };
 }
@@ -152,5 +158,51 @@ test('UI: winGame does nothing when not on the game screen (no overlay over setu
   const sb = makeUiSandbox();
   sb.toSetup();                                 // ensure game screen is off
   sb.winGame();                                 // a stale win callback firing on setup
-  assert.ok(!sb.__els.win._cls.has('show'));    // overlay stays hidden
+  assert.equal(sb.__els.win.open,false);    // overlay stays hidden
+});
+
+function flushTimers(sb){
+  const pending=Object.entries(sb.__pending);
+  for(const [id,fn] of pending){delete sb.__pending[id];fn();}
+}
+
+test('UI: hidden card accessible names never expose faces and reset after a mismatch', () => {
+  const sb=makeUiSandbox();sb.startGame();
+  sb.boardCards.forEach((b,i)=>assert.equal(b.getAttribute('aria-label'),'Face-down card '+(i+1)));
+  const other=sb.M.game.cards.findIndex(c=>c.val!==sb.M.game.cards[0].val);
+  sb.onCardTap(0);assert.match(sb.boardCards[0].getAttribute('aria-label'),/card 1$/);
+  assert.ok(!sb.boardCards[0].getAttribute('aria-label').includes('Face-down'));
+  sb.onCardTap(other);flushTimers(sb);
+  assert.equal(sb.boardCards[0].getAttribute('aria-label'),'Face-down card 1');
+});
+
+test('UI: each pair counts once, collection is awarded only after finishing, all moves rewarded equally', () => {
+  const sb=makeUiSandbox();sb.startGame();sb.M.moves=99;
+  const vals=[...new Set(sb.M.game.cards.map(c=>c.val))];
+  vals.forEach((v,i)=>{
+    const pair=sb.M.game.cards.filter(c=>c.val===v);
+    sb.onCardTap(pair[0].i);sb.onCardTap(pair[0].i); // cannot match itself
+    assert.equal(sb.M.flipped.length,1);
+    sb.onCardTap(pair[1].i);flushTimers(sb);
+    assert.equal(sb.M.matched,i+1);
+    assert.equal(sb.boardCards[pair[0].i].disabled,true);
+    sb.onCardTap(pair[0].i);assert.equal(sb.M.matched,i+1);
+    assert.equal(sb.M.album.length,0);
+  });
+  flushTimers(sb);assert.equal(sb.__els.win.open,true);
+  assert.equal(sb.M.album.length,3);sb.winGame();assert.equal(sb.M.album.length,3);
+});
+
+test('UI: leaving a round cancels comparison and cannot award an unfinished collection', () => {
+  const sb=makeUiSandbox();sb.startGame();
+  const pair=sb.M.game.cards.filter(c=>c.val===sb.M.game.cards[0].val);
+  sb.onCardTap(pair[0].i);sb.onCardTap(pair[1].i);sb.toSetup();flushTimers(sb);
+  assert.equal(sb.M.matched,0);assert.equal(sb.M.album.length,0);assert.equal(sb.__els.win.open,false);
+});
+
+test('every animal has an original PNG render on disk', () => {
+  for(const a of Object.values(sandbox.ANIMALS)){
+    const bytes=readFileSync(new URL('./memory-assets/'+a.id+'.png',import.meta.url));
+    assert.equal(bytes.subarray(1,4).toString(),'PNG');
+  }
 });

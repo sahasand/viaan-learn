@@ -3,233 +3,41 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Memory Match</title>
+<meta name="theme-color" content="#f8f5ec">
+<title>Little Friends · Memory Match</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{
-  --ink:#3a2a5a; --paper:#fff;
-}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{margin:0;height:100%;}
-body{
-  min-height:100svh;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
-  color:var(--ink);
-  background:linear-gradient(180deg,#FFE9F3 0%,#E9F0FF 45%,#E6FBF4 100%);
-  display:flex;flex-direction:column;align-items:center;
-  overflow-x:hidden;
-}
-/* drifting background blobs */
-body::before{
-  content:'';position:fixed;inset:-60px;z-index:0;pointer-events:none;
-  background:
-    radial-gradient(ellipse 280px 280px at 12% 18%, rgba(236,72,153,.16), transparent 70%),
-    radial-gradient(ellipse 300px 300px at 88% 30%, rgba(59,130,246,.14), transparent 70%),
-    radial-gradient(ellipse 260px 260px at 50% 92%, rgba(16,185,129,.14), transparent 70%);
-  animation:drift 18s ease-in-out infinite;
-}
-@keyframes drift{0%,100%{transform:translate(0,0)}33%{transform:translate(12px,-10px)}66%{transform:translate(-8px,6px)}}
-
-.scr{display:none;flex-direction:column;align-items:center;width:100%;max-width:520px;
-  padding:calc(14px + env(safe-area-inset-top,0px)) 14px calc(26px + env(safe-area-inset-bottom,0px));
-  position:relative;z-index:1;}
-.scr.on{display:flex;}
-
-/* ---------- header / titles ---------- */
-.topline{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;}
-.menu-lnk{
-  font-size:14px;font-weight:800;text-decoration:none;color:#fff;background:#8b5cf6;
-  padding:9px 13px;border-radius:12px;box-shadow:0 4px 0 #6d28d9;touch-action:manipulation;
-}
-.menu-lnk:active{transform:translateY(3px);box-shadow:0 1px 0 #6d28d9;}
-.title{font-weight:900;font-size:2rem;letter-spacing:.5px;margin:4px 0 0;
-  background:linear-gradient(90deg,#ec4899,#8b5cf6,#3b82f6);-webkit-background-clip:text;background-clip:text;color:transparent;
-  filter:drop-shadow(0 2px 2px rgba(0,0,0,.08));}
-.subtitle{font-weight:700;color:#7c6aa0;margin:2px 0 14px;font-size:1rem;}
-
-/* ---------- deck picker ---------- */
-.grp-h{align-self:flex-start;font-weight:900;color:#a78bcf;font-size:.85rem;letter-spacing:1.5px;
-  text-transform:uppercase;margin:12px 4px 8px;}
-.deck-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;}
-.deck{
-  display:flex;flex-direction:column;align-items:center;gap:5px;padding:12px 4px;border:none;
-  border-radius:18px;background:var(--paper);cursor:pointer;-webkit-appearance:none;touch-action:manipulation;
-  box-shadow:0 4px 0 rgba(120,90,170,.18), 0 8px 16px rgba(120,90,170,.12);
-  transition:transform .15s cubic-bezier(.34,1.56,.64,1), box-shadow .15s, outline-color .15s;
-  outline:3px solid transparent;outline-offset:2px;
-}
-.deck:active{transform:scale(.93) translateY(3px);}
-.deck.sel{outline-color:#ec4899;transform:translateY(-2px);
-  box-shadow:0 6px 0 rgba(236,72,153,.35), 0 12px 20px rgba(236,72,153,.25);}
-.deck-ic{font-size:2rem;line-height:1;}
-.deck-lb{font-size:.74rem;font-weight:800;color:#5b4a7a;text-align:center;line-height:1.05;}
-
-/* ---------- size picker ---------- */
-.size-row{display:flex;gap:10px;width:100%;margin-top:6px;}
-.size{
-  flex:1;display:flex;flex-direction:column;align-items:center;gap:1px;padding:12px 6px;border:none;
-  border-radius:16px;background:var(--paper);cursor:pointer;-webkit-appearance:none;touch-action:manipulation;
-  font-weight:900;font-size:1rem;color:#5b4a7a;
-  box-shadow:0 4px 0 rgba(120,90,170,.18);outline:3px solid transparent;outline-offset:2px;
-  transition:transform .15s, outline-color .15s, box-shadow .15s;
-}
-.size small{font-weight:700;font-size:.66rem;color:#9a86bd;}
-.size:active{transform:scale(.94) translateY(3px);}
-.size.sel{outline-color:#3b82f6;color:#2563eb;box-shadow:0 6px 0 rgba(59,130,246,.3);}
-
-/* ---------- play button ---------- */
-.play{
-  margin-top:20px;border:none;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;
-  font-weight:900;font-size:1.3rem;color:#fff;padding:16px 44px;border-radius:22px;letter-spacing:.5px;
-  background:linear-gradient(145deg,#fb7185,#ec4899);
-  box-shadow:0 7px 0 #be1d63, 0 14px 24px rgba(236,72,153,.4);
-  animation:bob 2.4s ease-in-out infinite;
-}
-.play:active{transform:translateY(5px);box-shadow:0 2px 0 #be1d63, 0 5px 10px rgba(236,72,153,.35);animation:none;}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-
-/* ---------- game top bar ---------- */
-.g-bar{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
-.stat{font-weight:900;font-size:1rem;color:#5b4a7a;background:rgba(255,255,255,.7);
-  padding:7px 12px;border-radius:12px;box-shadow:0 2px 6px rgba(120,90,170,.15);}
-#pairs{display:flex;align-items:center;gap:8px;}
-.prog-bar{width:60px;height:10px;border-radius:6px;background:rgba(123,106,160,.22);overflow:hidden;}
-.prog-fill{display:block;height:100%;width:0;border-radius:6px;
-  background:linear-gradient(90deg,#ec4899,#8b5cf6);transition:width .35s cubic-bezier(.34,1.56,.64,1);}
-.prog-txt{font-weight:900;font-size:.82rem;color:#5b4a7a;min-width:28px;}
-.gbtn{border:none;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;font-weight:800;font-size:.92rem;
-  color:#fff;padding:9px 13px;border-radius:12px;background:#34d399;box-shadow:0 4px 0 #059669;}
-.gbtn.alt{background:#60a5fa;box-shadow:0 4px 0 #2563eb;}
-.gbtn:active{transform:translateY(3px);box-shadow:0 1px 0 #059669;}
-.gbtn.alt:active{box-shadow:0 1px 0 #2563eb;}
-
-/* ---------- board + cards ---------- */
-/* Width is capped by viewport width AND by available height (so the taller
-   layouts — e.g. Easy's big 2-col board — fit on load without scrolling).
-   --cols/--rows are set per game in buildBoard(). */
-#board{
-  --cols:2; --rows:3;
-  display:grid;gap:10px;margin:0 auto;
-  width:min(94vw, 440px,
-    calc((100svh - 120px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)) * var(--cols) / var(--rows)));
-}
-.card{
-  aspect-ratio:1;border:none;background:transparent;padding:0;cursor:pointer;
-  -webkit-appearance:none;touch-action:manipulation;perspective:700px;container-type:size;
-}
-.ci{position:relative;width:100%;height:100%;transform-style:preserve-3d;
-  transition:transform .45s cubic-bezier(.2,.9,.3,1.4);}
-.card.up .ci,.card.done .ci{transform:rotateY(180deg);}
-.cf{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:16px;
-  backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  box-shadow:0 5px 0 rgba(0,0,0,.14), 0 9px 16px rgba(0,0,0,.16);}
-.cf-d{color:rgba(255,255,255,.92);font-size:2rem;font-size:40cqmin;}
-.cf-d::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;background-image:
-  radial-gradient(1.6px 1.6px at 16% 22%, rgba(255,255,255,.9), transparent),
-  radial-gradient(1.2px 1.2px at 34% 46%, rgba(255,255,255,.65), transparent),
-  radial-gradient(1.4px 1.4px at 66% 26%, rgba(255,255,255,.85), transparent),
-  radial-gradient(1.1px 1.1px at 82% 68%, rgba(255,255,255,.6), transparent),
-  radial-gradient(1.6px 1.6px at 26% 76%, rgba(255,255,255,.8), transparent),
-  radial-gradient(1.3px 1.3px at 60% 62%, rgba(255,255,255,.7), transparent);}
-.cf-u{transform:rotateY(180deg);background:#fff;border:4px solid rgba(58,42,90,.06);}
-.g0 .cf-u{border-color:rgba(225,29,72,.16)}
-.g1 .cf-u{border-color:rgba(37,99,235,.16)}
-.g2 .cf-u{border-color:rgba(5,150,105,.16)}
-.g3 .cf-u{border-color:rgba(217,119,6,.16)}
-.g4 .cf-u{border-color:rgba(124,58,237,.16)}
-.g5 .cf-u{border-color:rgba(8,145,178,.16)}
-.sym{font-size:2.3rem;font-size:50cqmin;line-height:1;}
-.swatch{width:62%;height:62%;border-radius:15px;
-  box-shadow:inset 0 4px 0 rgba(255,255,255,.45), inset 0 -5px 8px rgba(0,0,0,.16);}
-.card.done{cursor:default;}
-.card.done .ci{animation:pop .42s ease;}
-.card.done .cf-u{box-shadow:0 0 0 4px #FACC15, 0 0 18px rgba(250,204,21,.6);}
-@keyframes pop{0%{transform:rotateY(180deg) scale(1)}45%{transform:rotateY(180deg) scale(1.14)}100%{transform:rotateY(180deg) scale(1)}}
-/* deal-in (start) — self-removed on animationend so it never fights .shake */
-@keyframes dealIn{from{opacity:0;transform:translateY(46px) scale(.9)}to{opacity:1;transform:translateY(0) scale(1)}}
-.card.deal{animation:dealIn .5s cubic-bezier(.34,1.56,.64,1) both;}
-/* mismatch shake (wordless "not a match") */
-@keyframes shake{10%,90%{transform:translateX(-3px)}30%,70%{transform:translateX(5px)}50%{transform:translateX(-5px)}}
-.card.shake{animation:shake .34s ease both;}
-/* candy gradient card backs */
-.g0 .cf-d{background:linear-gradient(145deg,#fb7185,#e11d48);}
-.g1 .cf-d{background:linear-gradient(145deg,#60a5fa,#2563eb);}
-.g2 .cf-d{background:linear-gradient(145deg,#34d399,#059669);}
-.g3 .cf-d{background:linear-gradient(145deg,#fbbf24,#d97706);}
-.g4 .cf-d{background:linear-gradient(145deg,#c084fc,#7c3aed);}
-.g5 .cf-d{background:linear-gradient(145deg,#22d3ee,#0891b2);}
-
-/* ---------- win overlay ---------- */
-#win{position:fixed;inset:0;z-index:5;display:none;flex-direction:column;align-items:center;justify-content:center;
-  gap:14px;padding:24px;background:rgba(58,42,90,.55);backdrop-filter:blur(4px);text-align:center;}
-#win.show{display:flex;animation:fade .3s ease;}
-@keyframes fade{from{opacity:0}to{opacity:1}}
-.win-card{background:#fff;border-radius:26px;padding:28px 26px;max-width:340px;width:100%;
-  box-shadow:0 16px 50px rgba(0,0,0,.3);animation:cardPop .42s cubic-bezier(.34,1.56,.64,1) both;}
-@keyframes cardPop{from{opacity:0;transform:scale(.82)}to{opacity:1;transform:scale(1)}}
-.win-emoji{font-size:4.2rem;animation:bob 1.6s ease-in-out infinite;}
-.win-ttl{font-weight:900;font-size:1.7rem;margin:6px 0 2px;color:#ec4899;}
-.win-stars{font-size:2.6rem;letter-spacing:2px;margin:2px 0 10px;line-height:1;}
-.win-star{display:inline-block;animation:starPop .5s cubic-bezier(.34,1.56,.64,1) both;}
-@keyframes starPop{from{opacity:0;transform:scale(0) rotate(-160deg)}to{opacity:1;transform:scale(1) rotate(0)}}
-.win-msg{font-weight:700;color:#7c6aa0;margin-bottom:16px;}
-.win-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
-.win-btns button{border:none;cursor:pointer;-webkit-appearance:none;touch-action:manipulation;
-  font-weight:900;font-size:1rem;color:#fff;padding:13px 20px;border-radius:16px;}
-#winAgain{background:linear-gradient(145deg,#fb7185,#ec4899);box-shadow:0 5px 0 #be1d63;}
-#winDeck{background:linear-gradient(145deg,#60a5fa,#3b82f6);box-shadow:0 5px 0 #1d4ed8;}
-.win-btns button:active{transform:translateY(3px);}
-/* confetti */
-#confetti{position:fixed;inset:0;z-index:6;pointer-events:none;overflow:hidden;}
-#confetti span{position:absolute;top:-14px;width:11px;height:14px;border-radius:2px;
-  animation:fall linear forwards;}
-@keyframes fall{to{transform:translateY(112vh) rotate(720deg);}}
+:root{--paper:#f8f5ec;--ink:#28483f;--muted:#66766b;--mint:#c1dfcf;--deep:#356950;--coral:#c45337;--line:#e2e4d8;--white:#fffef9;--fn:'Nunito',sans-serif;--display:'Baloo 2',sans-serif}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:var(--fn);background:var(--paper);background-image:radial-gradient(#63837018 .8px,transparent .8px);background-size:14px 14px}button,a,summary{-webkit-tap-highlight-color:transparent;touch-action:manipulation}button{font:inherit;color:inherit;cursor:pointer;-webkit-appearance:none}button:disabled{cursor:default}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--coral);outline-offset:5px}button,a{transition:transform .18s,background .18s}button:active{transform:translateY(2px)}a{color:inherit}h1,h2,h3,p{margin:0}h1,h2,h3{font-family:var(--display);font-weight:700;line-height:1.05}header{height:86px;max-width:1120px;margin:auto;padding:16px 30px;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:900;font-size:18px}.brand-mark{background:var(--mint);width:40px;height:40px;display:grid;place-items:center;border-radius:14px;font-size:24px}.header-actions{display:flex;align-items:center;gap:10px}.quiet{border:1px solid var(--line);background:var(--white);border-radius:40px;padding:11px 17px;font-size:13px;font-weight:800;min-height:44px;text-decoration:none}.sound{min-width:110px}.scr{display:none}.scr.on{display:block}.setup-wrap{max-width:1040px;margin:24px auto 50px;padding:0 30px}.intro{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:44px;padding:10px 0 34px}.eyebrow{font-size:12px;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:var(--deep);margin-bottom:14px;display:flex;gap:8px;align-items:center}.eyebrow:before{content:'';width:7px;height:7px;background:var(--coral);border-radius:50%}h1{font-size:clamp(42px,5.5vw,66px);letter-spacing:-1.8px;margin-bottom:18px}h1 em{font-style:normal;color:var(--coral)}.intro p{font-size:16px;line-height:1.6;max-width:320px;color:var(--muted)}.hero-art{position:relative;height:305px;isolation:isolate}.hero-art:before{content:'';position:absolute;inset:18px 10px 15px;background:#e9edda;border-radius:50%;z-index:-1}.hero-card{position:absolute;width:165px;height:208px;border-radius:24px;border:7px solid var(--white);background:#f0e2c8;box-shadow:0 10px 0 #d6c9b840,0 18px 30px #3b493515;top:42px;left:50%;display:flex;align-items:center;justify-content:center}.hero-card img{width:112%;height:105%;object-fit:contain;max-width:none}.hero-card.cat{transform:translateX(-118%) rotate(-17deg);background:#e9dccc}.hero-card.dog{transform:translateX(18%) rotate(17deg);background:#d5e7e6}.hero-card.bear{transform:translateX(-50%) rotate(-3deg);top:25px}.hero-stamp{position:absolute;bottom:9px;left:50%;transform:translateX(-50%) rotate(-5deg);white-space:nowrap;border-radius:22px;background:var(--deep);color:var(--white);padding:10px 20px;font-weight:900;font-size:13px;box-shadow:0 5px 0 #28483f12}.spark{position:absolute;font-size:32px;color:#c78e39;top:0;right:25px;transform:rotate(15deg)}.spark.small{font-size:22px;top:auto;bottom:18px;left:0}.play-panel{border-top:1px solid var(--line);padding-top:28px;display:grid;grid-template-columns:1.35fr 1fr;gap:48px}.section-label{font-size:14px;font-weight:900;margin-bottom:13px}.section-label span{font-weight:700;color:var(--muted);font-size:12px;margin-left:6px}.deck-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.deck{position:relative;min-height:96px;border:2px solid var(--line);border-radius:18px;background:#ffffff75;font-weight:900;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;padding:7px 5px;font-size:13px}.deck .deck-art{height:44px;width:60px;display:grid;place-items:center;font-size:32px}.deck img{height:65px;width:65px;object-fit:contain;margin-top:-7px}.deck[aria-pressed=true]{border-color:var(--deep);background:#e8f0e4;box-shadow:0 3px 0 #356950}.deck[aria-pressed=true]:after{content:'✓';position:absolute;top:5px;right:8px;font-size:12px;color:var(--deep)}details{margin-top:17px}summary{cursor:pointer;font-size:13px;font-weight:800;padding:10px 0;min-height:40px}#moreDecks .deck-grid{grid-template-columns:repeat(4,1fr);padding-top:8px}.deck.small-deck{min-height:77px;font-size:11px}.small-deck .deck-art{height:30px;font-size:25px}.sizes{display:flex;gap:8px}.size{flex:1;border:2px solid var(--line);background:#ffffff80;border-radius:15px;min-height:74px;padding:9px 4px;font-size:12px;font-weight:800;line-height:1.1}.size strong{font-family:var(--display);font-size:28px;display:block}.size[aria-pressed=true]{background:#e8f0e4;border-color:var(--deep)}.primary{border:0;border-radius:18px;background:var(--coral);color:white;box-shadow:0 5px 0 #943e2b;padding:15px 22px;font-family:var(--display);font-size:23px;font-weight:700;min-height:58px;line-height:1.15}.primary:active{box-shadow:0 2px 0 #943e2b;transform:translateY(3px)}#playBtn{width:100%;margin:18px 0 12px;display:flex;justify-content:space-between;align-items:center}.start-note{text-align:center;font-size:12px;color:var(--muted)}.album{margin-top:24px;border-top:1px solid var(--line)}.album summary{display:flex;align-items:center;justify-content:space-between;padding:17px 0;font-size:15px}.album summary:after{content:'＋';font-size:22px;margin-left:14px}.album[open] summary:after{content:'−'}.album-count{margin-left:auto;background:#e9ecde;padding:5px 10px;border-radius:15px;font-size:12px}.album p{font-size:13px;color:var(--muted);margin:0 0 16px}.album-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.sticker{border-radius:20px;background:#eeeee3;padding:4px;text-align:center;font-size:11px;font-weight:900;color:var(--muted)}.sticker img{display:block;width:100%;aspect-ratio:1;object-fit:contain;filter:grayscale(1);opacity:.25}.sticker.earned{background:#e6eddd;color:var(--ink)}.sticker.earned img{filter:none;opacity:1}.setup-footer{text-align:center;font-size:11px;color:var(--muted);margin-top:24px;letter-spacing:.3px}
+#game{padding:0 22px 18px;text-align:center}.game-top{display:flex;align-items:center;justify-content:space-between;max-width:760px;margin:0 auto 13px;gap:18px}.game-title h2{font-size:28px}.game-title p{color:var(--muted);font-size:12px;margin-top:4px}.progress{display:flex;justify-content:center;align-items:center;gap:14px;margin-bottom:13px;font-size:13px;font-weight:900}.progress-track{height:8px;width:140px;background:#e1e6d8;border-radius:20px;overflow:hidden}.prog-fill{height:100%;width:0;background:var(--deep);border-radius:20px;transition:width .4s}.table{background:#e8edde;border:1px solid #dfe4d5;border-radius:30px;padding:20px;width:fit-content;margin:auto;box-shadow:0 6px 0 #d9ddce80}.board{--cols:2;--rows:3;--gap:12px;display:grid;grid-template-columns:repeat(var(--cols),1fr);gap:var(--gap);width:min(620px,calc(100vw - 88px),calc((100svh - 342px) * var(--cols) / var(--rows)));margin:auto}.card{position:relative;aspect-ratio:1;border:0;background:transparent;padding:0;perspective:900px;container-type:inline-size;min-width:0;min-height:0;border-radius:18px;touch-action:manipulation}.ci{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .4s cubic-bezier(.2,.7,.2,1)}.card.up .ci,.card.done .ci{transform:rotateY(180deg)}.cf{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;align-items:center;justify-content:center;overflow:hidden}.cf-d{color:#47785e;background:var(--mint);border:4px solid #f4f9ec;box-shadow:0 4px 0 #96b59e,0 6px 10px #3c584915}.cf-d:after{content:'';position:absolute;inset:8px;border:1px dashed #52826360;border-radius:9px}.paw{width:46%;height:46%;fill:currentColor;opacity:.65}.cf-u{background:var(--white);border:3px solid white;transform:rotateY(180deg);box-shadow:0 4px 0 #c4cdb7;flex-direction:column}.cf-u img{width:100%;height:100%;object-fit:contain;transform:scale(1.08);padding-bottom:8%}.animal-label{position:absolute;bottom:6%;font-size:clamp(10px,9cqi,17px);font-weight:900}.symbol{font-size:clamp(24px,54cqi,90px);line-height:1}.color-swatch{width:62%;height:62%;border-radius:28%;box-shadow:inset 0 -6px 0 #00000012}.card.done .cf-u{background:#f1f7e6;border-color:#7eaa72;box-shadow:0 3px 0 #93b383}.card.done .cf-u:after{content:'✓';position:absolute;top:4%;right:5%;background:var(--deep);color:white;border-radius:50%;width:18%;height:18%;display:grid;place-items:center;font-size:clamp(10px,11cqi,20px)}.card.done{animation:happy .5s ease}.feedback{min-height:26px;margin:16px 0 0;font-family:var(--display);font-size:20px}.found{display:flex;justify-content:center;align-items:center;gap:5px;height:38px;margin:3px 0}.found img{height:38px;width:38px;object-fit:contain}.found span{font-size:25px}.found .empty-dot{height:9px;width:9px;border-radius:50%;background:#d7decf;margin:0 8px}.deal{animation:deal .35s both;animation-delay:var(--delay)}dialog{border:1px solid var(--line);padding:32px;border-radius:30px;background:var(--paper);color:var(--ink);text-align:center;width:min(440px,calc(100vw - 34px));box-shadow:0 22px 80px #1e392433}dialog::backdrop{background:#263b32aa;backdrop-filter:blur(5px)}dialog h2{font-size:36px;margin-bottom:10px}dialog p{font-size:14px;color:var(--muted);line-height:1.6}dialog .primary{width:100%;margin:23px 0 14px}.win-friends{display:flex;justify-content:center;flex-wrap:wrap;margin:0 auto 16px;max-width:330px}.win-friends img{height:80px;width:80px;object-fit:contain;margin:0 -5px}.win-friends span{font-size:45px;margin:5px}.win-caption{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:2px;color:var(--deep);margin-bottom:10px}.dialog-options{display:flex;flex-direction:column;gap:10px;margin-top:20px}.dialog-options button{width:100%}#confetti{pointer-events:none;position:fixed;inset:0;z-index:5;overflow:hidden}#confetti i{position:absolute;top:-20px;width:9px;height:16px;border-radius:3px;animation:fall 3s linear forwards}
+@keyframes happy{0%,100%{transform:rotate(0)}30%{transform:rotate(-4deg) scale(1.03)}65%{transform:rotate(4deg) scale(1.03)}}@keyframes deal{from{opacity:0;transform:translateY(12px) scale(.96)}to{opacity:1;transform:none}}@keyframes fall{to{transform:translateY(110vh) rotate(480deg)}}
+@media(hover:hover){.deck:hover,.size:hover{background:#e8f0e4}.card:not(.up):not(.done):hover .ci{transform:translateY(-3px)}.quiet:hover{background:#e8f0e4}}
+@media(min-width:900px){.setup-wrap{margin-top:32px}.intro{padding-bottom:42px}.hero-art{height:320px}.game-title h2{font-size:32px}}
+@media(max-width:600px){header{height:72px;padding:12px 19px}.brand{font-size:15px;gap:7px}.brand-mark{width:34px;height:34px;border-radius:12px;font-size:20px}.quiet{padding:10px 13px;font-size:12px}.sound{min-width:98px}.setup-wrap{padding:0 23px;margin:8px auto 25px}.intro{grid-template-columns:1fr;gap:10px;text-align:center;padding:0 0 24px}.eyebrow{justify-content:center;font-size:10px;letter-spacing:1.8px;margin-bottom:10px}h1{font-size:39px;letter-spacing:-1.2px;margin-bottom:10px}.intro p{font-size:14px;margin:auto;max-width:270px}.hero-art{height:175px;grid-row:2;margin:5px auto 0;width:300px}.hero-art:before{inset:7px 12px 10px}.hero-card{width:105px;height:133px;border-width:5px;border-radius:18px;top:24px}.hero-card.bear{top:13px}.hero-stamp{font-size:11px;padding:8px 15px;bottom:0}.spark{font-size:23px;right:9px}.spark.small{font-size:18px;bottom:8px}.play-panel{grid-template-columns:1fr;gap:21px;padding-top:21px}.section-label{font-size:13px;margin-bottom:10px}.deck{min-height:83px}.deck .deck-art{height:37px;font-size:28px}.deck img{height:57px;width:57px}details{margin-top:8px}.size{min-height:62px}.size strong{font-size:25px}#playBtn{margin-top:15px}.album{margin-top:23px}.album-grid{grid-template-columns:repeat(4,1fr);gap:7px}.game-top{gap:10px;margin-bottom:13px}.game-title h2{font-size:24px}.game-title p{font-size:11px}#game{padding:4px 14px 12px}.table{padding:13px;border-radius:24px}.board{--gap:9px;width:min(620px,calc(100vw - 58px),calc((100svh - 285px) * var(--cols) / var(--rows)))}.cf{border-radius:12px}.cf-d{border-width:3px}.cf-d:after{inset:5px}.feedback{font-size:18px;margin-top:15px}.progress{margin-bottom:12px}.game-top .quiet{padding:9px 12px}.game-top .spacer{width:52px}.animal-label{bottom:5%}}
+@media(max-height:540px) and (orientation:landscape){.board{--rows:2!important}.board[data-size=easy]{--cols:3!important}.board[data-size=medium]{--cols:6!important}.board[data-size=hard]{--cols:8!important}header{height:55px;padding:7px 20px}.brand-mark{height:30px;width:30px}#game{padding:0 15px 8px}.game-top{margin-bottom:6px}.game-title h2{font-size:23px}.game-title p{display:none}.game-top .quiet{padding:5px 12px;min-height:34px}.progress{margin-bottom:8px}.table{padding:10px;border-radius:19px}.board{--gap:7px;width:min(620px,calc(100vw - 80px),calc((100svh - 228px) * var(--cols) / var(--rows)))}.feedback{font-size:15px;min-height:20px;margin-top:7px}.found{height:24px;margin:0}.found img{width:24px;height:24px}.cf{border-radius:10px}.cf-d:after{inset:4px}.animal-label{font-size:9px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}#confetti{display:none}}
 </style>
 </head>
 <body>
-
-  <!-- SETUP -->
-  <div class="scr on" id="setup">
-    <div class="topline">
-      <a class="menu-lnk" href="index.html">← Menu</a>
-      <span></span>
-    </div>
-    <div class="title">Memory Match</div>
-    <div class="subtitle">Pick a deck, flip & find the pairs!</div>
-    <div id="deckPick" style="width:100%"></div>
-    <div class="grp-h">Board size</div>
-    <div class="size-row" id="sizePick"></div>
-    <button class="play" id="playBtn">Play ▶</button>
-  </div>
-
-  <!-- GAME -->
-  <div class="scr" id="game">
-    <div class="g-bar">
-      <span class="stat" id="pairs"><span class="prog-bar"><span class="prog-fill"></span></span><span class="prog-txt">0/0</span></span>
-      <span class="stat" id="moves">Moves: 0</span>
-      <button class="gbtn" id="btnNew">↻ New</button>
-      <button class="gbtn alt" id="btnChange">Decks</button>
-    </div>
-    <div id="board"></div>
-  </div>
-
-  <!-- WIN -->
-  <div id="win">
-    <div class="win-card">
-      <div class="win-emoji">🎉</div>
-      <div class="win-ttl">You did it!</div>
-      <div class="win-msg" id="winMsg"></div>
-      <div class="win-btns">
-        <button id="winAgain">Play again</button>
-        <button id="winDeck">New deck</button>
-      </div>
-    </div>
-  </div>
-  <div id="confetti"></div>
-
-  <script>
+<header><a class="brand" href="index.html" aria-label="Viaan home"><span class="brand-mark" aria-hidden="true">v.</span> viaan <span style="font-weight:700;color:var(--muted)">/ play</span></a><div class="header-actions"><button id="soundBtn" class="quiet sound" aria-pressed="false">♪ Sound off</button></div></header>
+<main>
+<section id="setup" class="scr on" aria-label="Choose your memory game">
+<div class="setup-wrap">
+<div class="intro"><div><div class="eyebrow">Memory match · Little Friends</div><h1>Little friends.<br><em>Big discoveries.</em></h1><p>Turn over two cards. Find a pair.<br>Bring your little friends together.</p></div><div class="hero-art" aria-hidden="true"><span class="spark">✦</span><span class="spark small">✦</span><div class="hero-card cat"><img src="memory-assets/cat.png" alt=""></div><div class="hero-card dog"><img src="memory-assets/dog.png" alt=""></div><div class="hero-card bear"><img src="memory-assets/bear.png" alt=""></div><span class="hero-stamp">A little flip. A happy match.</span></div></div>
+<div class="play-panel"><div><h2 class="section-label">Pick your cards <span id="selectedDeck">Animals</span></h2><div id="deckPick" class="deck-grid" role="group" aria-label="Card theme"></div><details id="moreDecks"><summary>More cards to discover</summary><div id="extraDecks" class="deck-grid" role="group" aria-label="More card themes"></div></details></div><div><h2 class="section-label">How many pairs?</h2><div id="sizePick" class="sizes" role="group" aria-label="Number of pairs"></div><button class="primary" id="playBtn"><span>Play Animals</span><span aria-hidden="true">→</span></button><p class="start-note">Take your time. Every match is a little win.</p></div></div>
+<details class="album"><summary>My little friends <span class="album-count" id="albumCount">0 / 12</span></summary><p>Finish an animal game to add its friends to your collection.</p><div id="albumGrid" class="album-grid"></div></details><p class="setup-footer">Made for little hands & curious minds</p>
+</div></section>
+<section id="game" class="scr" aria-label="Memory game"><div class="game-top"><button id="btnPause" class="quiet" aria-label="Pause game">Ⅱ Pause</button><div class="game-title"><h2 id="gameTitle">Find the friends</h2><p id="gameSubtitle">Animals · 3 pairs</p></div><div class="spacer" style="width:65px" aria-hidden="true"></div></div><div class="progress" id="pairs"><div class="progress-track" aria-hidden="true"><div class="prog-fill"></div></div><span class="prog-txt">0 / 3 pairs</span></div><div class="table"><div id="board" class="board" role="group" aria-label="Matching cards"></div></div><p class="feedback" id="feedback" role="status" aria-live="polite">Pick any two cards</p><div class="found" id="found" aria-label="Pairs found"></div></section>
+</main>
+<dialog id="pause" aria-labelledby="pauseTitle"><h2 id="pauseTitle">A little break?</h2><p>Your friends will be right here.</p><button id="btnResume" class="primary" autofocus>Keep playing →</button><div class="dialog-options"><button id="btnNew" class="quiet">Start this game again</button><button id="btnChange" class="quiet">Choose different cards</button></div></dialog>
+<dialog id="win" aria-labelledby="winTitle"><div class="win-caption">All together!</div><div id="winFriends" class="win-friends" aria-hidden="true"></div><h2 id="winTitle">You found them all!</h2><p id="winMsg"></p><button id="winAgain" class="primary" autofocus>Play again →</button><button id="winDeck" class="quiet">Choose cards & see my friends</button></dialog>
+<div id="confetti" aria-hidden="true"></div>
+<script>
 /* LOGIC_START */
 var DECKS = {
-  animals:  { label:'Animals',     icon:'🐻', cat:'Pictures', kind:'sym',
+  animals:  { label:'Animals',     icon:'🐻', cat:'Pictures', kind:'image',
               items:['🐶','🐱','🐻','🐼','🐘','🦒','🦁','🐸','🐢','🦆','🦉','🐧'] },
   food:     { label:'Food',        icon:'🍎', cat:'Pictures', kind:'sym',
               items:['🍎','🍌','🍊','🍓','🥕','🌽','🍕','🍔','🍟','🍦','🍪','🍰'] },
@@ -281,178 +89,83 @@ function cardsMatch(cards, a, b){ return a!==b && cards[a].val === cards[b].val;
 
 function isWin(matchedPairs, totalPairs){ return matchedPairs >= totalPairs; }
 
-// Per-game reward (not persisted): 3 stars for a perfect run (no wasted moves), down to 1.
-function starsFor(moves, pairs){ if (moves <= pairs) return 3; if (moves <= pairs + 3) return 2; return 1; }
+var ANIMALS = {
+ '🐶':{id:'dog',name:'Dog'}, '🐱':{id:'cat',name:'Cat'}, '🐻':{id:'bear',name:'Bear'},
+ '🐼':{id:'panda',name:'Panda'}, '🐘':{id:'elephant',name:'Elephant'}, '🦒':{id:'giraffe',name:'Giraffe'},
+ '🦁':{id:'lion',name:'Lion'}, '🐸':{id:'frog',name:'Frog'}, '🐢':{id:'turtle',name:'Turtle'},
+ '🦆':{id:'duck',name:'Duck'}, '🦉':{id:'owl',name:'Owl'}, '🐧':{id:'penguin',name:'Penguin'}
+};
+var COLOR_NAMES={'#EF4444':'Red','#F97316':'Orange','#FACC15':'Yellow','#22C55E':'Green','#3B82F6':'Blue','#A855F7':'Purple','#EC4899':'Pink','#14B8A6':'Teal','#8B5CF6':'Violet','#10B981':'Emerald','#F43F5E':'Rose','#0EA5E9':'Sky blue'};
+function mergeAlbum(current,added){var allowed=Object.keys(ANIMALS).map(function(v){return ANIMALS[v].id;});return allowed.filter(function(id){return (Array.isArray(current)&&current.indexOf(id)!==-1)||(Array.isArray(added)&&added.indexOf(id)!==-1);});}
+function normalizePreferences(value){var p=value&&typeof value==='object'?value:{};return {deckId:Object.prototype.hasOwnProperty.call(DECKS,p.deckId)?p.deckId:'animals',size:Object.prototype.hasOwnProperty.call(SIZES,p.size)?p.size:'easy',album:mergeAlbum(p.album,[])};}
 /* LOGIC_END */
 /* UI_START */
-var M = { deckId:'animals', size:'medium', game:null, flipped:[], matched:0, moves:0, lock:false };
-var boardCards = [];
-var timers = [];   // pending gameplay timeouts, so a reset/leave can cancel them
-
-function $(id){ return document.getElementById(id); }
-
-// setTimeout that auto-deregisters on fire and can be bulk-cancelled by clearTimers().
-function later(fn, ms){
-  var id = setTimeout(function(){
-    var k = timers.indexOf(id); if (k>=0) timers.splice(k,1);
-    fn();
-  }, ms);
-  timers.push(id);
-  return id;
-}
-function clearTimers(){ for (var i=0;i<timers.length;i++) clearTimeout(timers[i]); timers=[]; }
-
-function faceHTML(kind, val){
-  if (kind==='color') return '<span class="swatch" style="background:'+val+'"></span>';
-  return '<span class="sym">'+val+'</span>';
-}
-
+var saved = readPreferences();
+var M = {deckId:saved.deckId,size:saved.size,album:saved.album,game:null,flipped:[],matched:0,moves:0,lock:false,completed:false,found:[]};
+var boardCards = [], timers = [], soundOn = false, audioContext = null;
+var PAW = '<svg class="paw" viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="22" cy="36" rx="11" ry="15" transform="rotate(-28 22 36)"/><ellipse cx="41" cy="23" rx="11" ry="15"/><ellipse cx="64" cy="23" rx="11" ry="15"/><ellipse cx="82" cy="39" rx="11" ry="15" transform="rotate(28 82 39)"/><path d="M24 67C25 54 37 45 51 45S78 55 79 69C81 84 64 84 51 79C37 86 20 83 24 67Z"/></svg>';
+function $(id){return document.getElementById(id);}
+function readPreferences(){try{return normalizePreferences(JSON.parse(localStorage.getItem('memory-friends-v1')));}catch(e){return normalizePreferences(null);}}
+function persist(){try{localStorage.setItem('memory-friends-v1',JSON.stringify({deckId:M.deckId,size:M.size,album:M.album}));}catch(e){/* Play still works when storage is unavailable. */}}
+function later(fn,ms){var id=setTimeout(function(){timers=timers.filter(function(t){return t!==id;});fn();},ms);timers.push(id);return id;}
+function clearTimers(){timers.forEach(clearTimeout);timers=[];}
+function animalImg(val){var a=ANIMALS[val];return '<img src="memory-assets/'+a.id+'.png" alt="" draggable="false">';}
+function faceName(val){return ANIMALS[val] ? ANIMALS[val].name : (COLOR_NAMES[val] || val);}
+function faceHTML(val,kind){if(kind==='image')return animalImg(val)+'<span class="animal-label">'+faceName(val)+'</span>';if(kind==='color')return '<span class="color-swatch" style="background:'+val+'"></span>';return '<span class="symbol">'+val+'</span>';}
 function buildSetup(){
-  var cats = {};
-  Object.keys(DECKS).forEach(function(id){
-    var d=DECKS[id]; (cats[d.cat] = cats[d.cat] || []).push(id);
-  });
-  var html='';
-  Object.keys(cats).forEach(function(cat){
-    html += '<div class="grp-h">'+cat+'</div><div class="deck-row">';
-    cats[cat].forEach(function(id){
-      var d=DECKS[id];
-      html += '<button class="deck'+(id===M.deckId?' sel':'')+'" data-deck="'+id+'">'
-            + '<span class="deck-ic">'+d.icon+'</span>'
-            + '<span class="deck-lb">'+d.label+'</span></button>';
-    });
-    html += '</div>';
-  });
-  $('deckPick').innerHTML = html;
-
-  var sh='';
-  Object.keys(SIZES).forEach(function(s){
-    sh += '<button class="size'+(s===M.size?' sel':'')+'" data-size="'+s+'">'
-        + SIZES[s].label + '<small>'+SIZES[s].pairs+' pairs</small></button>';
-  });
-  $('sizePick').innerHTML = sh;
-
-  $('deckPick').querySelectorAll('.deck').forEach(function(b){
-    b.addEventListener('click', function(){ M.deckId=b.getAttribute('data-deck'); buildSetup(); });
-  });
-  $('sizePick').querySelectorAll('.size').forEach(function(b){
-    b.addEventListener('click', function(){ M.size=b.getAttribute('data-size'); buildSetup(); });
-  });
+  ['deckPick','extraDecks'].forEach(function(id){$(id).innerHTML='';});
+  Object.keys(DECKS).forEach(function(id,i){var d=DECKS[id],b=document.createElement('button');b.className='deck'+(i>2?' small-deck':'');b.setAttribute('aria-pressed',String(id===M.deckId));b.setAttribute('aria-label',d.label);b.innerHTML='<span class="deck-art" aria-hidden="true">'+(id==='animals'?animalImg('🐻'):d.icon)+'</span><span>'+d.label+'</span>';b.addEventListener('click',function(){M.deckId=id;persist();updateSelections();});b.setAttribute('data-deck',id);$(i<3?'deckPick':'extraDecks').appendChild(b);});
+  $('sizePick').innerHTML='';Object.keys(SIZES).forEach(function(id){var s=SIZES[id],b=document.createElement('button');b.className='size';b.setAttribute('aria-pressed',String(id===M.size));b.setAttribute('aria-label',s.pairs+' pairs');b.setAttribute('data-size',id);b.innerHTML='<strong>'+s.pairs+'</strong> pairs';b.addEventListener('click',function(){M.size=id;persist();updateSelections();});$('sizePick').appendChild(b);});
+  updateSelections();renderAlbum();
 }
-
-function showScreen(id){
-  $('setup').classList.toggle('on', id==='setup');
-  $('game').classList.toggle('on', id==='game');
-}
-
+function updateSelections(){['deckPick','extraDecks'].forEach(function(id){$(id).querySelectorAll('button').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-deck')===M.deckId));});});$('sizePick').querySelectorAll('button').forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-size')===M.size));});$('selectedDeck').textContent=DECKS[M.deckId].label;$('playBtn').innerHTML='<span>Play '+DECKS[M.deckId].label+'</span><span aria-hidden="true">→</span>';}
+function renderAlbum(){$('albumCount').textContent=M.album.length+' / 12';$('albumGrid').innerHTML=Object.keys(ANIMALS).map(function(val){var a=ANIMALS[val],earned=M.album.indexOf(a.id)!==-1;return '<div class="sticker'+(earned?' earned':'')+'" aria-label="'+a.name+(earned?', collected':', not collected yet')+'"><span aria-hidden="true">'+animalImg(val)+a.name+(earned?' ✓':'')+'</span></div>';}).join('');}
+function closeDialogs(){['win','pause'].forEach(function(id){if($(id).open)$(id).close();});}
+function showScreen(id){['setup','game'].forEach(function(s){$(s).classList.toggle('on',s===id);});if(typeof window!=='undefined')window.scrollTo(0,0);}
 function startGame(){
-  clearTimers();
-  M.game = buildGame(M.deckId, SIZES[M.size].pairs);
-  M.flipped=[]; M.matched=0; M.moves=0; M.lock=false;
-  $('win').classList.remove('show');
-  $('confetti').innerHTML='';
-  buildBoard();
-  renderStats();
-  showScreen('game');
+  clearTimers();closeDialogs();$('confetti').innerHTML='';
+  M.game=buildGame(M.deckId,SIZES[M.size].pairs);M.flipped=[];M.matched=0;M.moves=0;M.lock=false;M.completed=false;M.found=[];
+  persist();buildBoard();renderStats();$('feedback').textContent='Pick any two cards';$('gameTitle').textContent=M.deckId==='animals'?'Find the friends':'Find the pairs';$('gameSubtitle').textContent=DECKS[M.deckId].label+' · '+SIZES[M.size].pairs+' pairs';showScreen('game');boardCards[0].focus({preventScroll:true});
 }
-
-// Leave the board for the setup screen, cancelling any in-flight timers/overlay.
-function toSetup(){
-  clearTimers();
-  M.flipped=[]; M.lock=false;
-  $('win').classList.remove('show');
-  $('confetti').innerHTML='';
-  showScreen('setup');
-}
-
+function toSetup(){clearTimers();closeDialogs();$('confetti').innerHTML='';M.lock=false;M.flipped=[];showScreen('setup');updateSelections();renderAlbum();$('playBtn').focus({preventScroll:true});}
 function buildBoard(){
-  var b=$('board');
-  var cols = SIZES[M.size].cols;
-  var rows = Math.ceil(M.game.cards.length / cols);
-  b.style.setProperty('--cols', cols);
-  b.style.setProperty('--rows', rows);
-  b.style.gridTemplateColumns = 'repeat('+cols+',1fr)';
-  b.innerHTML='';
-  boardCards=[];
-  M.game.cards.forEach(function(card){
-    var el=document.createElement('button');
-    el.className='card deal g'+(card.i % 6);
-    el.style.animationDelay = (card.i * 45) + 'ms';   // staggered deal-in
-    // remove .deal once it has played so it can't re-trigger when .shake is later removed
-    el.addEventListener('animationend', function(){ el.classList.remove('deal'); el.style.animationDelay=''; }, { once:true });
-    el.innerHTML = '<div class="ci"><div class="cf cf-d">✨</div>'
-                 + '<div class="cf cf-u">'+faceHTML(M.game.kind, card.val)+'</div></div>';
-    (function(i){ el.addEventListener('click', function(){ onCardTap(i); }); })(card.i);
-    b.appendChild(el);
-    boardCards.push(el);
-  });
+  var s=SIZES[M.size],board=$('board');board.innerHTML='';board.setAttribute('data-size',M.size);board.style.setProperty('--cols',s.cols);board.style.setProperty('--rows',M.game.cards.length/s.cols);boardCards=[];
+  M.game.cards.forEach(function(c,i){var b=document.createElement('button');b.className='card deal';b.style.setProperty('--delay',i*30+'ms');b.setAttribute('aria-label','Face-down card '+(i+1));b.innerHTML='<span class="ci" aria-hidden="true"><span class="cf cf-d">'+PAW+'</span><span class="cf cf-u">'+faceHTML(c.val,M.game.kind)+'</span></span>';b.addEventListener('animationend',function(){b.classList.remove('deal');});b.addEventListener('click',function(){onCardTap(i);});board.appendChild(b);boardCards.push(b);});
 }
-
-function renderStats(){
-  $('moves').textContent = 'Moves: '+M.moves;
-  var p = SIZES[M.size].pairs;
-  $('pairs').querySelector('.prog-fill').style.width = ((M.matched/p)*100)+'%';
-  $('pairs').querySelector('.prog-txt').textContent = M.matched+'/'+p;
-}
-
+function renderStats(){var total=SIZES[M.size].pairs;$('pairs').querySelector('.prog-fill').style.width=(M.matched/total*100)+'%';$('pairs').querySelector('.prog-txt').textContent=M.matched+' / '+total+' pairs';$('btnPause').disabled=M.lock||M.completed;$('found').innerHTML=M.found.map(function(val){return '<span aria-label="'+faceName(val)+' matched">'+(M.game.kind==='image'?animalImg(val):(M.game.kind==='color'?'<span style="color:'+val+'">●</span>':val))+'</span>';}).join('')+Array(total-M.matched).fill('<span class="empty-dot" aria-hidden="true"></span>').join('');}
 function onCardTap(i){
-  if (M.lock) return;
-  var el=boardCards[i];
-  if (el.classList.contains('up') || el.classList.contains('done')) return;
-  el.classList.add('up');
-  M.flipped.push(i);
-  if (M.flipped.length===2){
-    M.moves++; renderStats(); M.lock=true;
-    var a=M.flipped[0], b=M.flipped[1];
-    if (cardsMatch(M.game.cards, a, b)){
-      later(function(){
-        boardCards[a].classList.add('done'); boardCards[b].classList.add('done');
-        M.flipped=[]; M.lock=false; M.matched++; renderStats();
-        if (isWin(M.matched, SIZES[M.size].pairs)) later(winGame, 360);
-      }, 420);
-    } else {
-      boardCards[a].classList.add('shake'); boardCards[b].classList.add('shake');
-      later(function(){
-        boardCards[a].classList.remove('up','shake'); boardCards[b].classList.remove('up','shake');
-        M.flipped=[]; M.lock=false;
-      }, 820);
-    }
+  var b=boardCards[i];if(M.lock||M.completed||!b||b.classList.contains('up')||b.classList.contains('done')||$('pause').open)return;
+  b.classList.add('up');b.setAttribute('aria-label',faceName(M.game.cards[i].val)+', card '+(i+1));M.flipped.push(i);
+  if(M.flipped.length<2){$('feedback').textContent=M.deckId==='animals'?'Now find its friend':'Now find its pair';return;}
+  var a=M.flipped[0],z=M.flipped[1];M.moves++;M.lock=true;renderStats();
+  if(cardsMatch(M.game.cards,a,z)){
+    $('feedback').textContent='A happy match!';
+    later(function(){[a,z].forEach(function(n){boardCards[n].classList.add('done');boardCards[n].disabled=true;boardCards[n].setAttribute('aria-label','Matched '+faceName(M.game.cards[n].val)+', card '+(n+1));});M.flipped=[];M.matched++;M.found.push(M.game.cards[a].val);M.lock=false;chime();renderStats();
+      if(isWin(M.matched,SIZES[M.size].pairs)){M.completed=true;renderStats();later(winGame,700);}else{var next=boardCards.find(function(card){return !card.disabled;});if(next && document.activeElement && document.activeElement.disabled)next.focus({preventScroll:true});}
+    },450);
+  }else{
+    $('feedback').textContent=M.deckId==='animals'?'Two different friends. Try again!':'Not a pair yet. Try again!';
+    later(function(){[a,z].forEach(function(n){boardCards[n].classList.remove('up');boardCards[n].setAttribute('aria-label','Face-down card '+(n+1));});M.flipped=[];M.lock=false;$('feedback').textContent='Pick any two cards';renderStats();},1500);
   }
 }
-
 function winGame(){
-  if (!$('game').classList.contains('on')) return;   // left the board before this fired — ignore
-  var p = SIZES[M.size].pairs, st = starsFor(M.moves, p), row = '';
-  for (var i=0;i<3;i++){
-    row += '<span class="win-star" style="animation-delay:'+(0.15 + i*0.12)+'s">'+(i<st?'⭐':'☆')+'</span>';
-  }
-  $('winMsg').innerHTML = '<div class="win-stars">'+row+'</div>Found all '+p+' pairs in '+M.moves+' moves!';
-  $('win').classList.add('show');
-  confetti();
+  if(!$('game').classList.contains('on')||!M.completed)return;
+  var before=M.album.length;
+  if(M.deckId==='animals'){M.album=mergeAlbum(M.album,M.found.map(function(v){return ANIMALS[v].id;}));persist();}
+  var added=M.album.length-before;
+  $('winFriends').innerHTML=M.found.map(function(v){return M.game.kind==='image'?animalImg(v):'<span>'+(M.game.kind==='color'?'<span style="color:'+v+'">●</span>':v)+'</span>';}).join('');
+  $('winMsg').textContent=added>0 ? added+' '+(added===1?'new friend joins':'new friends join')+' your collection. You brought them together!' : 'Every pair found. Look what you can do!';
+  $('win').showModal();$('winAgain').focus();confetti();
 }
-
-function confetti(){
-  var c=$('confetti'); c.innerHTML='';
-  var cols=['#EF4444','#F97316','#FACC15','#22C55E','#3B82F6','#A855F7','#EC4899'];
-  for (var i=0;i<70;i++){
-    var s=document.createElement('span');
-    s.style.left = (Math.random()*100)+'%';
-    s.style.background = cols[i % cols.length];
-    s.style.animationDelay = (Math.random()*0.6)+'s';
-    s.style.animationDuration = (1.6 + Math.random()*1.5)+'s';
-    c.appendChild(s);
-  }
-  later(function(){ c.innerHTML=''; }, 4200);
-}
-
+function confetti(){var colors=['#c45337','#c1dfcf','#dcb758','#356950'];for(var i=0;i<36;i++){var p=document.createElement('i');p.style.left=Math.random()*100+'%';p.style.background=colors[i%colors.length];p.style.animationDelay=Math.random()*.5+'s';$('confetti').appendChild(p);}later(function(){$('confetti').innerHTML='';},3800);}
+function chime(){if(!soundOn||!audioContext||audioContext.state!=='running')return;[523.25,659.25,783.99].forEach(function(f,i){var o=audioContext.createOscillator(),g=audioContext.createGain(),t=audioContext.currentTime+i*.085;o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.065,t+.015);g.gain.exponentialRampToValueAtTime(.001,t+.3);o.connect(g);g.connect(audioContext.destination);o.start(t);o.stop(t+.32);});}
+$('soundBtn').addEventListener('click',function(){soundOn=!soundOn;try{if(soundOn){var Audio=window.AudioContext||window.webkitAudioContext;if(!Audio)throw new Error('Audio unavailable');if(!audioContext)audioContext=new Audio();audioContext.resume().then(chime).catch(function(){soundOn=false;updateSound();});}}catch(e){soundOn=false;}updateSound();});
+function updateSound(){$('soundBtn').textContent=soundOn?'♪ Sound on':'♪ Sound off';$('soundBtn').setAttribute('aria-pressed',String(soundOn));}
+$('playBtn').addEventListener('click',startGame);$('btnNew').addEventListener('click',startGame);$('winAgain').addEventListener('click',startGame);$('btnChange').addEventListener('click',toSetup);$('winDeck').addEventListener('click',toSetup);
+$('btnPause').addEventListener('click',function(){if(!M.lock&&!M.completed)$('pause').showModal();});$('btnResume').addEventListener('click',function(){$('pause').close();});$('win').addEventListener('cancel',function(e){e.preventDefault();});
 buildSetup();
-$('playBtn').addEventListener('click', startGame);
-$('btnNew').addEventListener('click', startGame);
-$('btnChange').addEventListener('click', toSetup);
-$('winAgain').addEventListener('click', startGame);
-$('winDeck').addEventListener('click', toSetup);
-showScreen('setup');
 /* UI_END */
-  </script>
+
+</script>
 </body>
 </html>
