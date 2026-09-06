@@ -1,0 +1,6 @@
+{
+  "name": "viaan-sky-playground",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test flight.test.mjs", "serve": "python3 -m http.server 8765 --bind 127.0.0.1" }
+}

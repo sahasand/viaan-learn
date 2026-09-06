@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#85d7df">
+  <title>Little Pilot · Viaan</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+  <canvas id="world" aria-label="A 3D flying playground. Steer with arrow keys, WASD, or drag on the sky."></canvas>
+  <header class="topbar">
+    <a class="round home" href="../index.html" aria-label="Back to Viaan">⌂</a>
+    <div class="wordmark"><span class="brand">little pilot<span class="brand-dot">.</span></span><span class="eyebrow">A SUNNY LITTLE ADVENTURE</span></div>
+    <div class="top-actions">
+      <button class="round" id="sound" aria-label="Turn sound on" aria-pressed="false">♫</button>
+      <button class="round" id="help" aria-label="How to fly">?</button>
+      <button class="round" id="pause" aria-label="Pause flight">Ⅱ</button>
+    </div>
+  </header>
+  <section class="mission" aria-label="Current adventure">
+    <span class="mission-icon" id="missionIcon">🐻</span>
+    <div><span class="eyebrow" id="missionKicker">SPECIAL DELIVERY</span><h1 id="missionTitle">A picnic for Bear</h1><p id="missionSubtitle">Follow the golden rings</p></div>
+    <div class="ring-counter" aria-label="Rings collected"><span class="ring-symbol">◎</span><b id="count">0</b><span>/ 5</span></div>
+    <div class="progress" id="progress"><i></i><i></i><i></i><i></i><i></i></div>
+  </section>
+  <div id="targetMarker" class="target-marker" aria-hidden="true"><span>◎</span><b id="distance"></b></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="bottom-left">
+    <div class="island-label"><span class="live-dot"></span> SUNNY ISLAND <span class="coordinate">01</span></div>
+    <canvas id="map" width="160" height="160" aria-label="Island map showing your plane and destination"></canvas>
+  </div>
+  <div class="steering-hint" id="steeringHint"><span class="hint-icon">↔</span><span><b>You’re the pilot!</b><small>Drag to steer · ↑ ↓ ← → also work</small></span></div>
+  <div class="bottom-right"><button id="land" class="guide land"><span>↘</span> Land</button><button id="guide" class="guide" aria-pressed="false"><span>✧</span> Guide me</button><span class="guide-note">A little helping wing</span></div>
+  <div id="joystick" aria-hidden="true"><span id="stick"></span></div>
+  <div class="veil" id="loading"><div class="loading-plane">✈</div><h2>A little sky. A big adventure.</h2><p id="loadText">Getting your plane ready…</p><div class="load-track"><i></i></div><a class="text-link" href="../index.html">Back to Viaan</a></div>
+  <dialog id="menu"><div class="dialog-icon">☁</div><span class="eyebrow" id="menuKicker">TAKE A LITTLE BREATHER</span><h2 id="menuTitle">Parked in the clouds.</h2><p id="menuText">Your adventure will be right here.</p><div id="instructions" hidden><div><span>👆</span><p><b>Drag on the sky</b><br>Left, right, up, or down.</p></div><div><span>✧</span><p><b>Want a helping wing?</b><br>Tap Guide me. Steer to take over.</p></div><div><span>🛟</span><p><b>You’re safe up here</b><br>Your plane stays above the ground.</p></div></div><button class="primary" id="resume">Let’s fly! <span>↗</span></button><button class="secondary" id="restart">Start a new adventure</button><a class="text-link" href="../index.html">Back to Viaan</a></dialog>
+  <dialog id="celebration"><div class="prize">🛬</div><span class="eyebrow">WELCOME TO SUNNY AIRPORT</span><h2>What a lovely landing!</h2><p id="landingMessage">Wheels down. Right on the runway.<br>Ready for another little flight?</p><div class="medal-row">★ ★ ★</div><button class="primary" id="explore">Take off again <span>↗</span></button><button class="secondary" id="again">Start a new adventure</button></dialog>
+  <noscript><p class="noscript">Please enable JavaScript to fly. <a href="../index.html">Back to Viaan</a></p></noscript>
+  <script type="module" src="game.js"></script>
+</body>
+</html>

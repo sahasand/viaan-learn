@@ -4053,7 +4053,7 @@
       $('wC').addEventListener('click', function () { S.adv = null; S.world = 'crit'; S.week = 1; showLvls() });
       $('wX').addEventListener('click', function () { location.href = 'chess.html' });
       $('wMem').addEventListener('click', function () { location.href = 'memory.html' });
-      $('wPl').addEventListener('click', function () { location.href = 'plane.html' });
+      $('wPl').addEventListener('click', function () { location.href = 'sky-playground/' });
       $('lBk').addEventListener('click', function () { show('home') });
       $('gBk').addEventListener('click', function () { if (S.adv) { S.adv = null; show('home') } else showLvls() });
       $('dcR').addEventListener('click', function () { startLvl(S.lvl) });
@@ -4104,7 +4104,7 @@
       }
       function advNext() {
         var A = advToday();
-        if (A.n >= 4) { location.href = A.g + '.html'; return }
+        if (A.n >= 4) { location.href = A.g === 'plane' ? 'sky-playground/' : A.g + '.html'; return }
         var st = A.s[A.n], arr = worldArr(st.w), idx = 0;
         arr.forEach(function (lv, i) { if (lv.id === st.id) idx = i });
         S.adv = { step: A.n };
