@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
 import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js';
 
+import { AIRPORTS, SPEEDS, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js';
+
 const $ = id => document.getElementById(id);
 const canvas = $('world');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -12,6 +14,10 @@ let elapsed = 0, lastTime = 0, lastMap = 0, landingTime = 0, landingStart;
 let freeFlight = false, input = { x: 0, y: 0 }, keys = new Set();
 let obstacles = [];
 let airportLeg = -1;
+let mode='airline', currentAirport='sunny', landingAirport='sunny', landingStyle='hands', speedMode='cruise', trip=null, passengerModel;
+let savedPassport; try { savedPassport=localStorage.getItem('viaan-airline-v1'); } catch {}
+let passport=normalizePassport(savedPassport);
+const approachLights=new Map();
 let audio, engine, engineGain;
 const rings = [], clouds = [], boats = [], birds = [], particles = [];
 const particleGeometry = new THREE.SphereGeometry(.15, 5, 4);
@@ -57,7 +63,7 @@ async function toggleSound() {
     $('sound').setAttribute('aria-pressed', soundOn);
     $('sound').setAttribute('aria-label', soundOn ? 'Turn sound off' : 'Turn sound on');
     updateSound();
-    if (soundOn) say(freeFlight ? 'The island is yours to explore!' : 'Let’s take Bear a picnic. Follow the golden rings!');
+    if (soundOn) say(mode === 'picnic' ? 'Let’s take Bear a picnic. Follow the golden rings!' : 'Welcome to your little airline. Choose a destination and take your friend on a trip!');
     else if ('speechSynthesis' in window) speechSynthesis.cancel();
   } catch { toast('Sound is unavailable. You can still fly!'); }
 }
@@ -152,11 +158,123 @@ function burst(at) {
     p.userData.life = 1; particles.push(p);
   }
 }
+function tripAirport() { return trip?.status === 'flying' ? trip.destination : currentAirport; }
+function chooseSpeed(mode) {
+  speedMode = Object.hasOwn(SPEEDS, mode) ? mode : 'cruise';
+  document.querySelectorAll('[data-speed]').forEach(b => b.setAttribute('aria-pressed', b.dataset.speed === speedMode));
+}
+function savePassport() { try { localStorage.setItem('viaan-airline-v1', JSON.stringify(passport)); } catch {} }
+function airportBoard() {
+  paused = true; clearInput(); updateSound();
+  if ($('celebration').open) $('celebration').close();
+  if ($('menu').open) $('menu').close();
+  $('departureAirport').textContent = airportById(currentAirport).airport;
+  $('destinationCards').innerHTML = AIRPORTS.filter(a => a.id !== currentAirport).map(a =>
+    `<button class="destination-card ${trip?.destination === a.id ? 'selected' : ''}" data-destination="${a.id}" aria-pressed="${trip?.destination === a.id}"><span class="destination-sky ${a.id}"><span>${a.icon}</span><img src="../memory-assets/${a.animal}.png" alt=""></span><strong>${a.name}</strong><small>${a.passenger} wants ${a.wish}</small><b>Choose this flight →</b></button>`).join('');
+  $('destinationCards').querySelectorAll('button').forEach(b => b.onclick = () => {
+    trip = newTrip(currentAirport, b.dataset.destination); mode = 'airline'; airportBoard();
+    say(`${airportById(trip.destination).passenger} is coming with you! First, load the suitcase.`);
+  });
+  $('boardingSteps').hidden = !trip || trip.status !== 'boarding';
+  if (trip?.status === 'boarding') {
+    const a = airportById(trip.destination);
+    $('boardingPortrait').src = `../memory-assets/${a.animal}.png`;
+    $('boardingName').textContent = `${a.passenger} is ready!`;
+    $('loadBag').innerHTML = '<span class="suitcase" aria-hidden="true"></span>' + (trip.bag ? '✓ Bag loaded' : '1. Load the suitcase'); $('loadBag').disabled = trip.bag;
+    $('boardPassenger').textContent = trip.boarded ? `✓ ${a.passenger} is aboard` : `2. Welcome ${a.passenger}`; $('boardPassenger').disabled = !trip.bag || trip.boarded;
+    $('depart').disabled = !trip.bag || !trip.boarded;
+    $('boardingStatus').textContent = trip.boarded ? 'All aboard. You’re ready for takeoff!' : trip.bag ? 'Now welcome your passenger aboard.' : 'Tap the suitcase to put it on the plane.';
+  }
+  $('passportStamps').innerHTML = AIRPORTS.map(a => `<span class="passport-stamp ${passport.stamps.includes(a.id) ? 'earned' : ''}"><b>${passport.stamps.includes(a.id) ? a.icon : '○'}</b>${a.name}</span>`).join('');
+  $('tripTotal').textContent = `${passport.trips} happy passenger trip${passport.trips === 1 ? '' : 's'}`;
+  if (!$('airportBoard').open) $('airportBoard').showModal();
+  updateMission();
+}
+function leaveAirport(free = false) {
+  if (phase !== 'parked') return;
+  if (free) { mode = 'free'; trip = null; }
+  else { const next = prepareTrip(trip, 'depart'); if (next?.status !== 'flying') return; trip = next; mode = 'airline'; }
+  $('airportBoard').close(); $('celebration').close();
+  paused = false; phase = 'takeoff'; landingTime = 0; landingStart = { ...state };
+  clearInput(); setGuided(false); updatePassenger(); updateMission(); updateSound();
+  lastTime = performance.now(); toast('Rolling down the runway…', 4);
+  say('Passenger ready. Bags ready. Cleared for takeoff!');
+}
+function openLandingChoice() {
+  if (phase !== 'flying' || paused) return;
+  paused = true; clearInput(); updateSound();
+  $('landingDestination').textContent = airportById(trip?.status === 'flying' ? trip.destination : nearestAirport(state)).airport;
+  $('landingChoice').showModal();
+}
+function beginLanding(style) {
+  landingStyle = style; $('landingChoice').close(); paused = false;
+  lastTime = performance.now(); visitAirport(); updateSound();
+}
+function restartAirline() {
+  for (const id of ['menu','celebration','airportBoard','landingChoice']) if ($(id).open) $(id).close();
+  mode = 'airline'; trip = null; currentAirport = 'sunny'; landingAirport = 'sunny';
+  clearInput(); state = parkedAt('sunny'); phase = 'parked'; paused = true; airportLeg = -1;
+  collected = 0; freeFlight = true; landingStyle = 'hands'; chooseSpeed('cruise'); setGuided(false);
+  updatePassenger(); updateMission(); setCamera(true); airportBoard();
+}
+function updatePassenger() {
+  if (!passengerModel) return;
+  passengerModel.visible = trip?.boarded && trip.status !== 'arrived';
+  const name = trip ? airportById(trip.destination).animal : 'panda';
+  passengerModel.getObjectByName('Passenger head').material.color.set(name === 'frog' ? '#92bb70' : name === 'penguin' ? '#374954' : '#ffefcf');
+  passengerModel.children.filter(o => o.name === 'Passenger ear').forEach(o => { o.visible = name !== 'penguin'; o.material.color.set(name === 'frog' ? '#92bb70' : '#374954'); });
+}
+function makePassenger() {
+  passengerModel = new THREE.Group(); passengerModel.position.set(0,.65,.83);
+  mesh(new THREE.SphereGeometry(.21,12,8), mat('#ffefcf'),0,0,0,passengerModel).name = 'Passenger head';
+  for (const side of [-1,1]) {
+    mesh(new THREE.SphereGeometry(.075,8,6),mat('#374954'),side*.17,.14,0,passengerModel).name='Passenger ear';
+    mesh(new THREE.SphereGeometry(.04,8,6),mat('#20343b'),side*.09,.03,-.18,passengerModel);
+  }
+  plane.add(passengerModel); passengerModel.visible=false;
+}
+function makeAirportDetails() {
+  for (const a of AIRPORTS) {
+    const board = document.createElement('canvas'); board.width=512; board.height=128;
+    const c=board.getContext('2d'); c.fillStyle='#fff9e9'; c.fillRect(0,0,512,128);
+    c.fillStyle='#234e4b';c.font='bold 35px sans-serif';c.textAlign='center';c.fillText(a.airport,256,73);
+    const texture=new THREE.CanvasTexture(board);texture.colorSpace=THREE.SRGBColorSpace;
+    const sign=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthWrite:false}));
+    sign.position.set(a.x+40,19,a.z+43);sign.scale.set(32,8,1);scene.add(sign);
+    const group=new THREE.Group(); group.position.set(a.x,0,a.z);scene.add(group); approachLights.set(a.id,group);
+    for (let z=20;z<=60;z+=5) for(const x of [16,28]) mesh(new THREE.SphereGeometry(.24,7,5),mat('#ffe9a9',{emissive:'#ffd763',emissiveIntensity:.8}),a.x+x,2.95,a.z+z);
+    for (let i=0;i<4;i++) {
+      const z=78-i*7,y=11-i*1.65;
+      const ring=mesh(new THREE.TorusGeometry(3.8,.08,5,32),new THREE.MeshBasicMaterial({color:'#fff1b6',transparent:true,opacity:.65}),22,y,z,group);
+      ring.name='Helping wing gate';
+    }
+    group.visible=false;
+  }
+}
+
 function setGuided(on) {
   guided = on; $('guide').setAttribute('aria-pressed', on);
   $('guide').innerHTML = on ? '<span>✧</span> Helping you' : '<span>✧</span> Guide me';
 }
 function updateMission() {
+  const airline = mode !== 'picnic';
+  document.body.dataset.phase = phase;
+  $('speedControls').hidden = phase === 'parked' || phase === 'loading';
+  $('speedControls').querySelectorAll('button').forEach(b=>b.disabled=phase!=='flying'||airportLeg>=0);
+  approachLights.forEach((g,id)=>g.visible=id===landingAirport&&airportLeg>=0);
+  $('islandName').textContent = airline ? 'LITTLE AIRLINE' : 'SUNNY ISLAND';
+  if (airline) {
+    rings.forEach(r=>r.visible=false);beacon.visible=false;document.querySelector('.ring-counter').hidden=true;$('progress').style.visibility='hidden';
+    const dest=airportById(airportLeg>=0?landingAirport:tripAirport());
+    $('missionIcon').innerHTML=trip?.boarded?`<img src="../memory-assets/${airportById(trip.destination).animal}.png" alt="">`:'✈';
+    $('missionKicker').textContent=phase==='parked'?airportById(currentAirport).airport:airportLeg>=0?dest.airport:trip?'HAPPY PASSENGER FLIGHT':'FREE FLIGHT';
+    $('missionTitle').textContent=phase==='takeoff'?'Ready, set, fly!':phase==='landing'?(landingStyle==='hands'?'You’re landing the plane!':'A lovely gentle landing'):phase==='parked'?'Where shall we go?':trip?`${dest.passenger} → ${dest.name}`:'Explore our three islands';
+    $('missionSubtitle').textContent=phase==='landing'?(landingStyle==='hands'?'Steer gently. Helping wings keep you safe.':'Wheels down. Rolling to a stop.'):airportLeg>=0?'Follow the glowing runway gates':phase==='takeoff'?'Speeding up along the runway':trip?'Fly to the marker · Guide me can help':'Pick a speed. Land at any nearby airport.';
+    $('land').innerHTML=phase==='landing'&&landingStyle==='hands'?'Land for me':airportLeg>=0&&phase==='flying'?'Keep flying':'↘ Land';
+    $('land').disabled=!(phase==='flying'||phase==='landing'&&landingStyle==='hands');
+    $('guide').disabled=phase!=='flying'||airportLeg>=0;
+    return;
+  }
   const airport = airportLeg >= 0;
   $('land').disabled = phase !== 'flying';
   $('land').innerHTML = airport && phase === 'flying' ? '<span>↗</span> Keep flying' : '<span>↘</span> Land';
@@ -183,11 +301,13 @@ function updateMission() {
   $('missionIcon').textContent = freeFlight ? '☀️' : '🐻';
 }
 function getTarget() {
-  if (airportLeg >= 0) return AIRPORT_APPROACH[Math.min(airportLeg, AIRPORT_APPROACH.length - 1)];
+  if (airportLeg >= 0) return approachFor(landingAirport)[Math.min(airportLeg, 1)];
+  if (mode !== 'picnic') return approachFor(trip?.status === 'flying' ? trip.destination : nearestAirport(state))[0];
   return freeFlight ? { x: 22, y: 14, z: 40 } : collected < TRAIL.length ? TRAIL[collected] : PICNIC;
 }
 function visitAirport() {
   if (phase !== 'flying') return;
+  landingAirport = mode === 'picnic' ? 'sunny' : trip?.status === 'flying' ? trip.destination : nearestAirport(state);
   airportLeg = 0; clearInput(); setGuided(true); updateMission();
   toast('Let’s line up with the runway. 🛬', 4);
   say('Time to land! I’ll line us up with the runway.');
@@ -200,7 +320,7 @@ function clearInput() {
   keys.clear(); input = { x: 0, y: 0 }; pointer = null; $('joystick').style.display = 'none';
 }
 function openMenu(help = false) {
-  if (phase === 'loading' || phase === 'error' || $('celebration').open) return;
+  if (phase === 'loading' || phase === 'error' || $('celebration').open || $('airportBoard').open || $('landingChoice').open) return;
   paused = true; clearInput(); updateSound();
   if ('speechSynthesis' in window) speechSynthesis.cancel();
   $('instructions').hidden = !help;
@@ -211,6 +331,8 @@ function openMenu(help = false) {
 }
 function resume() { $('menu').close(); paused = false; lastTime = performance.now(); updateSound(); }
 function restart() {
+  if ($('airportBoard').open) $('airportBoard').close();
+  mode='picnic';trip=null;currentAirport='sunny';landingAirport='sunny';landingStyle='auto';updatePassenger();
   if ($('menu').open) $('menu').close(); if ($('celebration').open) $('celebration').close();
   clearInput(); state = initialFlight(); collected = 0; freeFlight = false; airportLeg = -1; phase = 'flying'; paused = false;
   setGuided(false); updateMission(); setCamera(true); hintUntil = elapsed + 10;
@@ -220,13 +342,27 @@ function restart() {
 function setupControls() {
   $('sound').addEventListener('click', toggleSound);
   $('pause').addEventListener('click', () => openMenu()); $('help').addEventListener('click', () => openMenu(true));
-  $('resume').addEventListener('click', resume); $('restart').addEventListener('click', restart); $('again').addEventListener('click', restart);
+  $('resume').addEventListener('click', resume); $('restart').addEventListener('click', restartAirline); $('again').addEventListener('click', ()=>mode==='picnic'?restart():airportBoard());
+  $('picnicFlight').addEventListener('click',restart);
+  $('airportPicnic').addEventListener('click',restart);
+  $('freeFly').addEventListener('click',()=>leaveAirport(true));
+  $('loadBag').addEventListener('click',()=>{trip=prepareTrip(trip,'bag');airportBoard();chime();});
+  $('boardPassenger').addEventListener('click',()=>{trip=prepareTrip(trip,'board');updatePassenger();airportBoard();chime();});
+  $('depart').addEventListener('click',()=>leaveAirport());
+  $('airportBoard').addEventListener('cancel',e=>e.preventDefault());
+  $('handsLand').addEventListener('click',()=>beginLanding('hands'));
+  $('autoLand').addEventListener('click',()=>beginLanding('auto'));
+  $('cancelLanding').addEventListener('click',()=>{$('landingChoice').close();paused=false;lastTime=performance.now();updateSound();});
+  $('landingChoice').addEventListener('cancel',e=>{e.preventDefault();$('cancelLanding').click();});
+  document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>chooseSpeed(b.dataset.speed)));
   $('menu').addEventListener('cancel', e => { e.preventDefault(); resume(); });
   $('celebration').addEventListener('cancel', e => e.preventDefault());
   $('land').addEventListener('click', () => {
-    if (phase !== 'flying' || paused) return;
+    if (paused) return;
+    if (phase === 'landing' && landingStyle === 'hands') {landingTime=landingTime<=8?landingTime*5/8:landingTime-3;landingStyle='auto';updateMission();return;}
+    if (phase !== 'flying') return;
     if (airportLeg >= 0) { takeControl(); toast('You’re the pilot!'); }
-    else visitAirport();
+    else if(mode==='picnic') visitAirport();else openLandingChoice();
   });
   $('guide').addEventListener('click', () => {
     if (phase !== 'flying' || paused) return;
@@ -236,11 +372,12 @@ function setupControls() {
   });
   $('explore').addEventListener('click', () => {
     if (phase !== 'parked') return;
+    if(mode!=='picnic'){trip=null;airportBoard();return;}
     $('celebration').close(); paused = false; phase = 'takeoff'; landingTime = 0;
     landingStart = { ...state }; clearInput(); setGuided(false); updateMission(); toast('Rolling down the runway… 🛫', 4); updateSound();
   });
   canvas.addEventListener('pointerdown', e => {
-    if (phase !== 'flying' || paused || pointer !== null) return;
+    if (!(phase === 'flying' || phase === 'landing' && landingStyle === 'hands') || paused || pointer !== null) return;
     e.preventDefault(); canvas.setPointerCapture(e.pointerId); takeControl();
     pointer = { id: e.pointerId, x: e.clientX, y: e.clientY };
     $('joystick').style.cssText = `display:block;left:${e.clientX}px;top:${e.clientY}px`;
@@ -257,8 +394,8 @@ function setupControls() {
   const controlKeys = ['arrowleft', 'arrowright', 'arrowup', 'arrowdown', 'w', 'a', 's', 'd'];
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
-    if (k === 'escape' && !$('menu').open && !$('celebration').open) { e.preventDefault(); openMenu(); return; }
-    if (!controlKeys.includes(k) || paused || phase !== 'flying') return;
+    if (k === 'escape' && !$('menu').open && !$('celebration').open && !$('airportBoard').open && !$('landingChoice').open) { e.preventDefault(); openMenu(); return; }
+    if (!controlKeys.includes(k) || paused || !(phase === 'flying' || phase === 'landing' && landingStyle === 'hands')) return;
     e.preventDefault(); keys.add(k); takeControl(); hintUntil = elapsed + 1;
   });
   window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
@@ -270,34 +407,28 @@ function setCamera(immediate = false, dt = 0) {
   const forward = v.set(Math.sin(state.heading), 0, -Math.cos(state.heading));
   const distance = innerWidth < 650 && innerHeight > innerWidth ? 13 : 11;
   cameraGoal.set(state.x - forward.x * distance, state.y + 4.6, state.z - forward.z * distance);
-  cameraGoal.y = Math.max(cameraGoal.y, groundHeight(cameraGoal.x, cameraGoal.z) + 3);
+  cameraGoal.y = Math.max(cameraGoal.y, worldGroundHeight(cameraGoal.x, cameraGoal.z) + 3);
   lookGoal.set(state.x + forward.x * 13, state.y + 1.5, state.z + forward.z * 13);
   const blend = immediate ? 1 : 1 - Math.exp(-4 * dt);
   currentCamera.lerp(cameraGoal, blend); currentLook.lerp(lookGoal, blend);
   camera.position.copy(currentCamera); camera.lookAt(currentLook);
 }
 function drawMap() {
-  const c = map, toX = x => 80 + x * .54, toY = z => 80 + z * .54;
-  c.clearRect(0, 0, 160, 160); c.fillStyle = '#91ccb7'; c.beginPath();
-  for (let i = 0; i <= 70; i++) {
-    const a = i / 70 * Math.PI * 2, r = 1 + .055 * Math.sin(a * 3) + .035 * Math.cos(a * 7);
-    c.lineTo(toX(Math.cos(a) * 90 * r), toY(Math.sin(a) * 72 * r));
+  const c=map, airline=mode!=='picnic', scale=airline?.20:.54;
+  const toX=x=>80+x*scale,toY=z=>80+(z+(airline?85:0))*scale;
+  c.clearRect(0,0,160,160);
+  for(const a of airline?AIRPORTS:[AIRPORTS[0]]) {
+    c.fillStyle=a.id==='snowy'?'#e4edf0':a.id==='jungle'?'#6caa70':'#a6c889';c.beginPath();c.ellipse(toX(a.x),toY(a.z),90*scale,72*scale,0,0,Math.PI*2);c.fill();
+    c.strokeStyle='#fff2ce';c.lineWidth=3;c.beginPath();c.moveTo(toX(a.x+22),toY(a.z+16));c.lineTo(toX(a.x+22),toY(a.z+60));c.stroke();
+    if(airline){c.fillStyle='#265552';c.font='bold 13px sans-serif';c.textAlign='center';c.fillText(a.icon,toX(a.x),toY(a.z)-2);}
   }
-  c.closePath(); c.fill(); c.strokeStyle = '#e9d59a'; c.lineWidth = 3; c.stroke();
-  c.strokeStyle = '#657b67'; c.lineWidth = 5; c.beginPath(); c.moveTo(toX(RUNWAY.x), toY(16)); c.lineTo(toX(RUNWAY.x), toY(60)); c.stroke();
-  if (!freeFlight || airportLeg >= 0) {
-    c.strokeStyle = '#fff5c5aa'; c.lineWidth = 1.3; c.setLineDash([3, 4]); c.beginPath();
-    const route = airportLeg >= 0 ? [...AIRPORT_APPROACH.slice(airportLeg), { x:22, z:26 }] : [...TRAIL.slice(collected), PICNIC];
-    route.forEach(p => c.lineTo(toX(p.x), toY(p.z))); c.stroke(); c.setLineDash([]);
-  }
-  const target = getTarget(); c.fillStyle = '#fff4d1'; c.beginPath(); c.arc(toX(target.x), toY(target.z), 4, 0, Math.PI * 2); c.fill();
-  c.save(); c.translate(clamp(toX(state.x), 7, 153), clamp(toY(state.z), 7, 153)); c.rotate(state.heading);
-  c.fillStyle = '#e6583f'; c.strokeStyle = '#fff9df'; c.lineWidth = 1.5;
-  c.beginPath(); c.moveTo(0, -7); c.lineTo(5, 5); c.lineTo(0, 2); c.lineTo(-5, 5); c.closePath(); c.fill(); c.stroke(); c.restore();
+  const target=getTarget();c.strokeStyle='#fff5c5';c.lineWidth=1.5;c.setLineDash([3,3]);c.beginPath();c.moveTo(toX(state.x),toY(state.z));c.lineTo(toX(target.x),toY(target.z));c.stroke();c.setLineDash([]);
+  c.fillStyle='#fff4d1';c.beginPath();c.arc(toX(target.x),toY(target.z),3,0,Math.PI*2);c.fill();
+  c.save();c.translate(clamp(toX(state.x),7,153),clamp(toY(state.z),7,153));c.rotate(state.heading);c.fillStyle='#e6583f';c.strokeStyle='#fff9df';c.lineWidth=1.5;c.beginPath();c.moveTo(0,-7);c.lineTo(5,5);c.lineTo(0,2);c.lineTo(-5,5);c.closePath();c.fill();c.stroke();c.restore();
 }
 function updateMarker() {
   const marker = $('targetMarker');
-  if (phase !== 'flying' || (freeFlight && !guided)) { marker.style.display = 'none'; return; }
+  if (phase !== 'flying' || (mode === 'picnic' && freeFlight && !guided)) { marker.style.display = 'none'; return; }
   const target = getTarget(); v.set(target.x, target.y, target.z);
   const distance = v.distanceTo(plane.position); v.project(camera);
   // The clamped compass marker remains useful when the next ring is behind us.
@@ -310,7 +441,7 @@ function updateMarker() {
   marker.style.display = 'flex'; marker.style.left = `${clamp(x, 30, innerWidth - 40)}px`;
   marker.style.top = `${clamp(y - 72, innerWidth < 650 ? 200 : 90, innerHeight - 150)}px`;
   marker.style.transform = 'translateX(-50%)';
-  marker.firstElementChild.textContent = behind ? (x > innerWidth / 2 ? '→' : '←') : airportLeg >= 0 ? '🛬' : collected === 5 && !freeFlight ? '🧺' : '◎';
+  marker.firstElementChild.textContent = behind ? (x > innerWidth / 2 ? '→' : '←') : airportLeg >= 0 || mode !== 'picnic' ? '🛬' : collected === 5 && !freeFlight ? '🧺' : '◎';
   $('distance').textContent = `${Math.round(distance)} m`;
 }
 function updateFlight(dt) {
@@ -320,8 +451,8 @@ function updateFlight(dt) {
     x: Number(keys.has('arrowright') || keys.has('d')) - Number(keys.has('arrowleft') || keys.has('a')),
     y: Number(keys.has('arrowup') || keys.has('w')) - Number(keys.has('arrowdown') || keys.has('s'))
   } : input;
-  state = stepFlight(state, steer, dt, guided ? getTarget() : null, obstacles);
-  if (state.returning && !previous.returning) toast('Let’s stay near our island. ☀️');
+  state = stepFlight(state, steer, dt, guided ? getTarget() : null, obstacles, {speed:SPEEDS[speedMode],boundary:mode === 'picnic' ? 165 : 490,groundHeight:mode === 'picnic' ? groundHeight : worldGroundHeight});
+  if (state.returning && !previous.returning) toast('Let’s turn back toward our islands. ☀️');
   if (airportLeg >= 0) {
     if (touchesTarget(previous, state, getTarget(), 4.5)) {
       if (airportLeg === 0) { airportLeg = 1; updateMission(); toast('There’s the runway. Coming in! 🛬'); }
@@ -330,6 +461,10 @@ function updateFlight(dt) {
         toast('A gentle landing… 🛬', 4); updateSound();
       } else { airportLeg = 0; updateMission(); toast('One more turn to line up. ✈'); }
     }
+    return;
+  }
+  if (mode !== 'picnic') {
+    if (touchesTarget(previous,state,getTarget(),8)) visitAirport();
     return;
   }
   if (freeFlight) {
@@ -349,14 +484,24 @@ function updateFlight(dt) {
 function updateLanding(dt) {
   landingTime += dt;
   if (phase === 'landing') {
-    state = runwayLanding(landingStart, landingTime);
+    const steer=keys.size?{x:Number(keys.has('arrowright')||keys.has('d'))-Number(keys.has('arrowleft')||keys.has('a')),y:Number(keys.has('arrowup')||keys.has('w'))-Number(keys.has('arrowdown')||keys.has('s'))}:input;
+    state = landingStyle === 'hands' ? assistedLanding(landingStart,state,landingTime,dt,steer,airportRunway(landingAirport)) : runwayLanding(landingStart,landingTime,airportRunway(landingAirport));
     if (state.finished) {
+      currentAirport=landingAirport;clearInput();
       phase = 'parked'; paused = true; setGuided(false); chime(true); burst(plane.position);
       $('landingMessage').textContent = freeFlight ? 'Bear has his picnic, and you’re back at Sunny Airport. Ready to explore?' : 'Wheels down. Right on the runway. Your adventure is waiting whenever you’re ready.';
-      updateMission(); $('celebration').showModal(); say('What a lovely landing! Welcome to Sunny Airport.');
+      if(mode!=='picnic'){
+        const before=trip;trip=arriveTrip(trip,currentAirport);passport=stampArrival(passport,before,trip);savePassport();updatePassenger();
+        const a=airportById(currentAirport);$('arrivalKicker').textContent='WELCOME TO '+a.airport.toUpperCase();
+        $('arrivalTitle').textContent=trip?.status==='arrived'?`${a.passenger} says thank you!`:'What a lovely landing!';
+        $('landingMessage').textContent=trip?.status==='arrived'?`Your passenger loved the trip to ${a.name}. A new memory for your pilot passport!`:`You’re parked at ${a.airport}. Ready for another trip?`;
+        $('arrivalPortrait').innerHTML=trip?.status==='arrived'?`<img class="waving-friend" src="../memory-assets/${a.animal}.png" alt="${a.passenger} waving goodbye">`:'🛬';
+        $('explore').innerHTML='Choose another flight →';$('again').hidden=true;
+      }else{$('arrivalKicker').textContent='WELCOME TO SUNNY AIRPORT';$('arrivalTitle').textContent='What a lovely landing!';$('arrivalPortrait').textContent='🛬';$('explore').innerHTML='Take off again ↗';$('again').hidden=false;}
+      updateMission(); updateSound(); $('celebration').showModal(); say('What a lovely landing! Welcome to '+airportById(currentAirport).airport+'.');
     }
   } else {
-    state = runwayTakeoff(landingStart, landingTime);
+    state = runwayTakeoff(landingStart, landingTime, airportRunway(currentAirport));
     if (state.finished) { phase = 'flying'; airportLeg = -1; updateMission(); updateSound(); toast('You’re flying! ✈'); }
   }
 }
@@ -370,7 +515,7 @@ function animate(now) {
     else if (phase === 'landing' || phase === 'takeoff') updateLanding(dt);
     plane.position.set(state.x, state.y, state.z);
     plane.rotation.set(state.climb * .19, -state.heading, -state.turn * .48, 'YXZ');
-    if (propeller) propeller.rotation.z += dt * 42;
+    if (propeller) propeller.rotation.z += dt * (phase==='parked'?0:22+state.speed*2);
     water.material.uniforms.time.value = elapsed;
     clouds.forEach(c => { c.position.x += c.userData.speed * dt; if (c.position.x > 310) c.position.x = -310; });
     boats.forEach((b, i) => { b.position.y = .2 + Math.sin(elapsed + i) * .1; b.rotation.z = Math.sin(elapsed * .7 + i) * .025; });
@@ -388,15 +533,16 @@ function animate(now) {
     }
     setCamera(false, dt);
     sun.position.set(state.x + 60, 120, state.z + 50); sun.target.position.set(state.x, 0, state.z);
-    if (engine && audio) engine.frequency.setTargetAtTime(65 + Math.abs(state.turn) * 10 + state.climb * 6, audio.currentTime, .1);
+    if (engine && audio) engine.frequency.setTargetAtTime(45 + state.speed*2 + Math.abs(state.turn) * 8 + state.climb * 5, audio.currentTime, .1);
   }
   if (elapsed > toastUntil) $('toast').classList.remove('show');
   $('steeringHint').style.opacity = elapsed < hintUntil && phase === 'flying' ? 1 : 0;
-  updateMarker(); if (now - lastMap > 100) { drawMap(); lastMap = now; }
+  updateMarker(); if (now - lastMap > 100) { drawMap();$('speedReadout').textContent=Math.round(state.speed*3.6)+' km/h';lastMap = now; }
   renderer.render(scene, camera);
 }
 function fail(message) {
   phase = 'error'; paused = true; updateSound();
+  for (const id of ['airportBoard', 'landingChoice', 'celebration', 'menu']) $(id).close();
   $('loading').classList.remove('done'); $('loading').classList.add('error');
   $('loading').setAttribute('aria-hidden', 'false'); $('loading').inert = false;
   $('loading').querySelector('h2').textContent = 'A little trouble taking off.';
@@ -411,8 +557,8 @@ async function init() {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.12;
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    scene = new THREE.Scene(); scene.background = new THREE.Color('#bde5df'); scene.fog = new THREE.Fog('#bde5df', 135, 360);
-    camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, .2, 700);
+    scene = new THREE.Scene(); scene.background = new THREE.Color('#bde5df'); scene.fog = new THREE.Fog('#bde5df', 170, 600);
+    camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, .2, 900);
     scene.add(new THREE.HemisphereLight('#fff2d2', '#568c84', 2.0));
     sun = new THREE.DirectionalLight('#fff3db', 2.5); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -45; sun.shadow.camera.right = 45;
@@ -421,15 +567,18 @@ async function init() {
     makeOcean(); makeClouds(); makeExtras(); makeTrail();
     const loader = new GLTFLoader();
     const [islandAsset, planeAsset, obstacleData] = await Promise.all([loader.loadAsync('./assets/sunny-island.glb'), loader.loadAsync('./assets/toy-plane.glb'), fetch('./assets/obstacles.json').then(r => { if (!r.ok) throw new Error('Island data failed to load'); return r.json(); })]);
-    obstacles = obstacleData;
+    obstacles = worldObstacles(obstacleData);
     islandAsset.scene.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = true; } });
-    scene.add(islandAsset.scene); plane = planeAsset.scene;
+    scene.add(islandAsset.scene);
+    const otherIslands=await Promise.all(AIRPORTS.slice(1).map(async a=>({a,asset:await loader.loadAsync('./assets/'+a.asset+'.glb')})));
+    for(const {a,asset} of otherIslands){asset.scene.position.set(a.x,0,a.z);asset.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(asset.scene);}
+    plane = planeAsset.scene;
     plane.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    propeller = plane.getObjectByName('Propeller'); scene.add(plane);
+    propeller = plane.getObjectByName('Propeller'); scene.add(plane);makePassenger();makeAirportDetails();
     window.addEventListener('resize', () => {
       renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
     });
-    restart(); $('loading').classList.add('done'); $('loading').setAttribute('aria-hidden', 'true'); $('loading').inert = true;
+    restartAirline(); plane.position.set(state.x,state.y,state.z); $('loading').classList.add('done'); $('loading').setAttribute('aria-hidden', 'true'); $('loading').inert = true;
     requestAnimationFrame(animate);
   } catch (error) { console.error('Flight startup failed', error); fail('Please reload to try again. This game needs a browser with WebGL 2.'); }
 }

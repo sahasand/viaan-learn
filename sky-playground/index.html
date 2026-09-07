@@ -9,10 +9,10 @@
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 </head>
 <body>
-  <canvas id="world" aria-label="A 3D flying playground. Steer with arrow keys, WASD, or drag on the sky."></canvas>
+  <canvas id="world" aria-label="A 3D airline playground with three airports. Steer with arrow keys, WASD, or drag on the sky."></canvas>
   <header class="topbar">
     <a class="round home" href="../index.html" aria-label="Back to Viaan">⌂</a>
-    <div class="wordmark"><span class="brand">little pilot<span class="brand-dot">.</span></span><span class="eyebrow">A SUNNY LITTLE ADVENTURE</span></div>
+    <div class="wordmark"><span class="brand">little pilot<span class="brand-dot">.</span></span><span class="eyebrow">VIAAN’S LITTLE AIRLINE</span></div>
     <div class="top-actions">
       <button class="round" id="sound" aria-label="Turn sound on" aria-pressed="false">♫</button>
       <button class="round" id="help" aria-label="How to fly">?</button>
@@ -28,15 +28,25 @@
   <div id="targetMarker" class="target-marker" aria-hidden="true"><span>◎</span><b id="distance"></b></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="bottom-left">
-    <div class="island-label"><span class="live-dot"></span> SUNNY ISLAND <span class="coordinate">01</span></div>
+    <div class="island-label"><span class="live-dot"></span> <span id="islandName">LITTLE AIRLINE</span> <span class="coordinate">03</span></div>
     <canvas id="map" width="160" height="160" aria-label="Island map showing your plane and destination"></canvas>
   </div>
   <div class="steering-hint" id="steeringHint"><span class="hint-icon">↔</span><span><b>You’re the pilot!</b><small>Drag to steer · ↑ ↓ ← → also work</small></span></div>
+  <div class="speed-controls" id="speedControls" aria-label="Flying speed"><span id="speedReadout">0 km/h</span><div role="group" aria-label="Choose a speed"><button data-speed="slow" aria-pressed="false">Slow</button><button data-speed="cruise" aria-pressed="true">Cruise</button><button data-speed="fast" aria-pressed="false">Fast</button></div></div>
   <div class="bottom-right"><button id="land" class="guide land"><span>↘</span> Land</button><button id="guide" class="guide" aria-pressed="false"><span>✧</span> Guide me</button><span class="guide-note">A little helping wing</span></div>
   <div id="joystick" aria-hidden="true"><span id="stick"></span></div>
   <div class="veil" id="loading"><div class="loading-plane">✈</div><h2>A little sky. A big adventure.</h2><p id="loadText">Getting your plane ready…</p><div class="load-track"><i></i></div><a class="text-link" href="../index.html">Back to Viaan</a></div>
-  <dialog id="menu"><div class="dialog-icon">☁</div><span class="eyebrow" id="menuKicker">TAKE A LITTLE BREATHER</span><h2 id="menuTitle">Parked in the clouds.</h2><p id="menuText">Your adventure will be right here.</p><div id="instructions" hidden><div><span>👆</span><p><b>Drag on the sky</b><br>Left, right, up, or down.</p></div><div><span>✧</span><p><b>Want a helping wing?</b><br>Tap Guide me. Steer to take over.</p></div><div><span>🛟</span><p><b>You’re safe up here</b><br>Your plane stays above the ground.</p></div></div><button class="primary" id="resume">Let’s fly! <span>↗</span></button><button class="secondary" id="restart">Start a new adventure</button><a class="text-link" href="../index.html">Back to Viaan</a></dialog>
-  <dialog id="celebration"><div class="prize">🛬</div><span class="eyebrow">WELCOME TO SUNNY AIRPORT</span><h2>What a lovely landing!</h2><p id="landingMessage">Wheels down. Right on the runway.<br>Ready for another little flight?</p><div class="medal-row">★ ★ ★</div><button class="primary" id="explore">Take off again <span>↗</span></button><button class="secondary" id="again">Start a new adventure</button></dialog>
+  <dialog id="menu"><div class="dialog-icon">☁</div><span class="eyebrow" id="menuKicker">TAKE A LITTLE BREATHER</span><h2 id="menuTitle">Parked in the clouds.</h2><p id="menuText">Your adventure will be right here.</p><div id="instructions" hidden><div><span>👆</span><p><b>Drag on the sky</b><br>Left, right, up, or down.</p></div><div><span>✧</span><p><b>Want a helping wing?</b><br>Tap Guide me. Steer to take over.</p></div><div><span>🛟</span><p><b>You’re safe up here</b><br>Your plane stays above the ground.</p></div></div><button class="primary" id="resume">Let’s fly! <span>↗</span></button><button class="secondary" id="restart">Back to Sunny Airport</button><button class="secondary" id="picnicFlight">Bear’s original picnic adventure</button><a class="text-link" href="../index.html">Back to Viaan</a></dialog>
+  <dialog id="celebration"><div class="prize" id="arrivalPortrait">🛬</div><span class="eyebrow" id="arrivalKicker">WELCOME TO SUNNY AIRPORT</span><h2 id="arrivalTitle">What a lovely landing!</h2><p id="landingMessage">Wheels down. Right on the runway.<br>Ready for another little flight?</p><div class="medal-row">★ ★ ★</div><button class="primary" id="explore">Take off again <span>↗</span></button><button class="secondary" id="again">Start a new adventure</button></dialog>
+  <dialog id="airportBoard" aria-labelledby="airportHeading">
+    <div class="boarding-header"><span class="ticket-mark">✈</span><div><span class="eyebrow" id="departureAirport">SUNNY AIRPORT</span><h2 id="airportHeading">Where shall we fly?</h2></div><span class="airline-tag">VIAAN’S<br>LITTLE AIRLINE</span></div>
+    <p class="airport-intro">Pick a place. Take a friend on an adventure.</p>
+    <div class="destination-cards" id="destinationCards"></div>
+    <section id="boardingSteps" class="boarding-steps" aria-label="Get ready for takeoff" hidden><img id="boardingPortrait" src="../memory-assets/panda.png" alt="Your passenger"><div><h3 id="boardingName"></h3><p id="boardingStatus" role="status"></p><div class="boarding-actions"><button id="loadBag">1. Load the suitcase</button><button id="boardPassenger" disabled>2. Welcome aboard</button></div></div><button class="primary" id="depart" disabled>Take off! ↗</button></section>
+    <details class="pilot-passport"><summary>My pilot passport <span id="tripTotal"></span></summary><div id="passportStamps"></div></details>
+    <div class="airport-other"><button id="freeFly">Just fly & explore ↗</button><button id="airportPicnic">Bear’s picnic adventure</button><a href="../index.html">Home</a></div>
+  </dialog>
+  <dialog id="landingChoice" aria-labelledby="landingTitle"><div class="dialog-icon">🛬</div><span class="eyebrow" id="landingDestination"></span><h2 id="landingTitle">Let’s land!</h2><p>We’ll line up with the runway first.<br>Then choose how you’d like to come in.</p><button class="primary" id="handsLand">I’ll steer · with helping wings</button><button class="secondary landing-auto" id="autoLand">Land for me</button><button class="secondary" id="cancelLanding">Keep flying</button></dialog>
   <noscript><p class="noscript">Please enable JavaScript to fly. <a href="../index.html">Back to Viaan</a></p></noscript>
   <script type="module" src="game.js"></script>
 </body>
