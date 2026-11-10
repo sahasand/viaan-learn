@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#9fdcec">
+  <title>Little Racer · Viaan</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">{"imports":{"three":"../sky-playground/vendor/three.module.js"}}</script>
+</head>
+<body data-phase="loading">
+  <canvas id="world" aria-label="A 3D race track seen from behind your supercar. Steer with the left and right buttons or the arrow keys."></canvas>
+  <header class="topbar">
+    <a class="round home" href="../index.html" aria-label="Back to Viaan">⌂</a>
+    <div class="wordmark"><span class="brand">little racer<span class="brand-dot">.</span></span><span class="eyebrow">VIAAN’S SUPERCAR CLUB</span></div>
+    <div class="top-actions">
+      <button class="round" id="sound" aria-label="Turn sound on" aria-pressed="false">♫</button>
+      <button class="round" id="pause" aria-label="Pause the race">Ⅱ</button>
+    </div>
+  </header>
+
+  <section class="race-card" id="raceCard" aria-label="Race progress">
+    <div class="lap"><span class="eyebrow" id="trackName">SUNNY BEACH</span><strong id="lapText">Lap 1 of 3</strong></div>
+    <div class="place" id="placeText" aria-live="polite">4th</div>
+    <ol class="order" id="order" aria-label="Race order"></ol>
+  </section>
+  <canvas id="map" class="map" width="200" height="200" aria-label="Track map showing every car"></canvas>
+
+  <div class="countdown" id="countdown" role="status" aria-live="assertive"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="drive" id="drive">
+    <button class="steer" id="left" aria-label="Steer left"><span aria-hidden="true">◀</span></button>
+    <div class="dash">
+      <div class="speed" aria-label="Speed"><b id="speed">0</b><small>km/h</small><i id="boostBar"></i></div>
+      <button class="horn" id="horn" aria-label="Beep the horn"><span aria-hidden="true">📣</span> Beep!</button>
+    </div>
+    <button class="steer" id="right" aria-label="Steer right"><span aria-hidden="true">▶</span></button>
+  </div>
+
+  <div class="veil" id="loading"><div class="loading-car">🏁</div><h2>Start your engine.</h2><p id="loadText">Polishing your supercar…</p><div class="load-track"><i></i></div><a class="text-link" href="../index.html">Back to Viaan</a></div>
+
+  <dialog id="garage" aria-labelledby="garageTitle">
+    <span class="eyebrow">VIAAN’S GARAGE</span>
+    <h2 id="garageTitle">Pick your colour</h2>
+    <div class="swatches" id="swatches" role="group" aria-label="Car colour"></div>
+    <h3>Pick a track</h3>
+    <div class="tracks" id="tracks" role="group" aria-label="Race track"></div>
+    <button class="primary" id="start">Start the race! <span aria-hidden="true">🏁</span></button>
+  </dialog>
+
+  <dialog id="menu" aria-labelledby="menuTitle">
+    <div class="dialog-icon" aria-hidden="true">🅿️</div>
+    <span class="eyebrow">TAKING A LITTLE BREAK</span>
+    <h2 id="menuTitle">Parked for a moment.</h2>
+    <div class="how"><div><span aria-hidden="true">◀ ▶</span><p><b>Steer left and right</b><br>Your car drives forward by itself.</p></div><div><span aria-hidden="true">⭐</span><p><b>Drive through stars</b><br>Each star gives you a zoom boost.</p></div><div><span aria-hidden="true">🌿</span><p><b>Stay on the road</b><br>Grass is slow, but you can never crash.</p></div></div>
+    <button class="primary" id="resume">Keep racing!</button>
+    <button class="secondary" id="restart">Start this race again</button>
+    <button class="secondary" id="toGarage">Back to the garage</button>
+    <a class="text-link" href="../index.html">Back to Viaan</a>
+  </dialog>
+
+  <dialog id="finish" aria-labelledby="finishTitle">
+    <div class="prize" aria-hidden="true">🏁</div>
+    <span class="eyebrow" id="finishKicker">SUNNY BEACH · 3 LAPS</span>
+    <h2 id="finishTitle">You finished the race!</h2>
+    <p id="finishText">What super driving.</p>
+    <div class="medal-row" aria-hidden="true">★ ★ ★</div>
+    <ol class="podium" id="podium" aria-label="Finishing order"></ol>
+    <button class="primary" id="again">Race again!</button>
+    <button class="secondary" id="change">Change car or track</button>
+    <a class="text-link" href="../index.html">Back to Viaan</a>
+  </dialog>
+  <noscript><p class="noscript">Please enable JavaScript to race. <a href="../index.html">Back to Viaan</a></p></noscript>
+  <script type="module" src="game.js"></script>
+</body>
+</html>

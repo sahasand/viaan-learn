@@ -4,7 +4,7 @@
 
 Viaan is a static learning app for a young child, hosted on GitHub Pages. `index.html` contains the curriculum data and HTML shell; `curriculum-assets/learning.js`, `experience.js`, and `experience.css` provide rules, interactions, and design. No build step. Serve the repository over HTTP, for example `python3 -m http.server 8765`.
 
-Run `node --test curriculum.test.mjs chess.test.mjs memory.test.mjs sky-playground/*.test.mjs`. For curriculum changes, also verify a complete lesson with a wrong answer, a clue, a correct retry, manual Next, completion, and saved-progress reload. Check a phone viewport for overflow and usable controls.
+Run `node --test curriculum.test.mjs chess.test.mjs memory.test.mjs sky-playground/*.test.mjs little-racer/*.test.mjs`. For curriculum changes, also verify a complete lesson with a wrong answer, a clue, a correct retry, manual Next, completion, and saved-progress reload. Check a phone viewport for overflow and usable controls.
 
 ## Curriculum
 
@@ -56,6 +56,20 @@ airport, boarding, landing assistance, and passport rules; `game.js` owns the br
 and verify a passenger trip, saved passport, and mobile controls in a browser. The `.blend` source files,
 GLB exports, and reproducible background Blender script are included. Keep generated
 obstacle data and the runtime terrain formula aligned with island edits.
+
+## Little Racer (standalone game)
+
+The home Little Racer link opens `little-racer/`, a static Three.js supercar race:
+garage (six paint colours, three tracks), three laps against Panda, Penguin and Frog,
+auto-drive with left/right steering only, boost stars, and a finish card. Read
+`little-racer/README.md` when changing race rules, tracks, art, or sound. `race.js` holds
+all rules in track coordinates and runs in Node; `game.js` owns the scene, generated
+scenery, input, sound and lifecycle. It imports Three.js from `sky-playground/vendor`,
+so keep those files in place. The car is an original Blender model with no real maker's
+name or badge. Nothing crashes or stops the car, rivals rubber-band to stay close, and
+there is no timer or trophy saving; only colour and track persist in `viaan-racer-v1`.
+Run `node --test little-racer/*.test.mjs` after changes and verify a full race, pause,
+saved choices, and portrait/landscape controls in a browser.
 
 ## Shared conventions
 
