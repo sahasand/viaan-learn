@@ -160,62 +160,72 @@ def cut_arches(body, wheels, margin, inner, depth):
     shade(body, 35)
 
 def supercar():
-    FRONT, REAR = (.94, -1.30, .31), (.97, 1.35, .38)      # wheel x, z, radius
+    """A low, sharp-edged wedge: flat planes, hard creases and Y-shaped lights."""
+    FRONT, REAR = (.95, -1.30, .31), (.98, 1.38, .39)      # wheel x, z, radius
+    # (z, half width, floor, shoulder height, centre height). No smoothing: the flat facets are the style.
+    stations = [
+        (-2.30, .58, .21, .27, .28), (-2.12, .90, .15, .34, .35), (-1.72, 1.00, .14, .56, .47),
+        (-1.30, 1.04, .14, .74, .61), (-.85, 1.01, .14, .68, .66), (-.25, .98, .14, .64, .66),
+        (.45, 1.00, .14, .70, .72), (.95, 1.06, .15, .80, .78), (1.38, 1.09, .16, .88, .84),
+        (1.90, 1.07, .18, .90, .86), (2.18, 1.03, .30, .88, .84), (2.28, .98, .42, .83, .80)]
+    def ring(z, w, floor, shoulder, centre):
+        half = [(0, floor), (w * .80, floor), (w * .97, floor + .09), (w, shoulder - .16), (w - .13, shoulder), (w * .46, (shoulder + centre) / 2), (0, centre)]
+        return [(x, y, z) for x, y in half] + [(-x, y, z) for x, y in reversed(half[1:-1])]
+    body = loft('Body', [ring(*s) for s in stations], paint)
+    cut_arches(body, (FRONT, REAR), .075, .79, .67)
+    shade(body, 24)
 
-    # ---- body: a low wedge with raised fenders, a dipped bonnet and wide rear haunches ----
-    # (z, half width, floor, shoulder height, centre height)
-    STATIONS = [
-        (-2.26, .52, .25, .30, .31), (-2.08, .84, .17, .36, .38), (-1.72, .99, .15, .58, .47),
-        (-1.30, 1.04, .15, .77, .53), (-.88, 1.01, .15, .68, .58), (-.30, .97, .15, .63, .64),
-        (.40, 1.00, .15, .69, .70), (.90, 1.05, .16, .78, .75), (1.35, 1.08, .17, .86, .79),
-        (1.85, 1.06, .20, .87, .81), (2.14, 1.01, .28, .83, .79), (2.26, .93, .37, .75, .73)]
-    body = loft('Body', [body_ring(*s) for s in STATIONS], paint)
-    modify(body, 'SUBSURF', levels=2, render_levels=2)
-    cut_arches(body, (FRONT, REAR), .075, .78, .67)
-
-    # ---- cabin: painted pillars and roof with flush dark glass ----
+    # ---- cabin: the windscreen continues the line of the bonnet, the roof falls slowly to the tail ----
     # (z, base half width, base height, roof half width, roof height)
-    CABIN = [(-.98, .66, .50, .62, .585), (-.12, .86, .56, .53, 1.06), (.46, .88, .62, .55, 1.085), (1.22, .80, .70, .50, .93), (1.80, .68, .74, .52, .845)]
+    CABIN = [(-1.38, .70, .50, .66, .60), (-.30, .88, .56, .56, 1.04), (.35, .90, .60, .58, 1.07), (1.30, .90, .70, .60, .96), (2.02, .86, .76, .66, .885)]
     cabin = loft('Cabin', [cabin_ring(*c) for c in CABIN], paint)
-    modify(cabin, 'BEVEL', width=.045, segments=3); shade(cabin)
+    modify(cabin, 'BEVEL', width=.022, segments=2); shade(cabin, 30)
     A, B, C, D, E = CABIN
     top = lambda c, side: (side * c[3], c[4], c[0])
-    base = lambda c, side: (side * c[1], c[2] + .07, c[0])
-    panel('Windscreen', [top(A, -1), top(A, 1), top(B, 1), top(B, -1)], glass, .07)
-    panel('Engine glass', [top(C, -1), top(C, 1), top(D, 1), top(D, -1)], glass, .1)
+    base = lambda c, side: (side * c[1], c[2] + .08, c[0])
+    panel('Windscreen', [top(A, -1), top(A, 1), top(B, 1), top(B, -1)], glass, .06)
+    panel('Rear glass', [top(C, -1), top(C, 1), top(D, 1), top(D, -1)], glass, .1)
+    panel('Engine cover', [top(D, -1), top(D, 1), top(E, 1), top(E, -1)], dark, .1)
     for side in (-1, 1):
-        panel('Quarter light', [base(A, side), base(B, side), top(B, side), top(A, side)], glass, .16)
-        panel('Door glass', [base(B, side), base(C, side), top(C, side), top(B, side)], glass, .1)
-        panel('Rear quarter', [base(C, side), base(D, side), top(D, side), top(C, side)], glass, .14)
-    for i in range(4):
-        t = .16 + i * .23
-        box('Engine louvre', (0, D[4] + (E[4] - D[4]) * t + .02, D[0] + (E[0] - D[0]) * t), (.84, .028, .075), dark, .008, (-.15, 0, 0))
+        panel('Quarter light', [base(A, side), base(B, side), top(B, side), top(A, side)], glass, .14)
+        panel('Door glass', [base(B, side), base(C, side), top(C, side), top(B, side)], glass, .09)
+        panel('Rear quarter', [base(C, side), base(D, side), top(D, side), top(C, side)], glass, .16)
+    for i in range(5):
+        t = .14 + i * .18
+        box('Engine louvre', (0, D[4] + (E[4] - D[4]) * t + .03, D[0] + (E[0] - D[0]) * t), (.9, .03, .06), paint, .006, (-.1, 0, 0))
 
-    # ---- trim and lights ----
+    def y_light(name, centre, side, mat, upright):
+        """Three short bars meeting in a sideways Y, the lamp signature front and rear."""
+        for angle, reach in ((0, .17), (2.2, .12), (-2.2, .12)):
+            a = angle if side > 0 else math.pi - angle
+            if upright:   # on the tail, drawn in the x-y plane
+                box(name, (centre[0] + math.cos(a) * reach, centre[1] + math.sin(a) * reach, centre[2]), (reach * 2, .05, .04), mat, .008, (0, 0, a))
+            else:         # on the bonnet, lying along the slope
+                box(name, (centre[0] + math.cos(a) * reach, centre[1] + math.sin(a) * reach * .3, centre[2] - math.sin(a) * reach), (reach * 2, .022, .045), mat, .006, (0, a, 0))
+
     for side in (-1, 1):
-        box('Lamp housing', (side * .56, .375, -2.0), (.42, .05, .2), dark, .015, (.24, side * -.5, 0))
-        box('Headlamp', (side * .56, .392, -2.02), (.34, .03, .08), lamp, .01, (.24, side * -.5, 0))
-        box('Side intake', (side * 1.04, .47, .78), (.09, .26, .56), dark, .04, (0, side * .14, 0))
-        box('Door line', (side * 1.0, .37, -.22), (.03, .04, 1.25), dark, .008)
-        ellipsoid('Mirror', (side * .96, .80, -.44), (.12, .075, .10), paint)
-        box('Mirror arm', (side * .86, .76, -.42), (.16, .035, .06), dark, .01)
-        box('Wing support', (side * .58, .98, 1.94), (.06, .30, .20), dark, .015, (-.25, 0, 0))
-        box('Wing end plate', (side * 1.02, 1.10, 1.98), (.045, .26, .54), paint, .015)
-        cylinder('Exhaust', (side * .24, .43, 2.27), .10, .14, silver, 'z', 20, .015)
-        cylinder('Exhaust core', (side * .24, .43, 2.33), .07, .03, dark, 'z', 16)
-    box('Nose intake', (0, .235, -2.20), (1.16, .10, .14), dark, .02)
-    box('Front splitter', (0, .135, -2.16), (1.5, .045, .26), dark, .012)
-    box('Side skirts', (0, .135, .03), (2.14, .07, 2.05), dark, .02)
-    box('Rear panel', (0, .56, 2.235), (1.74, .30, .07), dark, .02)
-    box('Tail lamp', (0, .655, 2.275), (1.62, .055, .04), tail, .015)
-    box('Rear diffuser', (0, .24, 2.13), (1.66, .17, .30), dark, .02)
-    for i in range(5): box('Diffuser fin', ((i - 2) * .34, .23, 2.22), (.035, .16, .22), silver, .006)
-    box('Rear wing', (0, 1.14, 1.98), (2.0, .05, .46), paint, .02, (.09, 0, 0))
-    box('Wing lip', (0, 1.185, 2.19), (2.0, .06, .04), dark, .01)
-
+        box('Lamp bed', (side * .66, .452, -1.86), (.46, .02, .30), dark, .006, (.3, side * -.25, 0))
+        y_light('Headlamp', (side * .66, .478, -1.87), side, lamp, False)
+        box('Nose intake', (side * .50, .225, -2.2), (.5, .11, .1), dark, .02, (0, side * -.2, 0))
+        box('Side intake', (side * 1.05, .50, .86), (.08, .34, .66), dark, .03, (0, side * .13, 0))
+        box('Sill intake', (side * 1.02, .25, .18), (.07, .13, .62), dark, .02)
+        box('Door line', (side * 1.005, .40, -.3), (.025, .035, 1.05), dark, .006, (-.12, 0, 0))
+        ellipsoid('Mirror', (side * .98, .78, -.62), (.12, .07, .09), paint)
+        box('Mirror arm', (side * .88, .74, -.60), (.16, .03, .05), dark, .008)
+        y_light('Tail lamp', (side * .60, .66, 2.305), side, tail, True)
+        box('Wing support', (side * .56, .97, 2.02), (.05, .2, .16), dark, .01, (-.2, 0, 0))
+        box('Wing end plate', (side * .96, 1.06, 2.07), (.04, .15, .42), paint, .01)
+    box('Front splitter', (0, .125, -2.2), (1.56, .04, .26), dark, .01)
+    box('Side skirts', (0, .13, .03), (2.16, .06, 2.1), dark, .015)
+    box('Rear panel', (0, .64, 2.275), (1.86, .32, .05), dark, .015)
+    box('Rear diffuser', (0, .31, 2.2), (1.72, .22, .3), dark, .015)
+    for i in range(6): box('Diffuser fin', ((i - 2.5) * .28, .3, 2.3), (.03, .2, .2), silver, .005)
+    cylinder('Exhaust', (0, .47, 2.31), .17, .12, silver, 'z', 6, .012)
+    cylinder('Exhaust core', (0, .47, 2.36), .125, .03, dark, 'z', 6)
+    box('Rear wing', (0, 1.075, 2.07), (1.9, .04, .38), paint, .012, (.08, 0, 0))
     join_by_material()
     wheel('Wheel_FL', -1, *FRONT); wheel('Wheel_FR', 1, *FRONT)
-    wheel('Wheel_RL', -1, *REAR); wheel('Wheel_RR', 1, *REAR)
+    wheel('Wheel_RL', -1, *REAR, .34); wheel('Wheel_RR', 1, *REAR, .34)
 
 def truck():
     """A monster truck: tall pickup body on huge wheels."""

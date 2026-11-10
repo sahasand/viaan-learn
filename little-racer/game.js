@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../sky-playground/vendor/GLTFLoader.js';
-import { createSound } from './audio.js';
-import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, LOOP, STORAGE_KEY, PAINTS, TRAILS, CARS, BOSSES, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js';
+import { createSound } from './audio.js?v=6';
+import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, LOOP, STORAGE_KEY, PAINTS, TRAILS, CARS, BOSSES, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=6';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
@@ -789,8 +789,8 @@ function renderGarage() {
   $('bank').textContent = prefs.coins;
   const won = Object.keys(prefs.cups).length;
   $('cars').innerHTML = CARS.map(c => carUnlocked(prefs, c)
-    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${CAR_ICON[c.id]}.png" alt=""><small>${c.name}</small></button>`
-    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${CAR_ICON[c.id]}.png" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
+    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${CAR_ICON[c.id]}.png?v=6" alt=""><small>${c.name}</small></button>`
+    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${CAR_ICON[c.id]}.png?v=6" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
   $('swatches').innerHTML = PAINTS.map(p => owns(p)
     ? `<button data-paint="${p.id}" style="background:${swatch(p)}" aria-label="${p.name}" aria-pressed="${p.id === prefs.paint}"></button>`
     : `<button data-paint="${p.id}" class="locked" style="background:${swatch(p)}" aria-label="${p.name}, locked, costs ${p.cost} coins" aria-pressed="false">🔒<br>${p.cost}</button>`).join('');
@@ -902,7 +902,7 @@ function openMenu() {
 }
 
 /* ---------- input ---------- */
-// GO is a switch, not a pedal to hold: once it is lit the car keeps driving, so one finger is enough to steer.
+// The car drives by itself from the green light, so one finger is enough to steer. GO only ever switches driving on.
 const pad = () => ({ steer: (held.right.size ? 1 : 0) - (held.left.size ? 1 : 0), gas: cruise || held.gas.has('key'), brake: held.brake.size > 0, nitro: held.nitro.size > 0 });
 function hold(side, source, on) {
   if (on) held[side].add(source); else held[side].delete(source);
@@ -913,9 +913,9 @@ function releaseAll() { for (const side of Object.keys(held)) { held[side].clear
 function setupControls() {
   for (const side of Object.keys(held)) {
     const button = $(side);
-    button.addEventListener('pointerdown', e => { e.preventDefault(); try { button.setPointerCapture(e.pointerId); } catch {} hold(side, 'p' + e.pointerId, true); if (side === 'gas') setCruise(!cruise); });
+    button.addEventListener('pointerdown', e => { e.preventDefault(); try { button.setPointerCapture(e.pointerId); } catch {} hold(side, 'p' + e.pointerId, true); if (side === 'gas') setCruise(true); });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(name, e => hold(side, 'p' + e.pointerId, false));
-    button.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); hold(side, 'button', true); if (side === 'gas' && !e.repeat) setCruise(!cruise); } });
+    button.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); hold(side, 'button', true); if (side === 'gas') setCruise(true); } });
     button.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') hold(side, 'button', false); });
     button.addEventListener('blur', () => hold(side, 'button', false));
     button.addEventListener('contextmenu', e => e.preventDefault());
@@ -962,8 +962,6 @@ function setupControls() {
 function update(dt) {
   clock += dt;
   if (phase !== 'garage') for (const event of stepRace(race, pad(), dt)) handle(event);
-  // A driver who has switched GO off and sits still gets a friendly reminder.
-  if (phase === 'racing') { idleFor = !cruise && playerOf(race).speed < 1.5 ? idleFor + dt : 0; if (idleFor > 2.2 && !hinted) { hinted = true; toast('Tap GO to drive! 🟢', 3); $('gas').classList.add('nudge'); } if (cruise) hinted = false; }
   if (phase === 'finished' && finishAt && clock >= finishAt) { finishAt = 0; showFinish(); }
   if (countdownUntil && clock >= countdownUntil) { countdownUntil = 0; $('countdown').textContent = ''; }
   if (toastUntil && clock >= toastUntil) { toastUntil = 0; $('toast').classList.remove('show'); }
@@ -1003,7 +1001,7 @@ async function init() {
     makeSky(); makeParticles();
     canvas.tabIndex = -1;
     const loader = new GLTFLoader();
-    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb`)]))) {
+    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=6`)]))) {
       templates[id] = asset.scene;
       asset.scene.traverse(o => {
         if (!o.isMesh || shiny.includes(o.material)) return;

@@ -20,12 +20,13 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 
 ## Controls and rules
 
-- **GO** is a switch that starts lit: while it is lit the car drives by itself, so one
-  finger is enough to steer. Tapping GO coasts, tapping again drives. Hold **STOP** to
-  brake; letting go drives on. Steer with the **left** and **right** buttons or by
-  touching either half of the picture. Keys: arrows or WASD (up also drives while held),
-  N or Shift for nitro, H for the horn, P to pause. A driver who switches GO off and
-  sits still gets a reminder.
+- The car drives by itself from the green light, so one finger is enough to steer.
+  Hold **STOP** to brake; letting go drives on. **GO** is lit while driving and pressing
+  it only ever switches driving on. Steer with the **left** and **right** buttons or by
+  touching either half of the picture. Keys: arrows or WASD, N or Shift for nitro, H for
+  the horn, P to pause.
+- `index.html` and `game.js` load their files with a `?v=` number so phones do not keep an
+  old copy. Raise that number in both files whenever the game's code or styles change.
 - **Nitro** holds three bursts. Coins, stars and drift boosts fill it; one tap spends one.
 - Every track has a **loop-the-loop**. Cars are steered into its lane and carried round
   at a safe speed whatever is pressed, with a ring of coins on the way.
@@ -65,7 +66,8 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 ## Art and implementation
 
 `assets/supercar.blend`, `truck.blend` and `formula.blend` are the editable Blender
-sources for the three original vehicles. They carry no real maker's name, badge, or
+sources for the three original vehicles. The supercar is styled as a sharp, flat-faceted
+Italian-style wedge with Y-shaped lamps and a hexagonal exhaust. They carry no real maker's name, badge, or
 exact model shape; keep it that way, since the site is public. Rebuild a model, its GLB
 export, and its card render with:
 
