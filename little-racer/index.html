@@ -9,7 +9,7 @@
   <script type="importmap">{"imports":{"three":"../sky-playground/vendor/three.module.js"}}</script>
 </head>
 <body data-phase="loading">
-  <canvas id="world" aria-label="A 3D race track seen from behind your supercar. Steer with the left and right buttons or the arrow keys."></canvas>
+  <canvas id="world" aria-label="A 3D race track seen from behind your car. Hold Go and steer with the buttons, or use the arrow keys."></canvas>
   <header class="topbar">
     <a class="round home" href="../index.html" aria-label="Back to Viaan">⌂</a>
     <div class="wordmark"><span class="brand">little racer<span class="brand-dot">.</span></span><span class="eyebrow">VIAAN’S SUPERCAR CLUB</span></div>
@@ -32,12 +32,16 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <div class="drive" id="drive">
-    <button class="steer" id="left" aria-label="Steer left"><span aria-hidden="true">◀</span></button>
+    <div class="pad"><button class="steer" id="left" aria-label="Steer left"><span aria-hidden="true">◀</span></button><button class="steer" id="right" aria-label="Steer right"><span aria-hidden="true">▶</span></button></div>
     <div class="dash">
       <div class="speed" aria-label="Speed"><b id="speed">0</b><small>km/h</small><i id="boostBar"></i></div>
       <button class="horn" id="horn" aria-label="Beep the horn"><span aria-hidden="true">📣</span> Beep!</button>
     </div>
-    <button class="steer" id="right" aria-label="Steer right"><span aria-hidden="true">▶</span></button>
+    <div class="pad pedals">
+      <button class="nitro" id="nitro" aria-label="Nitro boost" data-bursts="0"><span aria-hidden="true">🔥</span><i id="nitroPips" aria-hidden="true">○○○</i></button>
+      <button class="pedal brake" id="brake" aria-label="Brake">STOP</button>
+      <button class="pedal gas" id="gas" aria-label="Go: hold to drive">GO</button>
+    </div>
   </div>
 
   <div class="veil" id="loading"><div class="loading-car">🏁</div><h2>Start your engine.</h2><p id="loadText">Polishing your supercar…</p><div class="load-track"><i></i></div><a class="text-link" href="../index.html">Back to Viaan</a></div>
@@ -45,7 +49,9 @@
   <dialog id="garage" aria-labelledby="garageTitle">
     <div class="garage-a">
       <div class="garage-top"><span class="eyebrow">VIAAN’S GARAGE</span><span class="bank" aria-label="Coins saved"><i aria-hidden="true"></i><b id="bank">0</b></span></div>
-      <h2 id="garageTitle">Pick your colour</h2>
+      <h2 id="garageTitle">Pick your ride</h2>
+      <div class="cars" id="cars" role="group" aria-label="Vehicle"></div>
+      <h3>Pick a colour</h3>
       <div class="swatches" id="swatches" role="group" aria-label="Car colour"></div>
       <h3>Pick a trail</h3>
       <div class="trails" id="trails" role="group" aria-label="Trail behind the car"></div>
@@ -54,6 +60,7 @@
       <h3>Pick a track</h3>
       <div class="tracks" id="tracks" role="group" aria-label="Race track"></div>
       <button class="primary" id="start">Start the race! <span aria-hidden="true">🏁</span></button>
+      <button class="secondary boss" id="bossStart" hidden>👑 Boss race</button>
     </div>
   </dialog>
 
@@ -61,7 +68,7 @@
     <div class="dialog-icon" aria-hidden="true">🅿️</div>
     <span class="eyebrow">TAKING A LITTLE BREAK</span>
     <h2 id="menuTitle">Parked for a moment.</h2>
-    <div class="how"><div><span aria-hidden="true">◀ ▶</span><p><b>Steer left and right</b><br>Your car drives forward by itself.</p></div><div><span aria-hidden="true">⭐</span><p><b>Stars and coins</b><br>Stars zoom. Coins unlock new paint and trails.</p></div><div><span aria-hidden="true">✨</span><p><b>Drift for a boost</b><br>Hold a turn round a corner, then let go.</p></div></div>
+    <div class="how"><div><span aria-hidden="true">GO</span><p><b>Hold GO to drive</b><br>Steer with ◀ ▶. STOP slows down.</p></div><div><span aria-hidden="true">🔥</span><p><b>Nitro</b><br>Coins and stars fill it. Tap the flame to blast off.</p></div><div><span aria-hidden="true">✨</span><p><b>Drift for a boost</b><br>Hold a turn round a corner, then let go.</p></div></div>
     <button class="primary" id="resume">Keep racing!</button>
     <button class="secondary" id="restart">Start this race again</button>
     <button class="secondary" id="toGarage">Back to the garage</button>

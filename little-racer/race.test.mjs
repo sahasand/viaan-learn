@@ -143,7 +143,9 @@ test('ramps launch the car once each lap, hold its speed in the air and land it 
   for (const fps of [20, 60, 120]) {
     const events = [];
     const race = drive('snow', careful, fps, e => events.push(e));
-    assert.equal(events.filter(e => e === 'jump').length, 2 * R.LAPS, `jumps at ${fps} fps`);
+    assert.equal(events.filter(e => e === 'jump').length, R.LAPS, `jumps at ${fps} fps`);
+    assert.equal(events.filter(e => e === 'megajump').length, R.LAPS);
+    assert.equal(events.filter(e => e === 'loop').length, R.LAPS, 'one trip round the loop each lap');
     assert.equal(events.filter(e => e === 'land').length, 2 * R.LAPS);
     assert.equal(R.playerOf(race).air, 0);
   }
@@ -160,7 +162,7 @@ test('ramps launch the car once each lap, hold its speed in the air and land it 
   assert.ok(Math.abs(frames / 60 - R.AIR_SECONDS) < .05);
   assert.ok(player.speed > R.CRUISE - .01);
   // A car crawling over the ramp just rolls across.
-  player.d = race.track.ramps[1] - .1; player.speed = 5; player.lat = 0;
+  player.d = race.track.ramps[0] + race.track.length - .1; player.speed = 5; player.lat = 0;
   assert.equal(R.stepRace(race, 0, 1 / 60).includes('jump'), false);
 });
 
@@ -218,7 +220,7 @@ test('finishing order is fixed once a car crosses the line', () => {
 });
 
 test('saved choices are validated before use', () => {
-  const fallback = { paint: 'sunshine', track: 'beach', trail: 'none', coins: 0, owned: [], cups: {} };
+  const fallback = { car: 'supercar', paint: 'sunshine', track: 'beach', trail: 'none', coins: 0, owned: [], cups: {} };
   for (const bad of [null, undefined, '', 'nonsense', '[]', '{"paint":7}', 42, '{"paint":"mud","track":"moon"}', '{"coins":-5,"owned":"gold","cups":[3]}']) assert.deepEqual(R.normalizePrefs(bad), fallback);
   // The first release saved only a paint and a track; that still loads.
   assert.deepEqual(R.normalizePrefs('{"paint":"grape","track":"snow","extra":1}'), { ...fallback, paint: 'grape', track: 'snow' });
@@ -226,7 +228,7 @@ test('saved choices are validated before use', () => {
   assert.equal(R.normalizePrefs({ paint: 'gold', trail: 'fire' }).paint, 'sunshine');
   assert.equal(R.normalizePrefs({ paint: 'gold', trail: 'fire' }).trail, 'none');
   const rich = R.normalizePrefs({ paint: 'gold', trail: 'fire', owned: ['gold', 'fire', 'gold', 'cheat', 7], coins: 12.5, cups: { beach: 2, snow: 9, moon: 1 } });
-  assert.deepEqual(rich, { paint: 'gold', track: 'beach', trail: 'fire', coins: 0, owned: ['gold', 'fire'], cups: { beach: 2 } });
+  assert.deepEqual(rich, { car: 'supercar', paint: 'gold', track: 'beach', trail: 'fire', coins: 0, owned: ['gold', 'fire'], cups: { beach: 2 } });
   assert.equal(R.normalizePrefs({ coins: 1e9 }).coins, 99999);
   assert.equal(R.PAINTS.filter(p => !p.cost).length, 6);
   assert.equal(new Set([...R.PAINTS, ...R.TRAILS].map(i => i.id)).size, R.PAINTS.length + R.TRAILS.length);
@@ -303,8 +305,9 @@ test('coins sit in rows and over ramps, count once and return each lap', () => {
   for (const { id } of R.TRACKS) {
     const track = R.getTrack(id), coins = R.coinsFor(track);
     assert.ok(coins.length >= 40, `${id} has ${coins.length} coins`);
-    assert.equal(coins.filter(c => c.air).length, 10);
-    for (const coin of coins) assert.ok(Math.abs(coin.lat) < R.HALF_ROAD - 2 && coin.s > 20 && coin.s < track.length - 10);
+    assert.equal(coins.filter(c => c.air).length, 14);
+    assert.equal(coins.filter(c => c.loop).length, 8);
+    for (const coin of coins) assert.ok(Math.abs(coin.lat) < R.HALF_ROAD - 2 + (coin.loop ? 2 : 0) && coin.s > 20 && coin.s < track.length - 10);
     for (const coin of coins.filter(c => !c.air)) for (const star of R.starsFor(track)) assert.ok(Math.abs(coin.s - star.s) > 4 || coin.lat !== star.lat);
   }
   const race = R.createRace('beach'), player = R.playerOf(race);
@@ -326,6 +329,134 @@ test('coins sit in rows and over ramps, count once and return each lap', () => {
   R.stepRace(race, 0, 1 / 20);
   assert.ok(race.coins.every(c => !c.taken));
   assert.equal(race.collected, 6, 'the count keeps growing across laps');
+});
+
+test('the loop joins the road smoothly, turns the car right over and carries it across lanes', () => {
+  for (const { id } of R.TRACKS) {
+    const track = R.getTrack(id), s = track.loop.s, G = R.LOOP.ground;
+    for (const [d, lat] of [[s + 1e-4, -R.LOOP.lane], [s + G - 1e-4, R.LOOP.lane]]) {
+      const frame = R.trackFrame(track, d, lat), road = R.trackPose(track, d, lat);
+      assert.ok(Math.hypot(frame.x - road.x, frame.y - road.y, frame.z - road.z) < .05, 'no step where the loop meets the road');
+      assert.ok(frame.uy > .98);
+    }
+    const top = R.trackFrame(track, s + G / 2, 0);
+    assert.ok(Math.abs(top.y - R.trackPose(track, s + G / 2, 0).y - 2 * R.LOOP.radius) < .01);
+    assert.ok(top.uy < -.98, 'upside down at the top');
+    for (let t = .02; t < 1; t += .02) {
+      const f = R.trackFrame(track, s + G * t, R.loopLane(t));
+      assert.ok(Math.abs(Math.hypot(f.fx, f.fy, f.fz) - 1) < 1e-6 && Math.abs(Math.hypot(f.ux, f.uy, f.uz) - 1) < 1e-6);
+      assert.ok(Math.abs(f.fx * f.ux + f.fy * f.uy + f.fz * f.uz) < 1e-6, 'up stays square to forward');
+    }
+    assert.equal(R.loopPhase(track, s - 1), -1);
+    assert.equal(R.loopPhase(track, s + G + 1), -1);
+    assert.equal(R.trackFrame(track, 50, 0).loop, -1);
+    // The loop stands clear of the tunnel and both ramps.
+    for (const other of [track.tunnel.s, ...track.ramps]) assert.ok(Math.abs(other - s) > 60);
+  }
+  const race = R.createRace('beach'), player = R.playerOf(race), s = race.track.loop.s;
+  for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
+  race.cars.slice(1).forEach(c => { c.d = s + 300; });
+  player.d = s - R.LOOP.lead; player.lat = 5; player.speed = R.CRUISE;
+  const events = []; let seconds = 0, inside = 0, steps = 0;
+  // Holding full right and no gas cannot fall out of the loop or stall in it.
+  while (player.d < s + R.LOOP.ground + 2 && steps++ < 2000) {
+    events.push(...R.stepRace(race, { steer: 1, gas: false }, 1 / 60)); seconds += 1 / 60;
+    const t = R.loopPhase(race.track, player.d);
+    if (t >= 0) { inside += 1 / 60; assert.ok(Math.abs(player.lat - R.loopLane(t)) < 1.6, `lane at ${t}`); if (t > .05) assert.ok(player.speed >= 20); }
+  }
+  assert.ok(steps < 2000);
+  assert.equal(events.filter(e => e === 'loop').length, 1);
+  assert.ok(inside > 2.5 && inside < 5, `the loop takes ${inside}s`);
+  assert.ok(race.coins.filter(c => c.loop).every(c => c.taken), 'the ring of coins is swept up on the way round');
+});
+
+test('gas makes the car go, letting go coasts, and the brake stops it without ever reversing', () => {
+  const race = R.createRace('beach'), player = R.playerOf(race);
+  for (let i = 0; i < 181; i++) R.stepRace(race, { steer: 0, gas: false }, 1 / 60);
+  for (let i = 0; i < 60; i++) R.stepRace(race, { steer: 0, gas: false }, 1 / 60);
+  assert.equal(player.speed, 0, 'no gas, no go');
+  for (let i = 0; i < 240; i++) R.stepRace(race, { steer: 0, gas: true }, 1 / 60);
+  assert.ok(player.speed > R.CRUISE - 2);
+  const fast = player.speed;
+  for (let i = 0; i < 60; i++) R.stepRace(race, { steer: 0 }, 1 / 60);
+  assert.ok(player.speed < fast && player.speed > fast * .5, 'coasting slows gently');
+  for (let i = 0; i < 120; i++) R.stepRace(race, { steer: 0, gas: true, brake: true }, 1 / 60);
+  assert.ok(player.speed < .5, 'the brake wins over the gas');
+  const stopped = player.d;
+  for (let i = 0; i < 120; i++) R.stepRace(race, { steer: 0, brake: true }, 1 / 60);
+  assert.ok(player.d >= stopped && player.d - stopped < .5 && player.speed >= 0);
+});
+
+test('nitro fills from coins, stars and drifts, and each press spends one burst', () => {
+  const race = R.createRace('beach'), player = R.playerOf(race);
+  for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
+  race.cars.slice(1).forEach(c => { c.d = 600; });
+  assert.equal(player.nitro, 0);
+  assert.ok(R.stepRace(race, { steer: 0, gas: true, nitro: true }, 1 / 60).includes('empty'));
+  R.stepRace(race, { steer: 0, gas: true }, 1 / 60);
+  const star = race.stars[0]; player.d = star.s - 1; player.lat = star.lat; player.speed = R.CRUISE;
+  R.stepRace(race, { steer: 0, gas: true }, 1 / 60);
+  assert.ok(Math.abs(player.nitro - R.NITRO_COST) < 1e-9, 'a star adds one burst');
+  player.nitro = 1; player.boost = 0;
+  const first = R.stepRace(race, { steer: 0, gas: true, nitro: true }, 1 / 60);
+  assert.ok(first.includes('nitro')); assert.equal(player.boost > 1.5, true);
+  // Holding the button does not burn the whole tank.
+  for (let i = 0; i < 30; i++) assert.equal(R.stepRace(race, { steer: 0, gas: true, nitro: true }, 1 / 60).includes('nitro'), false);
+  assert.ok(Math.abs(player.nitro - 2 / 3) < .06);
+  R.stepRace(race, { steer: 0, gas: true }, 1 / 60);
+  assert.ok(R.stepRace(race, { steer: 0, gas: true, nitro: true }, 1 / 60).includes('nitro'));
+  assert.ok(player.nitro <= 1 && player.nitro >= 0);
+});
+
+test('the second ramp is a mega jump with a longer flight and a longer arc of coins', () => {
+  const race = R.createRace('snow'), player = R.playerOf(race), track = race.track;
+  assert.equal(track.mega, track.ramps[1]);
+  for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
+  race.cars.slice(1).forEach(c => { c.d = track.mega + 400; });
+  player.d = track.mega - .2; player.lat = 0; player.speed = R.CRUISE;
+  assert.ok(R.stepRace(race, 0, 1 / 60).includes('megajump'));
+  assert.equal(player.airTime, R.MEGA_AIR);
+  let frames = 0, coins = 0;
+  while (player.air > 0 && frames++ < 400) coins += R.stepRace(race, 0, 1 / 60).filter(e => e === 'coin').length;
+  assert.ok(Math.abs(frames / 60 - R.MEGA_AIR) < .05);
+  assert.equal(coins, 9, 'every coin of the arc is caught in the air');
+});
+
+test('a boss race is one-on-one against the track’s boss, who stays close and can be beaten', () => {
+  for (const { id } of R.TRACKS) {
+    const race = R.createRace(id, { boss: true });
+    assert.equal(race.boss, true);
+    assert.deepEqual(race.cars.map(c => c.id), ['viaan', R.BOSSES[id].id]);
+    assert.ok(race.cars[1].boss && R.playerOf(race).nitro > 0);
+  }
+  assert.equal(R.bossBand(0), 1);
+  assert.ok(R.bossBand(200) > .55 && R.bossBand(200) < .7 && R.bossBand(-200) > 1 && R.bossBand(-200) <= 1.06);
+  // Driving cleanly and using every nitro burst wins; never steering loses but still finishes.
+  const win = R.createRace('beach', { boss: true }); let steps = 0, tap = false;
+  while (win.phase !== 'finished' && steps++ < 60 * 400) { tap = !tap; R.stepRace(win, { steer: careful(win), gas: true, nitro: tap }, 1 / 60); }
+  assert.equal(R.placeOf(win), 1);
+  const lose = drive('beach', 0); assert.equal(lose.phase, 'finished');
+  const idle = R.createRace('beach', { boss: true }); steps = 0;
+  while (idle.phase !== 'finished' && steps++ < 60 * 400) R.stepRace(idle, 0, 1 / 60);
+  assert.equal(idle.phase, 'finished');
+  assert.equal(R.placeOf(idle), 2);
+});
+
+test('cups unlock vehicles and beating a boss crowns the track', () => {
+  let prefs = R.normalizePrefs({ car: 'truck' });
+  assert.equal(prefs.car, 'supercar', 'the truck needs a cup');
+  assert.equal(R.carUnlocked(prefs, R.CARS[1]), false);
+  prefs = R.award(prefs, 'beach', 4, 0);
+  assert.equal(R.carUnlocked(prefs, R.CARS[1]), true);
+  assert.equal(R.normalizePrefs({ ...prefs, car: 'truck' }).car, 'truck');
+  assert.equal(R.normalizePrefs({ ...prefs, car: 'formula' }).car, 'supercar');
+  prefs = R.award(R.award(prefs, 'snow', 2, 0), 'jungle', 3, 0);
+  assert.equal(R.normalizePrefs({ ...prefs, car: 'formula' }).car, 'formula');
+  assert.equal(R.award(prefs, 'beach', 2, 0, true).cups.beach, 1, 'losing to the boss changes nothing');
+  prefs = R.award(prefs, 'beach', 1, 0, true);
+  assert.equal(prefs.cups.beach, 3);
+  assert.equal(R.award(prefs, 'beach', 1, 0).cups.beach, 3, 'a crown is never lost');
+  assert.equal(R.normalizePrefs({ cups: { beach: 3, snow: 4 } }).cups.snow, undefined);
 });
 
 test('passing a friend is announced with their name, but not off the start line', () => {

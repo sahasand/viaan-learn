@@ -1,7 +1,8 @@
 """Original Little Racer supercar. Run with:
 blender --background --factory-startup --python little-racer/tools/build_car.py
-Writes assets/supercar.blend, supercar.glb and the home-card render supercar.png.
-Add `-- side /tmp/out.png` (or front, rear, top) for a check render from another angle.
+Writes assets/supercar.blend, supercar.glb and the card render supercar.png.
+Add `-- truck` or `-- formula` for the other vehicles, and `-- [model] side /tmp/out.png`
+(or front, rear, top) for a check render from another angle.
 Coordinates below are game coordinates: x right, y up, the nose points to -z."""
 import bpy, math, sys
 from pathlib import Path
@@ -109,90 +110,25 @@ silver = material('Silver', (.80, .82, .84), .3, .7)
 lamp = material('Headlamp', (1, .97, .82), .2, 0, 1.6)
 tail = material('Tail lamp', (.95, .08, .06), .3, 0, 1.4)
 
-FRONT, REAR = (.94, -1.30, .31), (.97, 1.35, .38)      # wheel x, z, radius
+def join_by_material():
+    """Join every mesh by its first material; wheels are added afterwards so they can spin."""
+    groups = {}
+    for o in list(bpy.context.scene.objects):
+        if o.type == 'MESH': groups.setdefault(o.data.materials[0].name, []).append(o)
+    for name, objects in groups.items():
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in objects: o.select_set(True)
+        bpy.context.view_layer.objects.active = objects[0]
+        bpy.ops.object.join(); bpy.context.object.name = name + ' parts'
 
-# ---- body: a low wedge with raised fenders, a dipped bonnet and wide rear haunches ----
-# (z, half width, floor, shoulder height, centre height)
-STATIONS = [
-    (-2.26, .52, .25, .30, .31), (-2.08, .84, .17, .36, .38), (-1.72, .99, .15, .58, .47),
-    (-1.30, 1.04, .15, .77, .53), (-.88, 1.01, .15, .68, .58), (-.30, .97, .15, .63, .64),
-    (.40, 1.00, .15, .69, .70), (.90, 1.05, .16, .78, .75), (1.35, 1.08, .17, .86, .79),
-    (1.85, 1.06, .20, .87, .81), (2.14, 1.01, .28, .83, .79), (2.26, .93, .37, .75, .73)]
-def body_ring(z, w, floor, shoulder, centre):
-    half = [(0, floor), (w * .78, floor), (w, floor + .10), (w, shoulder - .08), (w - .08, shoulder), (w * .5, (shoulder + centre) / 2), (0, centre)]
-    return [(x, y, z) for x, y in half] + [(-x, y, z) for x, y in reversed(half[1:-1])]
-body = loft('Body', [body_ring(*s) for s in STATIONS], paint)
-modify(body, 'SUBSURF', levels=2, render_levels=2)
-# Wheel arches are cut out of the body; the cut faces take the dark material.
-body.data.materials.append(dark)
-for x, z, radius in (FRONT, REAR):
-    for side in (-1, 1):
-        cutter = cylinder('cutter', (side * 1.115, radius, z), radius + .075, .67, dark, 'x', 40)
-        mod = body.modifiers.new('Arch', 'BOOLEAN'); mod.operation = 'DIFFERENCE'; mod.object = cutter; mod.solver = 'EXACT'
-        activate(body); bpy.ops.object.modifier_apply(modifier=mod.name)
-        bpy.data.objects.remove(cutter, do_unlink=True)
-shade(body, 35)
-
-# ---- cabin: painted pillars and roof with flush dark glass ----
-# (z, base half width, base height, roof half width, roof height)
-CABIN = [(-.98, .66, .50, .62, .585), (-.12, .86, .56, .53, 1.06), (.46, .88, .62, .55, 1.085), (1.22, .80, .70, .50, .93), (1.80, .68, .74, .52, .845)]
-def cabin_ring(z, wb, yb, wt, yt):
-    return [(wb, yb, z), (wt, yt, z), (0, yt + .015, z), (-wt, yt, z), (-wb, yb, z), (0, yb, z)]
-cabin = loft('Cabin', [cabin_ring(*c) for c in CABIN], paint)
-modify(cabin, 'BEVEL', width=.045, segments=3); shade(cabin)
-A, B, C, D, E = CABIN
-top = lambda c, side: (side * c[3], c[4], c[0])
-base = lambda c, side: (side * c[1], c[2] + .07, c[0])
-panel('Windscreen', [top(A, -1), top(A, 1), top(B, 1), top(B, -1)], glass, .07)
-panel('Engine glass', [top(C, -1), top(C, 1), top(D, 1), top(D, -1)], glass, .1)
-for side in (-1, 1):
-    panel('Quarter light', [base(A, side), base(B, side), top(B, side), top(A, side)], glass, .16)
-    panel('Door glass', [base(B, side), base(C, side), top(C, side), top(B, side)], glass, .1)
-    panel('Rear quarter', [base(C, side), base(D, side), top(D, side), top(C, side)], glass, .14)
-for i in range(4):
-    t = .16 + i * .23
-    box('Engine louvre', (0, D[4] + (E[4] - D[4]) * t + .02, D[0] + (E[0] - D[0]) * t), (.84, .028, .075), dark, .008, (-.15, 0, 0))
-
-# ---- trim and lights ----
-for side in (-1, 1):
-    box('Lamp housing', (side * .56, .375, -2.0), (.42, .05, .2), dark, .015, (.24, side * -.5, 0))
-    box('Headlamp', (side * .56, .392, -2.02), (.34, .03, .08), lamp, .01, (.24, side * -.5, 0))
-    box('Side intake', (side * 1.04, .47, .78), (.09, .26, .56), dark, .04, (0, side * .14, 0))
-    box('Door line', (side * 1.0, .37, -.22), (.03, .04, 1.25), dark, .008)
-    ellipsoid('Mirror', (side * .96, .80, -.44), (.12, .075, .10), paint)
-    box('Mirror arm', (side * .86, .76, -.42), (.16, .035, .06), dark, .01)
-    box('Wing support', (side * .58, .98, 1.94), (.06, .30, .20), dark, .015, (-.25, 0, 0))
-    box('Wing end plate', (side * 1.02, 1.10, 1.98), (.045, .26, .54), paint, .015)
-    cylinder('Exhaust', (side * .24, .43, 2.27), .10, .14, silver, 'z', 20, .015)
-    cylinder('Exhaust core', (side * .24, .43, 2.33), .07, .03, dark, 'z', 16)
-box('Nose intake', (0, .235, -2.20), (1.16, .10, .14), dark, .02)
-box('Front splitter', (0, .135, -2.16), (1.5, .045, .26), dark, .012)
-box('Side skirts', (0, .135, .03), (2.14, .07, 2.05), dark, .02)
-box('Rear panel', (0, .56, 2.235), (1.74, .30, .07), dark, .02)
-box('Tail lamp', (0, .655, 2.275), (1.62, .055, .04), tail, .015)
-box('Rear diffuser', (0, .24, 2.13), (1.66, .17, .30), dark, .02)
-for i in range(5): box('Diffuser fin', ((i - 2) * .34, .23, 2.22), (.035, .16, .22), silver, .006)
-box('Rear wing', (0, 1.14, 1.98), (2.0, .05, .46), paint, .02, (.09, 0, 0))
-box('Wing lip', (0, 1.185, 2.19), (2.0, .06, .04), dark, .01)
-
-# Join everything so far by material; wheels stay separate so they can spin.
-groups = {}
-for o in list(bpy.context.scene.objects):
-    if o.type == 'MESH': groups.setdefault(o.data.materials[0].name, []).append(o)
-for name, objects in groups.items():
-    bpy.ops.object.select_all(action='DESELECT')
-    for o in objects: o.select_set(True)
-    bpy.context.view_layer.objects.active = objects[0]
-    bpy.ops.object.join(); bpy.context.object.name = name + ' parts'
-
-def wheel(name, side, x, z, radius):
-    x *= side
-    parts = [cylinder('tyre', (x, radius, z), radius, .30, tyre, 'x', 36, .06),
-             cylinder('rim', (x + side * .10, radius, z), radius * .70, .13, silver, 'x', 28, .015),
-             cylinder('dish', (x + side * .155, radius, z), radius * .60, .03, dark, 'x', 28),
-             cylinder('cap', (x + side * .185, radius, z), radius * .17, .04, silver, 'x', 14, .01)]
+def wheel(name, side, x, z, radius, width=.30):
+    x *= side; out = width / 2
+    parts = [cylinder('tyre', (x, radius, z), radius, width, tyre, 'x', 36, min(.06, radius * .16)),
+             cylinder('rim', (x + side * (out - .05), radius, z), radius * .70, .13, silver, 'x', 28, .015),
+             cylinder('dish', (x + side * (out + .005), radius, z), radius * .60, .03, dark, 'x', 28),
+             cylinder('cap', (x + side * (out + .035), radius, z), radius * .17, .04, silver, 'x', 14, .01)]
     for i in range(3):
-        spoke = box('spoke', (x + side * .17, radius, z), (.045, radius * 1.22, .085), silver, .012)
+        spoke = box('spoke', (x + side * (out + .02), radius, z), (.045, radius * 1.22, radius * .25), silver, .012)
         spoke.rotation_euler = (i * math.pi / 3, 0, 0)
         parts.append(spoke)
     bpy.ops.object.select_all(action='DESELECT')
@@ -205,11 +141,163 @@ def wheel(name, side, x, z, radius):
     bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
     return o
 
-wheel('Wheel_FL', -1, *FRONT); wheel('Wheel_FR', 1, *FRONT)
-wheel('Wheel_RL', -1, *REAR); wheel('Wheel_RR', 1, *REAR)
+def body_ring(z, w, floor, shoulder, centre):
+    half = [(0, floor), (w * .78, floor), (w, floor + .10), (w, shoulder - .08), (w - .08, shoulder), (w * .5, (shoulder + centre) / 2), (0, centre)]
+    return [(x, y, z) for x, y in half] + [(-x, y, z) for x, y in reversed(half[1:-1])]
 
-bpy.ops.wm.save_as_mainfile(filepath=str(ROOT / 'supercar.blend'))
-bpy.ops.export_scene.gltf(filepath=str(ROOT / 'supercar.glb'), export_format='GLB', export_cameras=False, export_lights=False, export_apply=True)
+def cabin_ring(z, wb, yb, wt, yt):
+    return [(wb, yb, z), (wt, yt, z), (0, yt + .015, z), (-wt, yt, z), (-wb, yb, z), (0, yb, z)]
+
+def cut_arches(body, wheels, margin, inner, depth):
+    """Cut wheel arches out of a body; the cut faces take the dark material."""
+    body.data.materials.append(dark)
+    for x, z, radius in wheels:
+        for side in (-1, 1):
+            cutter = cylinder('cutter', (side * (inner + depth / 2), radius, z), radius + margin, depth, dark, 'x', 40)
+            mod = body.modifiers.new('Arch', 'BOOLEAN'); mod.operation = 'DIFFERENCE'; mod.object = cutter; mod.solver = 'EXACT'
+            activate(body); bpy.ops.object.modifier_apply(modifier=mod.name)
+            bpy.data.objects.remove(cutter, do_unlink=True)
+    shade(body, 35)
+
+def supercar():
+    FRONT, REAR = (.94, -1.30, .31), (.97, 1.35, .38)      # wheel x, z, radius
+
+    # ---- body: a low wedge with raised fenders, a dipped bonnet and wide rear haunches ----
+    # (z, half width, floor, shoulder height, centre height)
+    STATIONS = [
+        (-2.26, .52, .25, .30, .31), (-2.08, .84, .17, .36, .38), (-1.72, .99, .15, .58, .47),
+        (-1.30, 1.04, .15, .77, .53), (-.88, 1.01, .15, .68, .58), (-.30, .97, .15, .63, .64),
+        (.40, 1.00, .15, .69, .70), (.90, 1.05, .16, .78, .75), (1.35, 1.08, .17, .86, .79),
+        (1.85, 1.06, .20, .87, .81), (2.14, 1.01, .28, .83, .79), (2.26, .93, .37, .75, .73)]
+    body = loft('Body', [body_ring(*s) for s in STATIONS], paint)
+    modify(body, 'SUBSURF', levels=2, render_levels=2)
+    cut_arches(body, (FRONT, REAR), .075, .78, .67)
+
+    # ---- cabin: painted pillars and roof with flush dark glass ----
+    # (z, base half width, base height, roof half width, roof height)
+    CABIN = [(-.98, .66, .50, .62, .585), (-.12, .86, .56, .53, 1.06), (.46, .88, .62, .55, 1.085), (1.22, .80, .70, .50, .93), (1.80, .68, .74, .52, .845)]
+    cabin = loft('Cabin', [cabin_ring(*c) for c in CABIN], paint)
+    modify(cabin, 'BEVEL', width=.045, segments=3); shade(cabin)
+    A, B, C, D, E = CABIN
+    top = lambda c, side: (side * c[3], c[4], c[0])
+    base = lambda c, side: (side * c[1], c[2] + .07, c[0])
+    panel('Windscreen', [top(A, -1), top(A, 1), top(B, 1), top(B, -1)], glass, .07)
+    panel('Engine glass', [top(C, -1), top(C, 1), top(D, 1), top(D, -1)], glass, .1)
+    for side in (-1, 1):
+        panel('Quarter light', [base(A, side), base(B, side), top(B, side), top(A, side)], glass, .16)
+        panel('Door glass', [base(B, side), base(C, side), top(C, side), top(B, side)], glass, .1)
+        panel('Rear quarter', [base(C, side), base(D, side), top(D, side), top(C, side)], glass, .14)
+    for i in range(4):
+        t = .16 + i * .23
+        box('Engine louvre', (0, D[4] + (E[4] - D[4]) * t + .02, D[0] + (E[0] - D[0]) * t), (.84, .028, .075), dark, .008, (-.15, 0, 0))
+
+    # ---- trim and lights ----
+    for side in (-1, 1):
+        box('Lamp housing', (side * .56, .375, -2.0), (.42, .05, .2), dark, .015, (.24, side * -.5, 0))
+        box('Headlamp', (side * .56, .392, -2.02), (.34, .03, .08), lamp, .01, (.24, side * -.5, 0))
+        box('Side intake', (side * 1.04, .47, .78), (.09, .26, .56), dark, .04, (0, side * .14, 0))
+        box('Door line', (side * 1.0, .37, -.22), (.03, .04, 1.25), dark, .008)
+        ellipsoid('Mirror', (side * .96, .80, -.44), (.12, .075, .10), paint)
+        box('Mirror arm', (side * .86, .76, -.42), (.16, .035, .06), dark, .01)
+        box('Wing support', (side * .58, .98, 1.94), (.06, .30, .20), dark, .015, (-.25, 0, 0))
+        box('Wing end plate', (side * 1.02, 1.10, 1.98), (.045, .26, .54), paint, .015)
+        cylinder('Exhaust', (side * .24, .43, 2.27), .10, .14, silver, 'z', 20, .015)
+        cylinder('Exhaust core', (side * .24, .43, 2.33), .07, .03, dark, 'z', 16)
+    box('Nose intake', (0, .235, -2.20), (1.16, .10, .14), dark, .02)
+    box('Front splitter', (0, .135, -2.16), (1.5, .045, .26), dark, .012)
+    box('Side skirts', (0, .135, .03), (2.14, .07, 2.05), dark, .02)
+    box('Rear panel', (0, .56, 2.235), (1.74, .30, .07), dark, .02)
+    box('Tail lamp', (0, .655, 2.275), (1.62, .055, .04), tail, .015)
+    box('Rear diffuser', (0, .24, 2.13), (1.66, .17, .30), dark, .02)
+    for i in range(5): box('Diffuser fin', ((i - 2) * .34, .23, 2.22), (.035, .16, .22), silver, .006)
+    box('Rear wing', (0, 1.14, 1.98), (2.0, .05, .46), paint, .02, (.09, 0, 0))
+    box('Wing lip', (0, 1.185, 2.19), (2.0, .06, .04), dark, .01)
+
+    join_by_material()
+    wheel('Wheel_FL', -1, *FRONT); wheel('Wheel_FR', 1, *FRONT)
+    wheel('Wheel_RL', -1, *REAR); wheel('Wheel_RR', 1, *REAR)
+
+def truck():
+    """A monster truck: tall pickup body on huge wheels."""
+    wheels = ((1.16, -1.45, .66), (1.16, 1.45, .66))
+    body = loft('Body', [body_ring(*s) for s in [
+        (-2.30, .86, 1.12, 1.50, 1.52), (-2.14, 1.04, 1.04, 1.66, 1.70), (-1.10, 1.08, 1.02, 1.74, 1.78), (-.80, 1.08, 1.02, 1.76, 1.78),
+        (.70, 1.08, 1.02, 1.76, 1.76), (2.10, 1.08, 1.04, 1.76, 1.76), (2.28, 1.02, 1.12, 1.70, 1.70)]], paint)
+    modify(body, 'SUBSURF', levels=2, render_levels=2)
+    cut_arches(body, wheels, .13, .74, .9)
+    cab = [(-.92, 1.0, 1.66, .96, 1.78), (-.42, 1.02, 1.68, .82, 2.52), (.42, 1.02, 1.68, .84, 2.54), (.72, 1.0, 1.66, .9, 1.80)]
+    cabin = loft('Cabin', [cabin_ring(*c) for c in cab], paint)
+    modify(cabin, 'BEVEL', width=.06, segments=3); shade(cabin)
+    A, B, C, D = cab
+    top = lambda c, side: (side * c[3], c[4], c[0])
+    base = lambda c, side: (side * c[1], c[2] + .12, c[0])
+    panel('Windscreen', [top(A, -1), top(A, 1), top(B, 1), top(B, -1)], glass, .09)
+    panel('Rear window', [top(C, -1), top(C, 1), top(D, 1), top(D, -1)], glass, .14)
+    for side in (-1, 1):
+        panel('Door glass', [base(B, side), base(C, side), top(C, side), top(B, side)], glass, .12)
+        box('Headlamp', (side * .68, 1.5, -2.27), (.34, .2, .08), lamp, .03)
+        box('Tail lamp', (side * .78, 1.5, 2.29), (.26, .2, .06), tail, .03)
+        cylinder('Exhaust', (side * .92, 2.25, .98), .09, 1.3, silver, 'z', 16, .02).rotation_euler = (0, 0, 0)
+        box('Step', (side * 1.12, .98, 0), (.16, .07, 1.4), silver, .02)
+        box('Axle', (side * .6, .66, -1.45), (1.0, .16, .16), dark, .04); box('Axle', (side * .6, .66, 1.45), (1.0, .16, .16), dark, .04)
+        box('Shock', (side * .78, .86, -1.45), (.1, .5, .1), silver, .03); box('Shock', (side * .78, .86, 1.45), (.1, .5, .1), silver, .03)
+    for o in [o for o in bpy.context.scene.objects if o.name.startswith('Exhaust')]:
+        o.rotation_euler = (math.pi / 2, 0, 0); activate(o); bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+    box('Chassis', (0, .9, 0), (1.3, .26, 3.9), dark, .05)
+    box('Grille', (0, 1.42, -2.29), (.86, .34, .08), dark, .03)
+    box('Bull bar', (0, 1.3, -2.42), (1.9, .1, .1), silver, .04); box('Bull bar', (0, 1.56, -2.42), (1.5, .08, .08), silver, .03)
+    for x in (-.6, .6): box('Bull bar', (x, 1.38, -2.40), (.09, .5, .09), silver, .03)
+    box('Bed liner', (0, 1.77, 1.42), (1.84, .04, 1.34), dark, .01)
+    box('Roof bar', (0, 2.63, -.05), (1.5, .09, .14), dark, .03)
+    for i in range(4): box('Roof lamp', ((i - 1.5) * .38, 2.66, -.14), (.24, .15, .08), lamp, .03)
+    box('Rear bumper', (0, 1.14, 2.34), (1.9, .16, .12), silver, .04)
+    join_by_material()
+    for name, side, (x, z, radius) in (('Wheel_FL', -1, wheels[0]), ('Wheel_FR', 1, wheels[0]), ('Wheel_RL', -1, wheels[1]), ('Wheel_RR', 1, wheels[1])):
+        wheel(name, side, x, z, radius, .56)
+
+def formula():
+    """An open-wheel formula racer with front and rear wings."""
+    front, rear = (.98, -1.50, .33), (.98, 1.36, .37)
+    body = loft('Body', [body_ring(*s) for s in [
+        (-2.34, .10, .30, .36, .38), (-1.95, .18, .26, .42, .46), (-1.20, .30, .20, .52, .58), (-.45, .42, .16, .62, .68),
+        (.50, .50, .16, .70, .84), (1.30, .44, .18, .62, .74), (1.95, .28, .24, .50, .56), (2.15, .18, .30, .44, .48)]], paint)
+    modify(body, 'SUBSURF', levels=2, render_levels=2); shade(body, 40)
+    for side in (-1, 1):
+        pod = loft('Side pod', [body_ring(*s) for s in [(-.55, .30, .16, .40, .42), (-.2, .36, .16, .54, .56), (.9, .36, .16, .54, .54), (1.5, .26, .18, .40, .42)]], paint)
+        modify(pod, 'SUBSURF', levels=2, render_levels=2); shade(pod, 40)
+        pod.location.x = side * .68; activate(pod); bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
+        box('Pod intake', (side * .68, .36, -.56), (.5, .22, .06), dark, .02)
+        box('Front end plate', (side * 1.0, .26, -2.18), (.04, .24, .46), paint, .012)
+        box('Rear end plate', (side * .82, .82, 2.0), (.045, .62, .56), dark, .012)
+        box('Mirror', (side * .5, .78, -.5), (.14, .06, .05), paint, .015)
+        for z, reach in ((front[1], .22), (rear[1], .4)):
+            box('Wishbone', (side * (reach + .98) / 2, .42, z - .12), (.98 - reach, .03, .05), dark, .01)
+            box('Wishbone', (side * (reach + .98) / 2, .30, z + .12), (.98 - reach, .03, .05), dark, .01)
+    box('Floor', (0, .13, .1), (1.5, .05, 3.0), dark, .012)
+    box('Front wing', (0, .17, -2.2), (2.0, .04, .42), dark, .012)
+    box('Front flap', (0, .25, -2.08), (1.9, .03, .2), paint, .01, (-.25, 0, 0))
+    box('Cockpit', (0, .80, -.02), (.5, .1, .72), dark, .04)
+    ellipsoid('Helmet', (0, .92, .06), (.2, .2, .22), lamp)
+    box('Visor', (0, .94, -.1), (.3, .07, .1), dark, .03)
+    ellipsoid('Air box', (0, 1.0, .62), (.2, .2, .44), paint)
+    box('Air intake', (0, 1.04, .26), (.2, .16, .06), dark, .03)
+    box('Engine fin', (0, .86, 1.3), (.05, .34, 1.0), paint, .015)
+    box('Rear wing', (0, 1.1, 2.0), (1.62, .05, .46), paint, .015, (.12, 0, 0))
+    box('Rear beam', (0, .62, 2.06), (1.6, .04, .28), dark, .012)
+    box('Rain light', (0, .42, 2.19), (.1, .16, .05), tail, .02)
+    for side in (-1, 1): cylinder('Exhaust', (side * .12, .5, 2.16), .06, .14, silver, 'z', 14, .01)
+    join_by_material()
+    wheel('Wheel_FL', -1, *front, .34); wheel('Wheel_FR', 1, *front, .34)
+    wheel('Wheel_RL', -1, *rear, .42); wheel('Wheel_RR', 1, *rear, .42)
+
+# Usage after "--": [model] [view out.png]; model is supercar, truck or formula.
+ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+MODEL = ARGS[0] if ARGS and ARGS[0] in ('supercar', 'truck', 'formula') else 'supercar'
+if ARGS and ARGS[0] == MODEL: ARGS = ARGS[1:]
+{'supercar': supercar, 'truck': truck, 'formula': formula}[MODEL]()
+
+bpy.ops.wm.save_as_mainfile(filepath=str(ROOT / (MODEL + '.blend')))
+bpy.ops.export_scene.gltf(filepath=str(ROOT / (MODEL + '.glb')), export_format='GLB', export_cameras=False, export_lights=False, export_apply=True)
 
 # Home-card portrait, lit like the Little Friends clay animals.
 scene = bpy.context.scene
@@ -223,15 +311,17 @@ scene.world.use_nodes = True
 background = scene.world.node_tree.nodes['Background']
 background.inputs[0].default_value = (.8, .86, .82, 1); background.inputs[1].default_value = .3
 
+AIM = 1.25 if MODEL == 'truck' else .5
 def light(name, p, power, size):
     data = bpy.data.lights.new(name, 'AREA'); data.energy = power; data.shape = 'DISK'; data.size = size
     o = bpy.data.objects.new(name, data); scene.collection.objects.link(o)
-    o.location = p; o.rotation_euler = (Vector((0, 0, .5)) - o.location).to_track_quat('-Z', 'Y').to_euler()
+    o.location = p; o.rotation_euler = (Vector((0, 0, AIM)) - o.location).to_track_quat('-Z', 'Y').to_euler()
 light('Large softbox', (-4, -5, 7), 420, 6); light('Warm fill', (5, -2, 4), 180, 4); light('Rim', (0, 5, 6), 340, 3)
 data = bpy.data.cameras.new('Portrait camera'); cam = bpy.data.objects.new('Portrait camera', data); scene.collection.objects.link(cam)
-view = sys.argv[sys.argv.index('--') + 1] if '--' in sys.argv else 'card'
+view = ARGS[0] if ARGS else 'card'
 cam.location = {'card': (-6.5, 8.5, 3.6), 'rear': (5.5, -8.5, 3.4), 'side': (-11, 0, 1.2), 'front': (-2.5, 10, 2.2), 'top': (0, .01, 12)}[view]
-cam.rotation_euler = (Vector((0, 0, .5)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
-data.type = 'ORTHO'; data.ortho_scale = 5.0; scene.camera = cam
-scene.render.filepath = str(ROOT / 'supercar.png') if view == 'card' else str(Path(sys.argv[sys.argv.index('--') + 2]))
+cam.location.z += AIM - .5
+cam.rotation_euler = (Vector((0, 0, AIM)) - cam.location).to_track_quat('-Z', 'Y').to_euler()
+data.type = 'ORTHO'; data.ortho_scale = 6.0 if MODEL == 'truck' else 5.0; scene.camera = cam
+scene.render.filepath = str(ROOT / (MODEL + '.png')) if view == 'card' else str(Path(ARGS[1]))
 bpy.ops.render.render(write_still=True)

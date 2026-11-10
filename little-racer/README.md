@@ -1,8 +1,9 @@
 # Little Racer
 
-A gentle 3D supercar race for Viaan. Pick a paint colour, a trail and a track in the
-garage, then race three laps over hills against Panda, Penguin and Frog. The car drives
-forward by itself; the only job is steering left and right. Coins collected in races
+A gentle 3D race for Viaan. Pick a vehicle, a paint colour, a trail and a track in the
+garage, then race three laps over hills, round a loop-the-loop and over a mega jump
+against Panda, Penguin and Frog. He holds GO to drive, steers left and right, and has a
+brake and a nitro button. Coins collected in races
 unlock special paints and trails, and every track gives a cup.
 
 ## Play locally
@@ -19,8 +20,20 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 
 ## Controls and rules
 
-- Hold the big **left** and **right** buttons, touch either half of the picture, or use
-  the arrow keys / A and D. **Beep!** (or H) sounds the horn. P pauses.
+- Hold **GO** to drive and **STOP** to brake; letting go of GO coasts. Steer with the
+  **left** and **right** buttons or by touching either half of the picture. Keys: arrows
+  or WASD, N or Shift for nitro, H for the horn, P to pause. A driver who has not found
+  GO gets one reminder.
+- **Nitro** holds three bursts. Coins, stars and drift boosts fill it; one tap spends one.
+- Every track has a **loop-the-loop**. Cars are steered into its lane and carried round
+  at a safe speed whatever is pressed, with a ring of coins on the way.
+- The second ramp of each lap is a **mega jump** over a line of buses and through two
+  rings of fire, with a long arc of coins.
+- **Vehicles** unlock with cups: the monster truck after finishing any race, the formula
+  racer after finishing all three tracks. They drive the same; only the look changes.
+- A track's **boss race** opens once its cup is earned: one-on-one against Lion, Elephant
+  or Giraffe in a monster truck. Winning turns the cup into a crown. Losing changes
+  nothing and it can be tried again at once.
 - Corners push the car gently outward, so steering into the bend holds the road.
 - Grass is slower and nudges the car back. A soft wall stops it wandering further.
   Cars that touch slide apart. Nothing spins, crashes, or stops.
@@ -49,17 +62,19 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 
 ## Art and implementation
 
-`assets/supercar.blend` is the editable Blender source for the original wedge-shaped
-supercar. It carries no real car maker's name, badge, or exact model shape; keep it that
-way, since the site is public. Rebuild the model, its GLB export, and the home-card
-render `supercar.png` with:
+`assets/supercar.blend`, `truck.blend` and `formula.blend` are the editable Blender
+sources for the three original vehicles. They carry no real maker's name, badge, or
+exact model shape; keep it that way, since the site is public. Rebuild a model, its GLB
+export, and its card render with:
 
 ```sh
-blender --background --factory-startup --python little-racer/tools/build_car.py
+blender --background --factory-startup --python little-racer/tools/build_car.py -- supercar
+blender --background --factory-startup --python little-racer/tools/build_car.py -- truck
+blender --background --factory-startup --python little-racer/tools/build_car.py -- formula
 ```
 
 The game repaints the material named `Paint` and spins the four `Wheel_*` objects, so
-keep those names. All four cars share the one model; rivals carry a `memory-assets/`
+keep those names in every model. Friends drive the supercar and bosses the truck; rivals carry a `memory-assets/`
 portrait above the roof.
 
 `race.js` holds every rule and runs in Node tests: track shapes and hills, car movement,
@@ -91,9 +106,10 @@ node --test little-racer/*.test.mjs
 Tests cover closed, non-overlapping tracks and corner radius, hands-off and
 steering-held drivers finishing every track, a careful driver winning at 20–120 Hz,
 single lap announcements, star boosts and respawn, ramp and tunnel placement, jumps,
-hill limits, drift charging and release, coin rows and air coins, unlock buying, cups,
+hill limits, the loop's shape and lane, gas and brake, nitro, the mega jump, boss races,
+vehicle unlocks, drift charging and release, coin rows and air coins, unlock buying, cups,
 overtake announcements, grass slowdown, rival pacing, soft
 bumps, bad input, fixed finishing order, saved choices, and model/page wiring.
-Browser checks should cover a full race to the finish card, a drift boost, an unlock in
-the garage, pause and resume, a colour
+Browser checks should cover a full race to the finish card, the loop, the mega jump, a
+nitro burst, a boss race, a drift boost, an unlock in the garage, pause and resume, a colour
 and track change, saved choices after reload, and portrait/landscape layouts.

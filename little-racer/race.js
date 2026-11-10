@@ -17,6 +17,12 @@ export const AIR_SECONDS = .95;    // time spent flying after a jump ramp
 export const TUNNEL_LENGTH = 42;
 export const DRIFT_SMALL = .9;     // seconds of holding a corner for blue sparks
 export const DRIFT_BIG = 1.9;      // ... and for orange sparks
+export const MEGA_AIR = 1.9;       // the second ramp of every lap is a mega jump
+export const NITRO_SECONDS = 1.7;
+export const NITRO_COST = 1 / 3;   // the tank holds three bursts
+// A vertical loop: cars enter on the left lane, go right round and leave on the right.
+// Distance counts slowly inside it so the trip round takes a few seconds.
+export const LOOP = { ground: 22, radius: 11, lead: 24, lane: 4.5, half: 3, pace: 22 / (22 + Math.PI * 22) };
 export const STORAGE_KEY = 'viaan-racer-v1';
 
 // Paints and trails with a cost are unlocked with coins collected in races.
@@ -37,6 +43,18 @@ export const TRAILS = [
   { id: 'ribbon', name: 'Rainbow trail', cost: 250 },
   { id: 'fire', name: 'Fire trail', cost: 400 }
 ];
+// Vehicles unlock with cups: finish a race on that many different tracks.
+export const CARS = [
+  { id: 'supercar', name: 'Supercar', cups: 0 },
+  { id: 'truck', name: 'Monster truck', cups: 1 },
+  { id: 'formula', name: 'Formula racer', cups: 3 }
+];
+// Each track's boss waits behind its cup and drives the monster truck.
+export const BOSSES = {
+  beach: { id: 'lion', name: 'Lion', color: '#f2a516' },
+  snow: { id: 'elephant', name: 'Elephant', color: '#6f8fd8' },
+  jungle: { id: 'giraffe', name: 'Giraffe', color: '#e2553a' }
+};
 const SHOP = [...PAINTS, ...TRAILS].filter(item => item.cost);
 export const RIVALS = [
   { id: 'panda', name: 'Panda', color: '#f4efe2', pace: .98, lane: 3.2 },
@@ -104,17 +122,21 @@ export function buildTrack(definition) {
     for (let j = -4; j <= 4; j++) sum += raw[(i + j + n) % n];
     ks[i] = sum / 9;
   }
-  // The straightest stretches host the tunnel and the two jump ramps.
+  // The straightest stretches host the tunnel, the two jump ramps and the loop.
   const bend = s => { let worst = 0; for (let i = -10; i <= 55; i++) worst = Math.max(worst, Math.abs(ks[((Math.round(s / step) + i) % n + n) % n])); return worst; };
   const options = [], chosen = [];
   for (let s = 100; s < total - 110; s += 5) options.push({ s, bend: bend(s) });
   options.sort((a, b) => a.bend - b.bend);
-  for (const option of options) {
-    if (chosen.every(c => Math.abs(c - option.s) > 170)) chosen.push(option.s);
-    if (chosen.length === 3) break;
+  for (let gap = 150; chosen.length < 4 && gap > 60; gap -= 15) {
+    chosen.length = 0;
+    for (const option of options) {
+      if (chosen.every(c => Math.abs(c - option.s) > gap)) chosen.push(option.s);
+      if (chosen.length === 4) break;
+    }
   }
+  const ramps = chosen.slice(1, 3).sort((a, b) => a - b);
   return { id: definition.id, name: definition.name, length: total, n, step, xs, zs, ys, hs, ks, slopes,
-    tunnel: { s: chosen[0], length: TUNNEL_LENGTH }, ramps: chosen.slice(1).sort((a, b) => a - b) };
+    tunnel: { s: chosen[0], length: TUNNEL_LENGTH }, ramps, mega: ramps[1], loop: { s: chosen[3] + LOOP.lead } };
 }
 const cache = new Map();
 export function getTrack(id) {
@@ -128,6 +150,28 @@ export function trackPose(track, d, lat = 0) {
   const heading = track.hs[i] + angleDelta(track.hs[j], track.hs[i]) * t, mix = (a) => a[i] + (a[j] - a[i]) * t;
   // The driver's right-hand side is (cos heading, sin heading).
   return { x: mix(track.xs) + Math.cos(heading) * lat, y: mix(track.ys), z: mix(track.zs) + Math.sin(heading) * lat, heading, k: mix(track.ks), slope: mix(track.slopes) };
+}
+// How far round the loop a car is (0 to 1), or -1 when it is on ordinary road.
+export function loopPhase(track, d) {
+  const s = ((d % track.length) + track.length) % track.length, t = (s - track.loop.s) / LOOP.ground;
+  return t > 0 && t < 1 ? t : -1;
+}
+export const loopLane = t => (t * 2 - 1) * LOOP.lane;
+// Where a car is in the world, with the way it faces and which way is up for it.
+// On the road that follows the slope; in the loop it goes right over the top.
+export function trackFrame(track, d, lat = 0) {
+  const pose = trackPose(track, d, lat), t = loopPhase(track, d), fx = Math.sin(pose.heading), fz = -Math.cos(pose.heading);
+  if (t < 0) {
+    const n = Math.hypot(1, pose.slope);
+    return { ...pose, fx: fx / n, fy: pose.slope / n, fz: fz / n, ux: -fx * pose.slope / n, uy: 1 / n, uz: -fz * pose.slope / n, loop: -1 };
+  }
+  const start = trackPose(track, track.loop.s, 0), sx = Math.sin(start.heading), sz = -Math.cos(start.heading), a = t * Math.PI * 2, R = LOOP.radius, turn = R * Math.PI * 2;
+  let tx = fx * LOOP.ground + sx * turn * Math.cos(a), ty = pose.slope * LOOP.ground + turn * Math.sin(a), tz = fz * LOOP.ground + sz * turn * Math.cos(a);
+  const length = Math.hypot(tx, ty, tz); tx /= length; ty /= length; tz /= length;
+  let ux = -sx * Math.sin(a), uy = Math.cos(a), uz = -sz * Math.sin(a);
+  const lean = ux * tx + uy * ty + uz * tz; ux -= tx * lean; uy -= ty * lean; uz -= tz * lean;
+  const tall = Math.hypot(ux, uy, uz);
+  return { ...pose, x: pose.x + sx * R * Math.sin(a), y: pose.y + R * (1 - Math.cos(a)), z: pose.z + sz * R * Math.sin(a), fx: tx, fy: ty, fz: tz, ux: ux / tall, uy: uy / tall, uz: uz / tall, loop: t };
 }
 export function distanceToTrack(track, x, z, stride = 3) {
   let best = Infinity;
@@ -144,8 +188,10 @@ export function normalizePrefs(raw) {
   const pick = (list, id) => (list.find(item => item.id === id && (!item.cost || owned.includes(id))) || list[0]).id;
   const cups = {};
   for (const track of TRACKS) { const cup = saved.cups && typeof saved.cups === 'object' ? saved.cups[track.id] : 0; if (cup === 1 || cup === 2) cups[track.id] = cup; }
+  for (const track of TRACKS) { const cup = saved.cups && typeof saved.cups === 'object' ? saved.cups[track.id] : 0; if (cup === 3) cups[track.id] = 3; }
+  const won = Object.keys(cups).length, car = CARS.find(c => c.id === saved.car && c.cups <= won) || CARS[0];
   return {
-    paint: pick(PAINTS, saved.paint), track: (TRACKS.find(t => t.id === saved.track) || TRACKS[0]).id, trail: pick(TRAILS, saved.trail),
+    car: car.id, paint: pick(PAINTS, saved.paint), track: (TRACKS.find(t => t.id === saved.track) || TRACKS[0]).id, trail: pick(TRAILS, saved.trail),
     coins: Number.isInteger(saved.coins) && saved.coins > 0 ? Math.min(saved.coins, 99999) : 0, owned, cups
   };
 }
@@ -155,42 +201,49 @@ export function buy(prefs, id) {
   if (!item || current.owned.includes(id) || current.coins < item.cost) return current;
   return normalizePrefs({ ...current, coins: current.coins - item.cost, owned: [...current.owned, id] });
 }
-// Every finished race banks its coins and a cup; winning upgrades the cup to gold.
-export function award(prefs, trackId, place, coins) {
+export const carUnlocked = (prefs, car) => car.cups <= Object.keys(prefs.cups).length;
+// Every finished race banks its coins and a cup; winning upgrades the cup to gold,
+// and beating the track's boss turns it into a crown (3).
+export function award(prefs, trackId, place, coins, boss = false) {
   const current = normalizePrefs(prefs);
   if (!TRACKS.some(t => t.id === trackId)) return current;
   const earned = Number.isInteger(coins) && coins > 0 ? coins : 0;
-  return normalizePrefs({ ...current, coins: current.coins + earned, cups: { ...current.cups, [trackId]: Math.max(current.cups[trackId] || 0, place === 1 ? 2 : 1) } });
+  return normalizePrefs({ ...current, coins: current.coins + earned, cups: { ...current.cups, [trackId]: Math.max(current.cups[trackId] || 0, place === 1 ? (boss ? 3 : 2) : 1) } });
 }
 export const nextUnlock = prefs => SHOP.filter(item => !prefs.owned.includes(item.id)).sort((a, b) => a.cost - b.cost)[0] || null;
 
 /* ---------- things on the road ---------- */
+const clearOf = (track, s) => track.ramps.every(ramp => s < ramp - 8 || s > ramp + (ramp === track.mega ? 76 : 40)) && (s < track.loop.s - LOOP.lead - 4 || s > track.loop.s + LOOP.ground + 8);
 export function starsFor(track) {
   const lanes = [0, 3.6, -3.6, 0, -3.6, 3.6], count = Math.floor((track.length - 60) / 62);
   return Array.from({ length: count }, (_, i) => ({ s: 50 + i * 62, lat: lanes[i % lanes.length], taken: false }))
-    // Nothing to collect where the car is flying off a ramp.
-    .filter(star => track.ramps.every(ramp => star.s < ramp - 6 || star.s > ramp + 38));
+    // Nothing to collect where the car is flying off a ramp or going round the loop.
+    .filter(star => clearOf(track, star.s));
 }
 export function coinsFor(track) {
   const coins = [], stars = starsFor(track), lanes = [-4, 0, 4, 0];
   // Rows of five on the road, weaving between lanes ...
   for (let row = 0, s = 24; s < track.length - 30; s += 58, row++) {
-    if (track.ramps.some(ramp => s > ramp - 22 && s < ramp + 40) || stars.some(star => Math.abs(star.s - s - 6) < 13)) continue;
+    if (!clearOf(track, s - 14) || !clearOf(track, s + 14) || stars.some(star => Math.abs(star.s - s - 6) < 13)) continue;
     for (let i = 0; i < 5; i++) coins.push({ s: s + i * 3, lat: lanes[row % lanes.length], air: false, taken: false });
   }
   // ... and an arc of five to grab in mid-air over each ramp.
-  for (const ramp of track.ramps) for (let i = 0; i < 5; i++) coins.push({ s: ramp + 4 + i * 4.5, lat: 0, air: true, taken: false });
+  for (const ramp of track.ramps) {
+    const mega = ramp === track.mega, count = mega ? 9 : 5, gap = mega ? 6 : 4.5;
+    for (let i = 0; i < count; i++) coins.push({ s: ramp + 4 + i * gap, lat: 0, air: true, taken: false });
+  }
+  // ... and a ring of eight all the way round the loop.
+  for (let i = 1; i <= 8; i++) coins.push({ s: track.loop.s + LOOP.ground * i / 9, lat: loopLane(i / 9), air: false, loop: true, taken: false });
   return coins;
 }
-export function createRace(trackId) {
-  const track = getTrack(trackId);
-  const car = (id, name, d, lat, extra = {}) => ({ id, name, player: false, d, lat, speed: 0, steer: 0, slide: 0, boost: 0, air: 0, drift: 0, driftDir: 0, finished: false, finishTime: null, ...extra });
+export function createRace(trackId, options = {}) {
+  const track = getTrack(trackId), boss = options.boss ? BOSSES[track.id] : null;
+  const car = (id, name, d, lat, extra = {}) => ({ id, name, player: false, d, lat, speed: 0, steer: 0, slide: 0, boost: 0, air: 0, airTime: AIR_SECONDS, nitro: 0, nitroHeld: false, drift: 0, driftDir: 0, finished: false, finishTime: null, ...extra });
   // Viaan starts at the back of the grid so there is always someone to catch.
-  const cars = [
-    car('viaan', 'Viaan', -24, -3.2, { player: true }),
-    ...RIVALS.map((r, i) => car(r.id, r.name, -6 - i * 6, r.lane, { pace: r.pace, lane: r.lane, wobble: i * 2.1 }))
-  ];
-  return { trackId: track.id, track, phase: 'countdown', countdown: 3, time: 0, cars, stars: starsFor(track), coins: coinsFor(track), collected: 0, finishOrder: [], bumped: {}, passed: '', lastPass: 0 };
+  const cars = boss
+    ? [car('viaan', 'Viaan', -13, -3.2, { player: true, nitro: NITRO_COST }), car(boss.id, boss.name, -6, 3.2, { pace: 1, lane: 3.2, wobble: 1, boss: true })]
+    : [car('viaan', 'Viaan', -24, -3.2, { player: true }), ...RIVALS.map((r, i) => car(r.id, r.name, -6 - i * 6, r.lane, { pace: r.pace, lane: r.lane, wobble: i * 2.1 }))];
+  return { trackId: track.id, track, boss: !!boss, phase: 'countdown', countdown: 3, time: 0, cars, stars: starsFor(track), coins: coinsFor(track), collected: 0, finishOrder: [], bumped: {}, passed: '', lastPass: 0 };
 }
 export const playerOf = race => race.cars[0];
 export const lapOf = (race, car) => clamp(Math.floor(car.d / race.track.length) + 1, 1, LAPS);
@@ -209,19 +262,46 @@ function fly(race, car, before, dt) {
   const length = race.track.length;
   if (car.air > 0) { car.air = Math.max(0, car.air - dt); return car.air ? null : 'land'; }
   if (car.finished || car.speed < 12) return null;
-  if (!race.track.ramps.some(s => Math.floor((car.d - s) / length) > Math.floor((before - s) / length))) return null;
-  car.air = AIR_SECONDS; return 'jump';
+  const ramp = race.track.ramps.find(s => Math.floor((car.d - s) / length) > Math.floor((before - s) / length));
+  if (ramp === undefined) return null;
+  car.airTime = car.air = ramp === race.track.mega ? MEGA_AIR : AIR_SECONDS;
+  return ramp === race.track.mega ? 'megajump' : 'jump';
+}
+// The loop and its lead-in steer every car into the loop's lane. Returns the loop phase.
+function loopGuide(race, car, dt) {
+  const length = race.track.length, s = ((car.d % length) + length) % length, t = loopPhase(race.track, car.d);
+  const leading = s > race.track.loop.s - LOOP.lead && s <= race.track.loop.s;
+  if (t >= 0 || leading) car.lat += ((t >= 0 ? loopLane(t) : -LOOP.lane) - car.lat) * ease(t >= 0 ? 9 : 3, dt);
+  if (t >= 0) car.speed = Math.max(car.speed, 20);
+  return t >= 0 ? t : leading ? -2 : -1;
+}
+// A boss keeps closer than the friends do and never gets far ahead.
+export function bossBand(gap) {
+  return gap > 0 ? 1 - .38 * clamp(gap / 70, 0, 1) : 1 + .05 * clamp(-gap / 60, 0, 1);
 }
 function stepPlayer(race, car, input, dt) {
   const pose = trackPose(race.track, car.d, car.lat), before = car.d, flying = car.air > 0, notes = [];
-  const steering = car.finished ? clamp(-car.lat * .4, -1, 1) : clamp(Number(input) || 0, -1, 1);
+  // A bare number is a steering value with the gas held, as the first version of the game worked.
+  const pad = input && typeof input === 'object' ? input : { steer: input, gas: true };
+  const guided = loopGuide(race, car, dt), looping = guided >= 0;
+  if (looping && !car.looping && !car.finished) notes.push('loop');
+  car.looping = looping;
+  const steering = car.finished ? clamp(-car.lat * .4, -1, 1) : guided !== -1 ? 0 : clamp(Number(pad.steer) || 0, -1, 1);
   car.steer += (steering - car.steer) * ease(10, dt);
-  const offRoad = Math.abs(car.lat) > HALF_ROAD;
-  let target = car.finished ? 9 : (offRoad ? GRASS : CRUISE) + (car.boost > 0 ? BOOST : 0);
-  if (!flying) car.speed += (target - car.speed) * ease(target > car.speed ? .9 : 2.6, dt);
+  const offRoad = Math.abs(car.lat) > HALF_ROAD && !looping;
+  // The nitro button spends one third of the tank on a burst.
+  if (pad.nitro && !car.nitroHeld && !car.finished) {
+    if (car.nitro >= NITRO_COST - 1e-9) { car.nitro -= NITRO_COST; car.boost = Math.max(car.boost, NITRO_SECONDS); notes.push('nitro'); }
+    else notes.push('empty');
+  }
+  car.nitroHeld = !!pad.nitro;
+  const top = (offRoad ? GRASS : CRUISE) + (car.boost > 0 ? BOOST : 0), braking = !!pad.brake && !car.finished;
+  const target = car.finished ? 9 : braking ? 0 : pad.gas || car.boost > 0 ? top : 0;
+  if (!flying) car.speed += (target - car.speed) * ease(braking ? 3.2 : target > car.speed ? .9 : pad.gas || car.finished ? 2.6 : .45, dt);
+  if (looping) car.speed = Math.max(car.speed, 20);
   car.boost = Math.max(0, car.boost - dt);
   // Holding a turn through a corner charges a drift; letting go spends it as a boost.
-  const dir = car.finished || Math.abs(steering) < .6 ? 0 : Math.sign(steering), grips = !offRoad && !flying && car.speed > 18;
+  const dir = car.finished || Math.abs(steering) < .6 ? 0 : Math.sign(steering), grips = !offRoad && !flying && !looping && car.speed > 18;
   if (dir && dir === car.driftDir && grips) {
     if (dir === Math.sign(pose.k) && Math.abs(pose.k) > .008) {
       const was = car.drift; car.drift += dt;
@@ -229,14 +309,14 @@ function stepPlayer(race, car, input, dt) {
       if (was < DRIFT_BIG && car.drift >= DRIFT_BIG) notes.push('drift2');
     }
   } else {
-    if (grips && car.drift >= DRIFT_SMALL) { car.boost = Math.max(car.boost, car.drift >= DRIFT_BIG ? 1.6 : .9); notes.push('turbo'); }
+    if (grips && car.drift >= DRIFT_SMALL) { car.boost = Math.max(car.boost, car.drift >= DRIFT_BIG ? 1.6 : .9); car.nitro = Math.min(1, car.nitro + (car.drift >= DRIFT_BIG ? .34 : .17)); notes.push('turbo'); }
     car.drift = 0; car.driftDir = dir;
   }
   // Corners push the car gently outward; steering into the bend holds the line.
-  const push = car.finished || flying ? 0 : clamp(pose.k * car.speed * car.speed * .12, -3.2, 3.2);
+  const push = car.finished || flying || guided !== -1 ? 0 : clamp(pose.k * car.speed * car.speed * .12, -3.2, 3.2);
   car.slide = car.steer * 9 * clamp(car.speed / CRUISE, .25, 1.2) * (flying ? .4 : car.drift > .3 ? .55 : 1) - push - (offRoad && !flying ? Math.sign(car.lat) * 2.2 : 0);
   car.lat = clamp(car.lat + car.slide * dt, -EDGE, EDGE);
-  car.d += car.speed * dt / clamp(1 - pose.k * car.lat, .6, 1.6);
+  car.d += car.speed * dt * (looping ? LOOP.pace : 1 / clamp(1 - pose.k * car.lat, .6, 1.6));
   const wasLap = Math.floor(before / race.track.length), air = fly(race, car, before, dt);
   if (air) notes.push(air);
   return { lap: wasLap >= 0 && Math.floor(car.d / race.track.length) > wasLap, notes };
@@ -244,18 +324,19 @@ function stepPlayer(race, car, input, dt) {
 function stepRival(race, car, player, dt) {
   const pose = trackPose(race.track, car.d, car.lat), start = car.d;
   const wish = car.finished ? car.lane : car.lane + 1.6 * Math.sin(car.d * .013 + car.wobble);
-  const before = car.lat;
-  car.lat = clamp(car.lat + clamp(wish - car.lat, -1, 1) * 3.5 * dt, -HALF_ROAD + 1.3, HALF_ROAD - 1.3);
-  car.slide = (car.lat - before) / (dt || 1); car.steer = clamp(car.slide / 4, -1, 1);
-  const target = car.finished ? 9 : CRUISE * car.pace * (player.finished ? 1 : rubberBand(car.d - player.d));
+  const before = car.lat, guided = loopGuide(race, car, dt);
+  if (guided === -1) car.lat = clamp(car.lat + clamp(wish - car.lat, -1, 1) * 3.5 * dt, -HALF_ROAD + 1.3, HALF_ROAD - 1.3);
+  car.slide = guided >= 0 ? 0 : (car.lat - before) / (dt || 1); car.steer = clamp(car.slide / 4, -1, 1);
+  const band = car.boss ? bossBand : rubberBand, target = car.finished ? 9 : CRUISE * car.pace * (player.finished ? 1 : band(car.d - player.d));
   if (!(car.air > 0)) car.speed += (target - car.speed) * ease(target > car.speed ? .9 : 1.6, dt);
-  car.d += car.speed * dt / clamp(1 - pose.k * car.lat, .6, 1.6);
+  if (guided >= 0) car.speed = Math.max(car.speed, 20);
+  car.d += car.speed * dt * (guided >= 0 ? LOOP.pace : 1 / clamp(1 - pose.k * car.lat, .6, 1.6));
   fly(race, car, start, dt);
 }
 function softBumps(race, dt, events) {
   for (let i = 0; i < race.cars.length; i++) for (let j = i + 1; j < race.cars.length; j++) {
     const a = race.cars[i], b = race.cars[j], along = a.d - b.d, across = a.lat - b.lat;
-    if (Math.abs(along) > 4.6 || Math.abs(across) > 2.5) continue;
+    if (Math.abs(along) > 4.6 || Math.abs(across) > 2.5 || loopPhase(race.track, a.d) >= 0 || loopPhase(race.track, b.d) >= 0) continue;
     const key = a.id + b.id, side = across === 0 ? (i % 2 ? 1 : -1) : Math.sign(across), push = 7 * dt;
     // Cars slide apart sideways; the one behind eases off. Nobody spins or stops.
     a.lat = clamp(a.lat + side * push * (a.player ? .5 : 1), -EDGE, EDGE);
@@ -290,11 +371,11 @@ export function stepRace(race, input, elapsed) {
   if (!player.finished && player.d >= 0) {
     const s = ((player.d % length) + length) % length, near = (item, reach) => Math.abs(((s - item.s + length * 1.5) % length) - length / 2) < reach;
     for (const star of race.stars) {
-      if (!star.taken && near(star, 3.4) && Math.abs(player.lat - star.lat) < 2.3) { star.taken = true; player.boost = BOOST_SECONDS; events.push('star'); }
+      if (!star.taken && near(star, 3.4) && Math.abs(player.lat - star.lat) < 2.3) { star.taken = true; player.boost = BOOST_SECONDS; player.nitro = Math.min(1, player.nitro + NITRO_COST); events.push('star'); }
     }
     for (const coin of race.coins) {
-      if (coin.taken || !near(coin, 2.8) || Math.abs(player.lat - coin.lat) > (coin.air ? 4 : 2) || (coin.air && !(player.air > 0))) continue;
-      coin.taken = true; race.collected++; events.push('coin');
+      if (coin.taken || !near(coin, coin.loop ? 1.2 : 2.8) || Math.abs(player.lat - coin.lat) > (coin.air ? 4 : 2) || (coin.air && !(player.air > 0))) continue;
+      coin.taken = true; race.collected++; player.nitro = Math.min(1, player.nitro + .05); events.push('coin');
     }
   }
   for (const car of race.cars) {
