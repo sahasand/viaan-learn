@@ -58,9 +58,7 @@ export const BOSSES = {
   galaxy: { id: 'comet', name: 'Comet', color: '#b06bff' }
 };
 // How every cartoon dog looks: fur, muzzle and ear colours, ear shape, collar and markings.
-// 'scout' is the puppy who rides along in Viaan's car.
 export const DOGS = {
-  scout: { fur: '#c9884a', muzzle: '#fbe9cf', ear: '#8a5527', ears: 'floppy', collar: '#eb6548', patch: '#8a5527' },
   biscuit: { fur: '#f3c56d', muzzle: '#fff4dc', ear: '#d6953a', ears: 'floppy', collar: '#2274dd' },
   pepper: { fur: '#fbfaf6', muzzle: '#ffffff', ear: '#2d2d36', ears: 'floppy', collar: '#dd2b2b', patch: '#2d2d36', spots: '#2d2d36' },
   waffle: { fur: '#8d96aa', muzzle: '#ffffff', ear: '#5c6479', ears: 'pointy', collar: '#ffc21a', eyes: '#3d8fe0' },

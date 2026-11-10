@@ -2,8 +2,8 @@
 
 A gentle 3D race for Viaan. Pick a vehicle, a paint colour, a trail and one of four tracks
 in the garage, then race three laps over hills, round a loop-the-loop and over a mega jump
-against three cartoon dogs: Biscuit, Pepper and Waffle. His puppy Scout rides along in his
-car. The car drives by itself; he steers left and right and has a boost and a brake button.
+against three cartoon dogs: Biscuit, Pepper and Waffle. Viaan's own car has no dog in it.
+The car drives by itself; he steers left and right and has a boost and a brake button.
 Coins collected in races unlock special paints and trails, and every track gives a cup.
 
 ## Play locally

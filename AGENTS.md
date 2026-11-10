@@ -61,7 +61,7 @@ obstacle data and the runtime terrain formula aligned with island edits.
 
 The home Little Racer link opens `little-racer/`, a static Three.js supercar race:
 garage (three vehicles, paints, trails, four tracks), three laps over hills against three
-cartoon dogs (Biscuit, Pepper, Waffle) with the puppy Scout riding in Viaan's car,
+cartoon dogs (Biscuit, Pepper, Waffle; Viaan's own car carries no dog),
 steer/boost/brake controls, drift boosts, boost stars, zoom strips, coins, a
 loop-the-loop, a jump and a mega jump, a tunnel, boss races, and a finish card. Read `little-racer/README.md` when
 changing race rules, tracks, art, or sound. `race.js` holds all rules in track coordinates

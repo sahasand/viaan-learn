@@ -476,8 +476,8 @@ test('the supercar model, portraits and page wiring are all present', () => {
   assert.ok(materials.includes('Paint'), 'the game repaints the Paint material');
   assert.ok(existsSync(here('./assets/supercar.blend')));
   assert.ok(existsSync(here('./assets/supercar.png')));
-  // Every driver is a cartoon dog with a full look, and the puppy who rides with Viaan is there too.
-  for (const id of ['scout', ...R.RIVALS.map(r => r.id), ...R.TRACKS.map(t => R.BOSSES[t.id].id)]) {
+  // Every rival and boss is a cartoon dog with a full look.
+  for (const id of [...R.RIVALS.map(r => r.id), ...R.TRACKS.map(t => R.BOSSES[t.id].id)]) {
     const look = R.DOGS[id]; assert.ok(look, id);
     for (const key of ['fur', 'muzzle', 'ear', 'collar']) assert.match(look[key], /^#[0-9a-f]{6}$/, `${id} ${key}`);
     assert.ok(['floppy', 'pointy'].includes(look.ears), id);

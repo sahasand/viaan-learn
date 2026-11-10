@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../sky-playground/vendor/GLTFLoader.js';
-import { createSound } from './audio.js?v=7';
-import { makeDog, poseDriver, portrait, makeCrowd } from './dogs.js?v=7';
-import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, LOOP, STORAGE_KEY, PAINTS, TRAILS, CARS, BOSSES, DOGS, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=7';
+import { createSound } from './audio.js?v=8';
+import { makeDog, poseDriver, portrait, makeCrowd } from './dogs.js?v=8';
+import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, LOOP, STORAGE_KEY, PAINTS, TRAILS, CARS, BOSSES, DOGS, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=8';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
@@ -748,17 +748,17 @@ function makeCar(model, color, driver) {
     flame.rotation.x = Math.PI / 2; flame.position.set(side * spec.flame[0], spec.flame[1], spec.flame[2]); flame.visible = false; return flame;
   });
   lift.rotation.order = 'YXZ'; lift.add(body, ...flames);
-  // A dog drives every car, poking out through the roof with its paws on top and its ears in the wind.
-  const dog = makeDog(DOGS[driver], true);
-  dog.group.position.set(0, spec.seat[0], spec.seat[1]); dog.group.scale.setScalar(spec.seat[2]); dog.group.rotation.y = Math.PI; lift.add(dog.group);
+  // A dog drives each friend's car, poking out through the roof with its paws on top and its ears in the wind. Viaan's own car has no dog.
+  const dog = driver ? makeDog(DOGS[driver], true) : null;
+  if (dog) { dog.group.position.set(0, spec.seat[0], spec.seat[1]); dog.group.scale.setScalar(spec.seat[2]); dog.group.rotation.y = Math.PI; lift.add(dog.group); }
   group.add(lift, blob); group.visible = false; scene.add(group);
   const view = { model, spec, group, lift, wheels, paint: coat, flames, blob, dog, spin: 0 };
   everyView.push(view); return view;
 }
-// Puts the right vehicles on the grid: Viaan's chosen one with his puppy Scout, then his friends or the boss.
+// Puts the right vehicles on the grid: Viaan's chosen one, then his friends or the boss.
 function seatViews() {
   for (const view of everyView) view.group.visible = false;
-  const mine = playerViews[prefs.car] || (playerViews[prefs.car] = makeCar(prefs.car, paint().color, 'scout'));
+  const mine = playerViews[prefs.car] || (playerViews[prefs.car] = makeCar(prefs.car, paint().color, null));
   applyPaint(mine.paint, prefs.paint);
   if (race.boss) {
     const boss = BOSSES[race.trackId];
@@ -791,7 +791,7 @@ function updateCars(dt) {
     view.wheels.forEach((wheel, w) => wheel.rotation.set(view.spin, w < 2 ? -car.steer * .32 : 0, 0));
     view.blob.visible = !sun.castShadow && !looping; view.blob.scale.set(view.spec.blob[0] / (1 + rise * .25), view.spec.blob[1] / (1 + rise * .25), 1);
     for (const flame of view.flames) { flame.visible = car.boost > 0; flame.scale.y = .8 + Math.sin(clock * 40 + i) * .3; }
-    poseDriver(view.dog, clock, phase === 'garage' ? 0 : car.speed, car.steer, car.boost > 0, flying, reducedMotion);
+    if (view.dog) poseDriver(view.dog, clock, phase === 'garage' ? 0 : car.speed, car.steer, car.boost > 0, flying, reducedMotion);
     if (paused || phase === 'garage' || looping) return;
     // Effects trail from the back wheels.
     const backX = f.x - fx * 2, backZ = f.z - fz * 2, ground = f.y + rise, off = Math.abs(car.lat) > HALF_ROAD && !flying, wheel = () => (rand() < .5 ? -1 : 1) * .95;
@@ -880,7 +880,8 @@ function updateCamera(dt) {
   $('rush').classList.toggle('on', racing() && player.boost > 0);
 }
 /* ---------- heads-up display ---------- */
-const avatar = car => `<img src="${mugs[car.player ? 'scout' : car.id]}" alt="${car.player ? 'Viaan and Scout' : car.name}">`;
+// Viaan is a disc in his car's colour with a V on it; every dog shows its face.
+const avatar = car => car.player ? `<i class="me-disc" style="background:${swatch(paint())}" title="Viaan">V</i>` : `<img src="${mugs[car.id]}" alt="${car.name}">`;
 function drawMapBase(track) {
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (let i = 0; i < track.n; i++) { minX = Math.min(minX, track.xs[i]); maxX = Math.max(maxX, track.xs[i]); minZ = Math.min(minZ, track.zs[i]); maxZ = Math.max(maxZ, track.zs[i]); }
@@ -928,8 +929,8 @@ function renderGarage() {
   $('bank').textContent = prefs.coins;
   const won = Object.keys(prefs.cups).length;
   $('cars').innerHTML = CARS.map(c => carUnlocked(prefs, c)
-    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${CAR_ICON[c.id]}.png?v=7" alt=""><small>${c.name}</small></button>`
-    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${CAR_ICON[c.id]}.png?v=7" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
+    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${CAR_ICON[c.id]}.png?v=8" alt=""><small>${c.name}</small></button>`
+    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${CAR_ICON[c.id]}.png?v=8" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
   $('swatches').innerHTML = PAINTS.map(p => owns(p)
     ? `<button data-paint="${p.id}" style="background:${swatch(p)}" aria-label="${p.name}" aria-pressed="${p.id === prefs.paint}"></button>`
     : `<button data-paint="${p.id}" class="locked" style="background:${swatch(p)}" aria-label="${p.name}, locked, costs ${p.cost} coins" aria-pressed="false">🔒<br>${p.cost}</button>`).join('');
@@ -1140,7 +1141,7 @@ async function init() {
     makeSky(); makeParticles();
     canvas.tabIndex = -1;
     const loader = new GLTFLoader();
-    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=7`)]))) {
+    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=8`)]))) {
       templates[id] = asset.scene;
       asset.scene.traverse(o => {
         if (!o.isMesh || shiny.includes(o.material)) return;

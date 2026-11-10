@@ -40,6 +40,7 @@ body:not([data-phase="garage"]):not([data-phase="loading"]) .home,body:not([data
 .order li{width:46px;height:46px;border-radius:50%;border:3px solid #fff;background:#fff3d6;overflow:hidden;box-shadow:0 3px 0 #0d2f3340;opacity:.92}
 .order li.me{width:56px;height:56px;border:4px solid var(--coral);opacity:1;box-shadow:0 0 0 3px #fff,0 4px 0 3px #0d2f3340}
 .order img,.podium img,.boss img{display:block;width:100%;height:100%;object-fit:cover}
+.me-disc{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;font-style:normal;font-weight:800;font-size:24px;line-height:1;color:#fff;text-shadow:0 2px 0 #0d2f3399,0 0 3px #0d2f33}
 .tally{position:absolute;top:var(--top);left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:none;z-index:2}
 .chip{display:flex;align-items:center;gap:8px;height:50px;padding:0 18px;border-radius:26px;background:#0d2f33d6;border:3px solid #ffffff59;color:#fff;font-weight:800;font-size:24px;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
 .chip.lap{flex-direction:column;justify-content:center;gap:1px}
@@ -129,7 +130,7 @@ body[data-phase="garage"] #pause,body[data-phase="loading"] #pause,body[data-pha
 .podium li{display:grid;grid-template-columns:40px 44px 1fr;align-items:center;gap:8px;padding:5px 12px;border-radius:18px;background:#fff;font-weight:800;font-size:18px}
 .podium li.me{background:var(--mint);outline:3px solid var(--ink)}
 .podium li>b{font-size:15px;color:#55705f}
-.podium img{width:44px;height:44px;border-radius:50%}
+.podium img,.podium i{width:44px;height:44px;border-radius:50%}
 .noscript{position:absolute;inset:30%;background:var(--paper);padding:30px;z-index:20}
 
 /* ---------- garage ---------- */
@@ -206,7 +207,7 @@ body[data-phase="garage"] #pause,body[data-phase="loading"] #pause,body[data-pha
   .brake{width:min(70px,17.5vw);height:min(70px,17.5vw);font-size:15px}.horn{width:min(56px,14vw);height:min(56px,14vw);font-size:11px}.small-pedals{gap:8px}
   #finish{inset:auto 10px calc(10px + env(safe-area-inset-bottom)) 10px;transform:none;width:auto;padding:16px}
   #finish h2{font-size:25px;margin:2px 0 6px}
-  .podium{grid-template-columns:1fr 1fr}.podium li{grid-template-columns:30px 34px 1fr;gap:6px;padding:3px 8px;font-size:15px}.podium img{width:34px;height:34px}
+  .podium{grid-template-columns:1fr 1fr}.podium li{grid-template-columns:30px 34px 1fr;gap:6px;padding:3px 8px;font-size:15px}.podium img,.podium i{width:34px;height:34px}
   #finish .text-link{margin-top:4px;padding:6px}
 }
 /* A small phone: the garage drops its little headings so the start button is always in view. */
@@ -240,6 +241,6 @@ body[data-phase="garage"] #pause,body[data-phase="loading"] #pause,body[data-pha
   .primary{padding:10px;margin-top:10px;min-height:46px}.secondary{padding:8px;min-height:44px}
   .how p{font-size:12px;margin:2px 0}.text-link{margin-top:2px;padding:6px}
   #finish{inset:auto 14px 10px auto;transform:none;width:330px}
-  .podium{grid-template-columns:1fr 1fr}.podium li{grid-template-columns:28px 30px 1fr;padding:2px 8px;font-size:14px}.podium img{width:30px;height:30px}
+  .podium{grid-template-columns:1fr 1fr}.podium li{grid-template-columns:28px 30px 1fr;padding:2px 8px;font-size:14px}.podium img,.podium i{width:30px;height:30px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rush{display:none}}
