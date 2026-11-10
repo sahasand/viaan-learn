@@ -12,6 +12,8 @@ export const GRASS = 15;        // m/s off the road
 export const HALF_ROAD = 7;     // metres from the centre line to the kerb
 export const EDGE = 10.5;       // soft wall: nobody travels further out than this
 export const BOOST_SECONDS = 2.4;
+export const AIR_SECONDS = .95;    // time spent flying after a jump ramp
+export const TUNNEL_LENGTH = 42;
 export const STORAGE_KEY = 'viaan-racer-v1';
 
 export const PAINTS = [
@@ -84,7 +86,17 @@ export function buildTrack(definition) {
     for (let j = -4; j <= 4; j++) sum += raw[(i + j + n) % n];
     ks[i] = sum / 9;
   }
-  return { id: definition.id, name: definition.name, length: total, n, step, xs, zs, hs, ks };
+  // The straightest stretches host the tunnel and the two jump ramps.
+  const bend = s => { let worst = 0; for (let i = -10; i <= 55; i++) worst = Math.max(worst, Math.abs(ks[((Math.round(s / step) + i) % n + n) % n])); return worst; };
+  const options = [], chosen = [];
+  for (let s = 100; s < total - 110; s += 5) options.push({ s, bend: bend(s) });
+  options.sort((a, b) => a.bend - b.bend);
+  for (const option of options) {
+    if (chosen.every(c => Math.abs(c - option.s) > 170)) chosen.push(option.s);
+    if (chosen.length === 3) break;
+  }
+  return { id: definition.id, name: definition.name, length: total, n, step, xs, zs, hs, ks,
+    tunnel: { s: chosen[0], length: TUNNEL_LENGTH }, ramps: chosen.slice(1).sort((a, b) => a - b) };
 }
 const cache = new Map();
 export function getTrack(id) {
@@ -118,11 +130,13 @@ export function normalizePrefs(raw) {
 
 export function starsFor(track) {
   const lanes = [0, 3.6, -3.6, 0, -3.6, 3.6], count = Math.floor((track.length - 60) / 62);
-  return Array.from({ length: count }, (_, i) => ({ s: 50 + i * 62, lat: lanes[i % lanes.length], taken: false }));
+  return Array.from({ length: count }, (_, i) => ({ s: 50 + i * 62, lat: lanes[i % lanes.length], taken: false }))
+    // Nothing to collect where the car is flying off a ramp.
+    .filter(star => track.ramps.every(ramp => star.s < ramp - 6 || star.s > ramp + 38));
 }
 export function createRace(trackId) {
   const track = getTrack(trackId);
-  const car = (id, name, d, lat, extra = {}) => ({ id, name, player: false, d, lat, speed: 0, steer: 0, slide: 0, boost: 0, finished: false, finishTime: null, ...extra });
+  const car = (id, name, d, lat, extra = {}) => ({ id, name, player: false, d, lat, speed: 0, steer: 0, slide: 0, boost: 0, air: 0, finished: false, finishTime: null, ...extra });
   // Viaan starts at the back of the grid so there is always someone to catch.
   const cars = [
     car('viaan', 'Viaan', -24, -3.2, { player: true }),
@@ -142,30 +156,40 @@ export const placeOf = (race, id = 'viaan') => standings(race).findIndex(c => c.
 export function rubberBand(gap) {
   return gap > 0 ? 1 - .5 * clamp(gap / 50, 0, 1) : 1 + .12 * clamp(-gap / 80, 0, 1);
 }
+// Ramps launch any car that reaches them at speed. Returns 'jump', 'land' or null.
+function fly(race, car, before, dt) {
+  const length = race.track.length;
+  if (car.air > 0) { car.air = Math.max(0, car.air - dt); return car.air ? null : 'land'; }
+  if (car.finished || car.speed < 12) return null;
+  if (!race.track.ramps.some(s => Math.floor((car.d - s) / length) > Math.floor((before - s) / length))) return null;
+  car.air = AIR_SECONDS; return 'jump';
+}
 function stepPlayer(race, car, input, dt) {
-  const pose = trackPose(race.track, car.d, car.lat), wasLap = Math.floor(car.d / race.track.length);
+  const pose = trackPose(race.track, car.d, car.lat), before = car.d, flying = car.air > 0;
   const steering = car.finished ? clamp(-car.lat * .4, -1, 1) : clamp(Number(input) || 0, -1, 1);
   car.steer += (steering - car.steer) * ease(10, dt);
   const offRoad = Math.abs(car.lat) > HALF_ROAD;
   let target = car.finished ? 9 : (offRoad ? GRASS : CRUISE) + (car.boost > 0 ? BOOST : 0);
-  car.speed += (target - car.speed) * ease(target > car.speed ? .9 : 2.6, dt);
+  if (!flying) car.speed += (target - car.speed) * ease(target > car.speed ? .9 : 2.6, dt);
   car.boost = Math.max(0, car.boost - dt);
   // Corners push the car gently outward; steering into the bend holds the line.
-  const drift = car.finished ? 0 : clamp(pose.k * car.speed * car.speed * .12, -3.2, 3.2);
-  car.slide = car.steer * 9 * clamp(car.speed / CRUISE, .25, 1.2) - drift - (offRoad ? Math.sign(car.lat) * 2.2 : 0);
+  const drift = car.finished || flying ? 0 : clamp(pose.k * car.speed * car.speed * .12, -3.2, 3.2);
+  car.slide = car.steer * 9 * clamp(car.speed / CRUISE, .25, 1.2) * (flying ? .4 : 1) - drift - (offRoad && !flying ? Math.sign(car.lat) * 2.2 : 0);
   car.lat = clamp(car.lat + car.slide * dt, -EDGE, EDGE);
   car.d += car.speed * dt / clamp(1 - pose.k * car.lat, .6, 1.6);
-  return wasLap >= 0 && Math.floor(car.d / race.track.length) > wasLap;
+  const wasLap = Math.floor(before / race.track.length);
+  return { lap: wasLap >= 0 && Math.floor(car.d / race.track.length) > wasLap, air: fly(race, car, before, dt) };
 }
 function stepRival(race, car, player, dt) {
-  const pose = trackPose(race.track, car.d, car.lat);
+  const pose = trackPose(race.track, car.d, car.lat), start = car.d;
   const wish = car.finished ? car.lane : car.lane + 1.6 * Math.sin(car.d * .013 + car.wobble);
   const before = car.lat;
   car.lat = clamp(car.lat + clamp(wish - car.lat, -1, 1) * 3.5 * dt, -HALF_ROAD + 1.3, HALF_ROAD - 1.3);
   car.slide = (car.lat - before) / (dt || 1); car.steer = clamp(car.slide / 4, -1, 1);
   const target = car.finished ? 9 : CRUISE * car.pace * (player.finished ? 1 : rubberBand(car.d - player.d));
-  car.speed += (target - car.speed) * ease(target > car.speed ? .9 : 1.6, dt);
+  if (!(car.air > 0)) car.speed += (target - car.speed) * ease(target > car.speed ? .9 : 1.6, dt);
   car.d += car.speed * dt / clamp(1 - pose.k * car.lat, .6, 1.6);
+  fly(race, car, start, dt);
 }
 function softBumps(race, dt, events) {
   for (let i = 0; i < race.cars.length; i++) for (let j = i + 1; j < race.cars.length; j++) {
@@ -194,7 +218,9 @@ export function stepRace(race, input, elapsed) {
   }
   race.time += dt;
   const player = playerOf(race), length = race.track.length, finishLine = LAPS * length;
-  if (stepPlayer(race, player, input, dt) && player.d < finishLine) {
+  const moved = stepPlayer(race, player, input, dt);
+  if (moved.air) events.push(moved.air);
+  if (moved.lap && player.d < finishLine) {
     for (const star of race.stars) star.taken = false;
     events.push(lapOf(race, player) === LAPS ? 'lastlap' : 'lap');
   }

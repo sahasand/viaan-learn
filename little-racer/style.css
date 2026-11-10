@@ -33,6 +33,9 @@ h2,h3,p,ol{margin:0;padding:0}
 .order i{display:block;width:20px;height:20px;border-radius:50%;border:2px solid #fff}
 .map{position:absolute;right:28px;top:calc(88px + env(safe-area-inset-top));width:104px;height:104px;border-radius:22px;background:#fff9e9d9;box-shadow:var(--shadow)}
 
+.rush{position:absolute;inset:-20%;pointer-events:none;opacity:0;transition:opacity .25s;background:repeating-conic-gradient(from 0deg,#fff0 0 3.4deg,#ffffff8c 3.7deg 4.1deg,#fff0 4.4deg 7deg);-webkit-mask-image:radial-gradient(circle,transparent 30%,#000 75%);mask-image:radial-gradient(circle,transparent 30%,#000 75%)}
+.rush.on{opacity:.75;animation:rush .18s steps(2) infinite}
+@keyframes rush{to{transform:rotate(3.5deg)}}
 .countdown{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-size:min(34vw,170px);font-weight:900;letter-spacing:-6px;color:#fff;text-shadow:0 6px 0 var(--coral),0 14px 30px #143f4255;pointer-events:none}
 .countdown:empty{display:none}
 .countdown.pop{animation:pop .5s ease-out}
@@ -150,4 +153,4 @@ dialog p{font-size:14px;line-height:1.6;color:#55705f}
   .podium{grid-template-columns:1fr 1fr}.podium li{grid-template-columns:30px 28px 1fr;padding:2px 8px;font-size:13px}.podium img{width:26px;height:26px}
   .how p{font-size:12px;margin:2px 0}.text-link{margin-top:4px;padding:6px}
 }
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.rush{display:none}}

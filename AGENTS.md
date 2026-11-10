@@ -61,7 +61,8 @@ obstacle data and the runtime terrain formula aligned with island edits.
 
 The home Little Racer link opens `little-racer/`, a static Three.js supercar race:
 garage (six paint colours, three tracks), three laps against Panda, Penguin and Frog,
-auto-drive with left/right steering only, boost stars, and a finish card. Read
+auto-drive with left/right steering only, boost stars, two jump ramps and a tunnel per
+track, and a finish card. Read
 `little-racer/README.md` when changing race rules, tracks, art, or sound. `race.js` holds
 all rules in track coordinates and runs in Node; `game.js` owns the scene, generated
 scenery, input, sound and lifecycle. It imports Three.js from `sky-playground/vendor`,

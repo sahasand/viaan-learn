@@ -125,6 +125,45 @@ test('stars boost only the player, come back each lap, and are spread along the 
   assert.ok(race.stars.every(s => !s.taken));
 });
 
+test('each track has a tunnel and two jump ramps on straight road, well apart', () => {
+  for (const { id } of R.TRACKS) {
+    const track = R.getTrack(id), spots = [track.tunnel.s, ...track.ramps];
+    assert.equal(track.ramps.length, 2);
+    assert.equal(track.tunnel.length, R.TUNNEL_LENGTH);
+    for (const s of spots) {
+      assert.ok(s >= 100 && s <= track.length - 110, `${id} feature at ${s}`);
+      for (let d = s; d < s + 40; d += 2) assert.ok(Math.abs(R.trackPose(track, d, 0).k) < 1 / 45, `${id} is nearly straight at ${d}`);
+    }
+    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) assert.ok(Math.abs(spots[i] - spots[j]) > 170);
+    for (const star of R.starsFor(track)) for (const ramp of track.ramps) assert.ok(star.s < ramp - 6 || star.s > ramp + 38);
+  }
+});
+
+test('ramps launch the car once each lap, hold its speed in the air and land it safely', () => {
+  for (const fps of [20, 60, 120]) {
+    const events = [];
+    const race = drive('snow', careful, fps, e => events.push(e));
+    assert.equal(events.filter(e => e === 'jump').length, 2 * R.LAPS, `jumps at ${fps} fps`);
+    assert.equal(events.filter(e => e === 'land').length, 2 * R.LAPS);
+    assert.equal(R.playerOf(race).air, 0);
+  }
+  const race = R.createRace('beach');
+  for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
+  const player = R.playerOf(race), ramp = race.track.ramps[0];
+  race.cars.slice(1).forEach(c => { c.d = ramp + 300; });
+  player.d = ramp - .2; player.lat = 0; player.speed = R.CRUISE;
+  assert.ok(R.stepRace(race, 0, 1 / 60).includes('jump'));
+  assert.equal(player.air, R.AIR_SECONDS);
+  // Flying over the grass does not slow the car, and the flight ends on time.
+  player.lat = R.EDGE; let frames = 0;
+  while (player.air > 0 && frames++ < 200) R.stepRace(race, 0, 1 / 60);
+  assert.ok(Math.abs(frames / 60 - R.AIR_SECONDS) < .05);
+  assert.ok(player.speed > R.CRUISE - .01);
+  // A car crawling over the ramp just rolls across.
+  player.d = race.track.ramps[1] - .1; player.speed = 5; player.lat = 0;
+  assert.equal(R.stepRace(race, 0, 1 / 60).includes('jump'), false);
+});
+
 test('grass slows the car and nudges it back; the road restores full speed', () => {
   const race = R.createRace('beach');
   for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
