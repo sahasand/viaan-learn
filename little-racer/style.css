@@ -210,3 +210,7 @@ dialog p{font-size:14px;line-height:1.6;color:#55705f}
 @media(prefers-reduced-motion:reduce){.gas.nudge,.nitro.ready{animation:none}}
 /* On a phone the colours sit in one swipeable row so the car stays in view above the garage. */
 @media(max-width:650px){.swatches{display:flex;overflow-x:auto;gap:7px;padding:5px 3px 7px;scrollbar-width:none}.swatches button{flex:0 0 52px;height:44px}#garage h3{margin:7px 0 5px}.cars button img{width:60px;height:40px}.cars button{min-height:58px}}
+
+/* GO is a switch: bright and glowing while the car is driving, dull when coasting. */
+.gas:not(.on){background:#9fb5a6;box-shadow:0 7px 0 #74897b,var(--shadow)}
+.gas.on{box-shadow:0 7px 0 #1f8a4c,0 0 0 6px #31b86b40,var(--shadow)}

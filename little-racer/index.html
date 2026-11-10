@@ -9,7 +9,7 @@
   <script type="importmap">{"imports":{"three":"../sky-playground/vendor/three.module.js"}}</script>
 </head>
 <body data-phase="loading">
-  <canvas id="world" aria-label="A 3D race track seen from behind your car. Hold Go and steer with the buttons, or use the arrow keys."></canvas>
+  <canvas id="world" aria-label="A 3D race track seen from behind your car. The car drives while Go is lit. Steer with the buttons or the arrow keys."></canvas>
   <header class="topbar">
     <a class="round home" href="../index.html" aria-label="Back to Viaan">⌂</a>
     <div class="wordmark"><span class="brand">little racer<span class="brand-dot">.</span></span><span class="eyebrow">VIAAN’S SUPERCAR CLUB</span></div>
@@ -40,7 +40,7 @@
     <div class="pad pedals">
       <button class="nitro" id="nitro" aria-label="Nitro boost" data-bursts="0"><span aria-hidden="true">🔥</span><i id="nitroPips" aria-hidden="true">○○○</i></button>
       <button class="pedal brake" id="brake" aria-label="Brake">STOP</button>
-      <button class="pedal gas" id="gas" aria-label="Go: hold to drive">GO</button>
+      <button class="pedal gas on" id="gas" aria-label="Go: tap to drive or coast" aria-pressed="true">GO</button>
     </div>
   </div>
 
@@ -68,7 +68,7 @@
     <div class="dialog-icon" aria-hidden="true">🅿️</div>
     <span class="eyebrow">TAKING A LITTLE BREAK</span>
     <h2 id="menuTitle">Parked for a moment.</h2>
-    <div class="how"><div><span aria-hidden="true">GO</span><p><b>Hold GO to drive</b><br>Steer with ◀ ▶. STOP slows down.</p></div><div><span aria-hidden="true">🔥</span><p><b>Nitro</b><br>Coins and stars fill it. Tap the flame to blast off.</p></div><div><span aria-hidden="true">✨</span><p><b>Drift for a boost</b><br>Hold a turn round a corner, then let go.</p></div></div>
+    <div class="how"><div><span aria-hidden="true">GO</span><p><b>GO is lit: the car drives</b><br>Steer with ◀ ▶. Hold STOP to slow down.</p></div><div><span aria-hidden="true">🔥</span><p><b>Nitro</b><br>Coins and stars fill it. Tap the flame to blast off.</p></div><div><span aria-hidden="true">✨</span><p><b>Drift for a boost</b><br>Hold a turn round a corner, then let go.</p></div></div>
     <button class="primary" id="resume">Keep racing!</button>
     <button class="secondary" id="restart">Start this race again</button>
     <button class="secondary" id="toGarage">Back to the garage</button>

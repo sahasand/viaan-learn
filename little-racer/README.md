@@ -20,10 +20,12 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 
 ## Controls and rules
 
-- Hold **GO** to drive and **STOP** to brake; letting go of GO coasts. Steer with the
-  **left** and **right** buttons or by touching either half of the picture. Keys: arrows
-  or WASD, N or Shift for nitro, H for the horn, P to pause. A driver who has not found
-  GO gets one reminder.
+- **GO** is a switch that starts lit: while it is lit the car drives by itself, so one
+  finger is enough to steer. Tapping GO coasts, tapping again drives. Hold **STOP** to
+  brake; letting go drives on. Steer with the **left** and **right** buttons or by
+  touching either half of the picture. Keys: arrows or WASD (up also drives while held),
+  N or Shift for nitro, H for the horn, P to pause. A driver who switches GO off and
+  sits still gets a reminder.
 - **Nitro** holds three bursts. Coins, stars and drift boosts fill it; one tap spends one.
 - Every track has a **loop-the-loop**. Cars are steered into its lane and carried round
   at a safe speed whatever is pressed, with a ring of coins on the way.

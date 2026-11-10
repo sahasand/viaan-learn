@@ -37,7 +37,7 @@ const SPECS = {
 };
 const CAR_ICON = { supercar: 'supercar', truck: 'truck', formula: 'formula' };
 const templates = {}, everyView = [], playerViews = {}, bossViews = {}, rivalViews = [];
-let views = [], bossMode = false, idleFor = 0, hinted = false;
+let views = [], bossMode = false, idleFor = 0, hinted = false, cruise = true;
 const basis = new THREE.Matrix4(), vf = new THREE.Vector3(), vu = new THREE.Vector3(), vr = new THREE.Vector3();
 const dummy = new THREE.Object3D(), tint = new THREE.Color(), va = new THREE.Vector3(), vb = new THREE.Vector3(), mapContext = $('map').getContext('2d');
 const rand = (() => { let n = 2027; return () => ((n = (n * 1664525 + 1013904223) >>> 0) / 4294967296); })();
@@ -823,7 +823,7 @@ function resetRace() {
   race = createRace(prefs.track, { boss: bossMode }); buildWorld(prefs.track); seatViews();
   orderKey = ''; $('trackName').textContent = (race.boss ? `BOSS · ${BOSSES[race.trackId].name}` : race.track.name).toUpperCase();
   $('countdown').textContent = ''; $('toast').classList.remove('show'); $('rush').classList.remove('on');
-  cameraHeading = trackPose(race.track, playerOf(race).d, 0).heading; cameraKick = 0; idleFor = 0; hinted = false;
+  cameraHeading = trackPose(race.track, playerOf(race).d, 0).heading; cameraKick = 0; idleFor = 0; hinted = false; setCruise(true);
   sound.music(prefs.track); sound.squeal(false); sound.hurry(race.boss);
   releaseAll();
 }
@@ -902,18 +902,20 @@ function openMenu() {
 }
 
 /* ---------- input ---------- */
-const pad = () => ({ steer: (held.right.size ? 1 : 0) - (held.left.size ? 1 : 0), gas: held.gas.size > 0, brake: held.brake.size > 0, nitro: held.nitro.size > 0 });
+// GO is a switch, not a pedal to hold: once it is lit the car keeps driving, so one finger is enough to steer.
+const pad = () => ({ steer: (held.right.size ? 1 : 0) - (held.left.size ? 1 : 0), gas: cruise || held.gas.has('key'), brake: held.brake.size > 0, nitro: held.nitro.size > 0 });
 function hold(side, source, on) {
   if (on) held[side].add(source); else held[side].delete(source);
   $(side).classList.toggle('down', held[side].size > 0);
 }
+function setCruise(on) { cruise = on; $('gas').classList.toggle('on', on); $('gas').setAttribute('aria-pressed', on); if (on) $('gas').classList.remove('nudge'); }
 function releaseAll() { for (const side of Object.keys(held)) { held[side].clear(); $(side).classList.remove('down'); } }
 function setupControls() {
   for (const side of Object.keys(held)) {
     const button = $(side);
-    button.addEventListener('pointerdown', e => { e.preventDefault(); try { button.setPointerCapture(e.pointerId); } catch {} hold(side, 'p' + e.pointerId, true); });
+    button.addEventListener('pointerdown', e => { e.preventDefault(); try { button.setPointerCapture(e.pointerId); } catch {} hold(side, 'p' + e.pointerId, true); if (side === 'gas') setCruise(!cruise); });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(name, e => hold(side, 'p' + e.pointerId, false));
-    button.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); hold(side, 'button', true); } });
+    button.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); hold(side, 'button', true); if (side === 'gas' && !e.repeat) setCruise(!cruise); } });
     button.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') hold(side, 'button', false); });
     button.addEventListener('blur', () => hold(side, 'button', false));
     button.addEventListener('contextmenu', e => e.preventDefault());
@@ -960,9 +962,8 @@ function setupControls() {
 function update(dt) {
   clock += dt;
   if (phase !== 'garage') for (const event of stepRace(race, pad(), dt)) handle(event);
-  // A driver who has not found the gas gets one friendly reminder.
-  if (phase === 'racing' && !hinted) { idleFor = playerOf(race).speed < 1.5 ? idleFor + dt : 0; if (idleFor > 2.2) { hinted = true; toast('Hold GO to drive! 🟢', 3); $('gas').classList.add('nudge'); } }
-  if (hinted && held.gas.size) $('gas').classList.remove('nudge');
+  // A driver who has switched GO off and sits still gets a friendly reminder.
+  if (phase === 'racing') { idleFor = !cruise && playerOf(race).speed < 1.5 ? idleFor + dt : 0; if (idleFor > 2.2 && !hinted) { hinted = true; toast('Tap GO to drive! 🟢', 3); $('gas').classList.add('nudge'); } if (cruise) hinted = false; }
   if (phase === 'finished' && finishAt && clock >= finishAt) { finishAt = 0; showFinish(); }
   if (countdownUntil && clock >= countdownUntil) { countdownUntil = 0; $('countdown').textContent = ''; }
   if (toastUntil && clock >= toastUntil) { toastUntil = 0; $('toast').classList.remove('show'); }
