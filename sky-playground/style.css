@@ -24,3 +24,41 @@
 .suitcase{display:inline-block;width:23px;height:19px;border-radius:4px;background:#e99d4c;border:2px solid #a56436;position:relative;margin:4px 9px 0 0;vertical-align:middle;box-shadow:inset 5px 0 #f8c879,inset -5px 0 #f8c879}
 .suitcase::before{content:"";position:absolute;left:6px;top:-7px;width:7px;height:5px;border:2px solid #a56436;border-bottom:0;border-radius:3px 3px 0 0}
 @media(max-height:500px){.bottom-right{flex-direction:column;gap:7px}.bottom-right .guide{width:132px;min-width:0;padding:10px;font-size:11px}.guide-note{display:none}.speed-controls button{min-width:48px;padding:10px 9px;font-size:10px}.speed-controls>div{gap:1px;padding:3px}}
+
+/* A kids' game: brighter sky, bigger buttons, stars to count and a plane to dress up. */
+body{background:#8fd3f4}
+.star-counter{display:flex;align-items:center;gap:5px;margin-left:auto;padding:5px 13px 5px 9px;border-radius:22px;background:#fff3c4;font-weight:900;font-size:21px;font-variant-numeric:tabular-nums;box-shadow:inset 0 0 0 2px #ffd866}
+.star-counter.pop{animation:starpop .3s ease-out}
+@keyframes starpop{from{transform:scale(1.45)}to{transform:scale(1)}}
+.mission h1{font-size:17px}.mission p{font-size:12px}
+.bubble{position:absolute;left:46px;top:calc(196px + env(safe-area-inset-top));max-width:250px;padding:9px 17px;border-radius:6px 22px 22px 22px;background:#fff;font-weight:900;font-size:17px;box-shadow:var(--shadow);opacity:0;transform:scale(.6);transform-origin:0 0;transition:opacity .2s,transform .25s cubic-bezier(.3,1.6,.6,1);pointer-events:none}
+.bubble.show{opacity:1;transform:scale(1)}
+.rush{position:absolute;inset:-20%;pointer-events:none;opacity:0;transition:opacity .25s;background:repeating-conic-gradient(from 0deg,#fff0 0 3.4deg,#ffffff8c 3.7deg 4.1deg,#fff0 4.4deg 7deg);-webkit-mask-image:radial-gradient(circle,transparent 30%,#000 75%);mask-image:radial-gradient(circle,transparent 30%,#000 75%)}
+.rush.on{opacity:.7;animation:rush .18s steps(2) infinite}
+@keyframes rush{to{transform:rotate(3.5deg)}}
+.toast{font-size:22px;padding:12px 26px;font-weight:900}
+.guide{font-size:16px;padding:13px 20px;border-radius:22px;min-height:54px;justify-content:center;width:100%}
+.guide:disabled{opacity:.45}
+.trick{background:#ffe27a;box-shadow:0 5px 0 #d9a520,var(--shadow);margin-bottom:10px}
+.trick:active{transform:translateY(4px);box-shadow:0 1px 0 #d9a520}
+.speed-controls button{font-size:14px;padding:12px 14px;min-height:48px;font-weight:900}
+.speed-controls>span{font-size:13px}
+.hangar{margin-top:16px;padding:12px 14px;border-radius:20px;background:#fff;border:1px solid #e7e2cf;text-align:left}
+.hangar-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.hangar h3{margin:0;font-size:15px}
+.star-bank{display:inline-flex;align-items:center;gap:5px;padding:3px 12px 3px 8px;border-radius:18px;background:#fff3c4;font-weight:900;font-size:16px;box-shadow:inset 0 0 0 2px #ffd866}
+.plane-paints{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.plane-paints button{height:46px;border-radius:23px;border:3px solid #fff;box-shadow:0 2px 0 #0002,0 1px 6px #0002;font-size:10px;font-weight:900;color:#fff;text-shadow:0 1px 2px #0009;line-height:1.1}
+.plane-paints button[aria-pressed="true"],.plane-trails button[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:2px}
+.plane-paints button.locked{filter:saturate(.7) brightness(.9)}
+.plane-trails{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-top:9px}
+.plane-trails button{display:grid;justify-items:center;gap:1px;min-height:50px;padding:5px 2px;border-radius:16px;background:#f6fbf2;border:2px solid #dfe8d6;font-size:20px}
+.plane-trails button small{font-size:10px;font-weight:900;color:#55705f}
+.plane-trails button.locked{background:#f3eedd}
+.hangar-note{min-height:18px;margin:7px 0 0;font-size:12px!important;font-weight:900;color:#c26a12!important;text-align:center}
+.star-reward{font-weight:900;font-size:18px!important;color:#c98a00!important;margin:4px 0 0}
+.star-reward:empty{display:none}
+body[data-phase="parked"] .star-counter,body[data-phase="loading"] .star-counter{visibility:hidden}
+@media(max-width:650px){.bubble{left:30px;top:calc(160px + env(safe-area-inset-top));font-size:15px}.toast{font-size:18px}.guide{font-size:14px;padding:11px 14px;min-height:50px}.plane-paints{grid-template-columns:repeat(7,1fr);gap:5px}.plane-paints button{height:44px;font-size:9px}.star-counter{font-size:18px}}
+@media(max-height:500px){.bubble{top:132px;font-size:14px}.toast{font-size:16px}.guide{font-size:13px;padding:8px 12px;min-height:44px;width:auto}.trick{margin:0}.hangar{margin-top:8px;padding:8px 12px}.plane-trails{margin-top:6px}.plane-trails button{min-height:44px;font-size:16px}}
+@media(prefers-reduced-motion:reduce){.rush{display:none}}

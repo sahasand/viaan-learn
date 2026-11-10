@@ -52,7 +52,7 @@ steering, three island airports, animal passenger boarding, speed controls, assi
 manual/automatic landings, and a locally saved pilot passport. The original picnic
 adventure and free flight remain available. Read `sky-playground/README.md` when changing flight behavior, mission
 flow, art, or local preview setup. `flight.js` holds flight rules; `airline.js` holds
-airport, boarding, landing assistance, and passport rules; `game.js` owns the browser lifecycle. Run `node --test sky-playground/*.test.mjs` after changes,
+airport, boarding, landing assistance, and passport rules; `sky.js` holds stars, balloons, rainbow hoops, the star trail and the saved pilot (`viaan-pilot-v1`: stars, plane paints, trails); `fx.js` draws that playful layer and `tunes.js` synthesizes music; `game.js` owns the browser lifecycle and reaches `fx.js`/`tunes.js` only through optional hooks so controller tests run without them. Stars only come from flying and nothing is ever lost. Run `node --test sky-playground/*.test.mjs` after changes,
 and verify a passenger trip, saved passport, and mobile controls in a browser. The `.blend` source files,
 GLB exports, and reproducible background Blender script are included. Keep generated
 obstacle data and the runtime terrain formula aligned with island edits.

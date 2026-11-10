@@ -50,7 +50,7 @@ export function guidance(state, target) {
 export function stepFlight(state, input, elapsed, target = null, obstacles = [], options = {}) {
   const dt = clamp(elapsed, 0, .05), next = { ...state };
   const terrain = options.groundHeight || groundHeight;
-  const speed = clamp(options.speed ?? 10, 6, 20), boundary = options.boundary || 165;
+  const speed = clamp(options.speed ?? 10, 6, 28), boundary = options.boundary || 165;
   let steer = { x: clamp(input.x, -1, 1), y: clamp(input.y, -1, 1) };
   // Turn gently back toward the island, with hysteresis to avoid boundary chatter.
   next.returning = Math.hypot(state.x, state.z) > (state.returning ? boundary * 120 / 165 : boundary);
@@ -61,7 +61,7 @@ export function stepFlight(state, input, elapsed, target = null, obstacles = [],
   next.climb += (steer.y - state.climb) * smooth;
   next.heading += next.turn * .88 * dt;
   // Slow down in a tight assisted turn so the guide never circles a missed target.
-  next.speed = target ? Math.min(speed, 10) - Math.abs(next.turn) * 4 : speed;
+  next.speed = target ? Math.min(speed, options.guideSpeed ?? 10) - Math.abs(next.turn) * 4 : speed;
   next.x += Math.sin(next.heading) * next.speed * dt;
   next.z -= Math.cos(next.heading) * next.speed * dt;
   next.y += next.climb * 7 * dt;

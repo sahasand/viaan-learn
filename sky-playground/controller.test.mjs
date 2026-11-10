@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import * as flight from './flight.js';
 import * as airline from './airline.js';
+import * as sky from './sky.js';
 const code=readFileSync(new URL('./game.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/init\(\);\s*$/,'');
 class Vec {constructor(x=0,y=0,z=0){this.set(x,y,z);}set(x,y,z){this.x=x;this.y=y;this.z=z;return this;}copy(v){return this.set(v.x,v.y,v.z);}lerp(v){return this.copy(v);}setScalar(){return this;}}
 function harness(){
@@ -11,7 +12,7 @@ function harness(){
  function element(id){const classes=new Set();return {id,open:false,hidden:false,disabled:false,style:{},dataset:{},children:[],textContent:'',innerHTML:'',listeners:{},classList:{add(c){classes.add(c);},remove(c){classes.delete(c);},toggle(c,on){if(on)classes.add(c);else classes.delete(c);}},setAttribute(){},querySelectorAll(){return [];},getContext(){return {};},addEventListener(name,fn){this.listeners[name]=fn;},showModal(){this.open=true;},close(){this.open=false;}};}
  const get=id=>els[id]||(els[id]=element(id));
  class Mesh {constructor(g,m){this.geometry=g;this.material=m;this.position=new Vec();this.scale=new Vec();this.userData={};}}
- const ctx=vm.createContext({...flight,...airline,console,innerWidth:1280,innerHeight:720,performance:{now:()=>0},matchMedia:()=>({matches:true}),localStorage:{getItem:()=>null,setItem(k,v){events.saved={k,v};}},window:{addEventListener(n,fn){events[n]=fn;}},document:{body:{dataset:{}},getElementById:get,querySelector:s=>get(s),querySelectorAll:()=>[],addEventListener(n,fn){events[n]=fn;}},THREE:{Vector3:Vec,SphereGeometry:class{},Mesh,MeshStandardMaterial:class{constructor(o){Object.assign(this,o);}}}});
+ const ctx=vm.createContext({...flight,...airline,...sky,console,innerWidth:1280,innerHeight:720,performance:{now:()=>0},matchMedia:()=>({matches:true}),localStorage:{getItem:()=>null,setItem(k,v){events.saved={k,v};}},window:{addEventListener(n,fn){events[n]=fn;}},document:{body:{dataset:{}},getElementById:get,querySelector:s=>get(s),querySelectorAll:()=>[],addEventListener(n,fn){events[n]=fn;}},THREE:{Vector3:Vec,SphereGeometry:class{},Mesh,MeshStandardMaterial:class{constructor(o){Object.assign(this,o);}}}});
  vm.runInContext(code+`; scene={add(){}};camera={position:new THREE.Vector3(),lookAt(){}};plane={position:new THREE.Vector3()};beacon={visible:false};setupControls();`,ctx);
  return {run:s=>vm.runInContext(s,ctx),get,events};
 }

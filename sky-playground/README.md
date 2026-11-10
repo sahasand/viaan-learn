@@ -26,7 +26,16 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
   WASD also steer. The plane avoids terrain and mapped trees/buildings.
 - **Slow**, **Cruise**, and **Fast** change free steering speed. Guidance slows down
   for accurate turns. The speed readout and engine pitch follow the plane's speed.
-- **Guide me** flies toward your destination. Steering takes control back during
+- The sky is full of things to find: a trail of stars leads to the destination, each
+  island wears a ring of stars, balloons pop for three stars, and rainbow hoops give a
+  three-second zoom. Everything returns at the next takeoff. Stars are banked as they
+  are touched and nothing is ever lost.
+- **Loop!** (or T) rolls the plane just for fun. A whale, dolphins, and puffy clouds to
+  fly through are there to be discovered, and the passenger comments in a speech bubble.
+- At the airport, **My plane** offers colours and trails. Locked ones show their price
+  in stars; tapping one buys it when there are enough and otherwise says how many more
+  are needed. Stars only come from flying. Choices save under `viaan-pilot-v1`.
+- **Guide me** flies toward your destination, sweeping up the star trail on the way. Steering takes control back during
   flight. Reaching the destination marker starts the runway approach.
 - **Land** offers **I'll steer · with helping wings**, or **Land for me**.
   The approach first aligns the plane; on the final glide, helping wings narrow the
@@ -38,8 +47,8 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 - **Just fly & explore** skips boarding. **Bear's picnic adventure** retains the
   original five golden rings, picnic delivery, landing, and free flight.
 - Pause and How to fly stop the simulation. Changing tabs or losing focus also pauses.
-- Sound starts muted. The music-note button enables a quiet engine, chimes, and
-  optional device speech. Play works without sound or speech support.
+- Sound starts muted. The music-note button enables a quiet engine, synthesized music,
+  pops, chimes, and optional device speech. Play works without sound or speech support.
 
 ## Art and implementation
 
@@ -58,7 +67,12 @@ moving buildings or trees, update `assets/obstacles.json` to match. The analytic
 terrain formula in `flight.js` matches the original asset generator.
 
 `game.js` owns the scene, input, mission, camera, sound, and lifecycle. `flight.js`
-contains flight rules. `airline.js` owns airport coordinates, boarding transitions,
+contains flight rules. `sky.js` holds the rules for stars, balloons, hoops, the star
+trail the helping wing follows, and the saved pilot (stars, paints, trails). `fx.js`
+draws that playful layer: sky gradient, collectables, particles, sea friends, runway
+fans, plane paint, trails and the loop. `tunes.js` synthesizes music and effects on the
+game's audio context. `game.js` only calls `fx.js` and `tunes.js` through optional
+hooks, so the controller tests run without them. `airline.js` owns airport coordinates, boarding transitions,
 passport validation, and assisted landing rules. Animal portraits reuse the local
 `memory-assets/` artwork. Three.js 0.180.0 is vendored under its MIT license
 (`vendor/THREE-LICENSE.txt`); GLTFLoader uses a local BufferGeometryUtils import.
@@ -75,5 +89,9 @@ rollout, takeoff, steering effects and safe touchdown at 20–120 Hz, world terr
 and obstacle clearance, boundaries, passport validation, boarding order, pause and
 resume, mid-glide takeover, original picnic availability, and GLB integrity.
 Controller tests run the actual game logic with a minimal DOM/scene harness.
-Browser checks should cover complete passenger trips, saved passport reload,
+`sky.test.mjs` covers item placement clear of land, trees and the world edge, star
+trails for all six routes, helped flights gathering the trail, single collection,
+reset, and validated pilot saves and unlocks.
+Browser checks should cover complete passenger trips, star collecting, a hoop zoom, a
+loop, an unlock in My plane, saved passport reload,
 manual steering, landing choice, and portrait/landscape layouts.
