@@ -23,6 +23,7 @@
     <div class="lap"><span class="eyebrow" id="trackName">SUNNY BEACH</span><strong id="lapText">Lap 1 of 3</strong></div>
     <div class="place" id="placeText" aria-live="polite">4th</div>
     <ol class="order" id="order" aria-label="Race order"></ol>
+    <div class="coins" aria-label="Coins collected"><i aria-hidden="true"></i><b id="coinText">0</b></div>
   </section>
   <canvas id="map" class="map" width="200" height="200" aria-label="Track map showing every car"></canvas>
 
@@ -42,19 +43,25 @@
   <div class="veil" id="loading"><div class="loading-car">🏁</div><h2>Start your engine.</h2><p id="loadText">Polishing your supercar…</p><div class="load-track"><i></i></div><a class="text-link" href="../index.html">Back to Viaan</a></div>
 
   <dialog id="garage" aria-labelledby="garageTitle">
-    <span class="eyebrow">VIAAN’S GARAGE</span>
-    <h2 id="garageTitle">Pick your colour</h2>
-    <div class="swatches" id="swatches" role="group" aria-label="Car colour"></div>
-    <h3>Pick a track</h3>
-    <div class="tracks" id="tracks" role="group" aria-label="Race track"></div>
-    <button class="primary" id="start">Start the race! <span aria-hidden="true">🏁</span></button>
+    <div class="garage-a">
+      <div class="garage-top"><span class="eyebrow">VIAAN’S GARAGE</span><span class="bank" aria-label="Coins saved"><i aria-hidden="true"></i><b id="bank">0</b></span></div>
+      <h2 id="garageTitle">Pick your colour</h2>
+      <div class="swatches" id="swatches" role="group" aria-label="Car colour"></div>
+      <h3>Pick a trail</h3>
+      <div class="trails" id="trails" role="group" aria-label="Trail behind the car"></div>
+    </div>
+    <div class="garage-b">
+      <h3>Pick a track</h3>
+      <div class="tracks" id="tracks" role="group" aria-label="Race track"></div>
+      <button class="primary" id="start">Start the race! <span aria-hidden="true">🏁</span></button>
+    </div>
   </dialog>
 
   <dialog id="menu" aria-labelledby="menuTitle">
     <div class="dialog-icon" aria-hidden="true">🅿️</div>
     <span class="eyebrow">TAKING A LITTLE BREAK</span>
     <h2 id="menuTitle">Parked for a moment.</h2>
-    <div class="how"><div><span aria-hidden="true">◀ ▶</span><p><b>Steer left and right</b><br>Your car drives forward by itself.</p></div><div><span aria-hidden="true">⭐</span><p><b>Drive through stars</b><br>Each star gives you a zoom boost.</p></div><div><span aria-hidden="true">🌿</span><p><b>Stay on the road</b><br>Grass is slow, but you can never crash.</p></div></div>
+    <div class="how"><div><span aria-hidden="true">◀ ▶</span><p><b>Steer left and right</b><br>Your car drives forward by itself.</p></div><div><span aria-hidden="true">⭐</span><p><b>Stars and coins</b><br>Stars zoom. Coins unlock new paint and trails.</p></div><div><span aria-hidden="true">✨</span><p><b>Drift for a boost</b><br>Hold a turn round a corner, then let go.</p></div></div>
     <button class="primary" id="resume">Keep racing!</button>
     <button class="secondary" id="restart">Start this race again</button>
     <button class="secondary" id="toGarage">Back to the garage</button>
@@ -67,6 +74,7 @@
     <h2 id="finishTitle">You finished the race!</h2>
     <p id="finishText">What super driving.</p>
     <div class="medal-row" aria-hidden="true">★ ★ ★</div>
+    <p class="reward" id="reward"></p>
     <ol class="podium" id="podium" aria-label="Finishing order"></ol>
     <button class="primary" id="again">Race again!</button>
     <button class="secondary" id="change">Change car or track</button>

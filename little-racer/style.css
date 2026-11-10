@@ -31,6 +31,10 @@ h2,h3,p,ol{margin:0;padding:0}
 .order li.me{border-color:var(--coral);border-width:3px}
 .order img{width:30px;height:30px;object-fit:contain}
 .order i{display:block;width:20px;height:20px;border-radius:50%;border:2px solid #fff}
+.coins,.bank{display:inline-flex;align-items:center;gap:6px;font-weight:900;font-size:17px;font-variant-numeric:tabular-nums}
+.coins i,.bank i{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2a8,#ffc21a 55%,#d99a00);box-shadow:inset 0 0 0 2px #e0a800,0 1px 0 #0002}
+.coins{grid-column:1 / -1}.coins.pop b{animation:coin .25s ease-out}
+@keyframes coin{from{transform:scale(1.5);color:#d99a00}to{transform:scale(1)}}
 .map{position:absolute;right:28px;top:calc(88px + env(safe-area-inset-top));width:104px;height:104px;border-radius:22px;background:#fff9e9d9;box-shadow:var(--shadow)}
 
 .rush{position:absolute;inset:-20%;pointer-events:none;opacity:0;transition:opacity .25s;background:repeating-conic-gradient(from 0deg,#fff0 0 3.4deg,#ffffff8c 3.7deg 4.1deg,#fff0 4.4deg 7deg);-webkit-mask-image:radial-gradient(circle,transparent 30%,#000 75%);mask-image:radial-gradient(circle,transparent 30%,#000 75%)}
@@ -40,7 +44,7 @@ h2,h3,p,ol{margin:0;padding:0}
 .countdown:empty{display:none}
 .countdown.pop{animation:pop .5s ease-out}
 @keyframes pop{from{transform:translate(-50%,-50%) scale(1.5);opacity:.3}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
-.toast{position:absolute;top:24%;left:50%;transform:translate(-50%,-10px);opacity:0;transition:opacity .25s,transform .25s;padding:11px 22px;border-radius:30px;background:var(--paper);box-shadow:var(--shadow);font-size:18px;font-weight:900;text-align:center;pointer-events:none;max-width:85%;width:max-content}
+.toast{z-index:6;position:absolute;top:24%;left:50%;transform:translate(-50%,-10px);opacity:0;transition:opacity .25s,transform .25s;padding:11px 22px;border-radius:30px;background:var(--paper);box-shadow:var(--shadow);font-size:18px;font-weight:900;text-align:center;pointer-events:none;max-width:85%;width:max-content}
 .toast.show{opacity:1;transform:translate(-50%,0)}
 
 .drive{position:absolute;left:0;right:0;bottom:calc(22px + env(safe-area-inset-bottom));padding:0 calc(24px + env(safe-area-inset-right)) 0 calc(24px + env(safe-area-inset-left));display:flex;align-items:flex-end;justify-content:space-between;gap:12px;pointer-events:none}
@@ -88,7 +92,18 @@ dialog p{font-size:14px;line-height:1.6;color:#55705f}
 
 /* The garage sits beside the car so each colour shows on the real model. */
 #garage{inset:50% auto auto 28px;transform:translateY(-46%);margin:0;width:340px;padding:22px}
-.swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.garage-top{display:flex;justify-content:space-between;align-items:center}
+.bank{padding:4px 12px 4px 6px;border-radius:20px;background:#fff;border:1px solid var(--line)}
+.swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.swatches button{position:relative;display:grid;place-items:center;font-size:11px;font-weight:900;color:#fff;text-shadow:0 1px 2px #0009;line-height:1.1}
+.swatches button.locked{filter:saturate(.75) brightness(.88)}
+.trails{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.trails button{display:grid;justify-items:center;gap:1px;padding:6px 2px;min-height:54px;border-radius:16px;background:#fff;border:2px solid var(--line);font-size:22px}
+.trails button small{font-size:10px;font-weight:900;color:#55705f}
+.trails button[aria-pressed="true"]{background:var(--mint);border-color:var(--ink)}
+.trails button.locked{background:#f3eedd}
+.cup{font-style:normal;font-size:16px;margin-left:6px}.cup:not(.gold){filter:grayscale(1) brightness(1.15)}
+.reward{font-weight:900;color:var(--ink)!important;font-size:14px!important;margin:2px 0 8px}
 .swatches button{aspect-ratio:1;min-width:44px;min-height:44px;border-radius:50%;border:4px solid #fff;box-shadow:0 2px 0 #0002,var(--shadow)}
 .swatches button[aria-pressed="true"]{outline:4px solid var(--ink);outline-offset:2px}
 .tracks{display:grid;gap:8px}
@@ -125,7 +140,7 @@ dialog p{font-size:14px;line-height:1.6;color:#55705f}
   .steer{width:98px;height:98px;font-size:40px}
   .speed b{font-size:24px;min-width:46px}.horn{padding:10px 14px;font-size:14px}
   #garage{inset:auto 10px calc(10px + env(safe-area-inset-bottom)) 10px;transform:none;width:auto;padding:16px 16px 14px;border-radius:26px}
-  #garage h2{font-size:22px;margin:2px 0 10px}#garage h3{margin:12px 0 8px;font-size:15px}
+  #garage h2{font-size:21px;margin:2px 0 8px}#garage h3{margin:9px 0 6px;font-size:14px}.swatches{gap:6px}.swatches button{aspect-ratio:auto;height:46px;border-radius:23px;font-size:10px}.trails button{min-height:46px;font-size:18px;padding:3px}
   .tracks{grid-template-columns:repeat(3,1fr)}
   .tracks button{grid-template-columns:1fr;text-align:center;padding:8px 4px;gap:2px}
   .tracks button span{grid-row:auto;font-size:24px}.tracks button strong{font-size:12px}.tracks button small{display:none}
@@ -143,7 +158,8 @@ dialog p{font-size:14px;line-height:1.6;color:#55705f}
   .countdown{font-size:110px;top:45%}.toast{top:20%;font-size:14px}
   dialog{padding:14px 18px;max-height:96svh}dialog h2{font-size:21px;margin:2px 0 8px}
   .dialog-icon,.prize,.medal-row{display:none}
-  #garage{inset:auto auto 10px 16px;transform:none;width:330px;padding:12px 16px}
+  #garage{inset:auto auto 8px 12px;transform:none;width:min(600px,calc(100% - 24px));padding:10px 14px}#garage[open]{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;align-items:end}
+  #garage h2{font-size:18px;margin:0 0 6px}.swatches button{aspect-ratio:auto;height:44px;border-radius:22px;font-size:10px}.trails button{min-height:44px;font-size:17px;padding:2px}
   #garage h3{margin:8px 0 6px;font-size:14px}
   .tracks{grid-template-columns:repeat(3,1fr)}
   .tracks button{grid-template-columns:1fr;text-align:center;padding:5px 4px;min-height:48px;gap:0}

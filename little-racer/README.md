@@ -1,8 +1,9 @@
 # Little Racer
 
-A gentle 3D supercar race for Viaan. Pick a paint colour and a track in the garage,
-then race three laps against Panda, Penguin and Frog. The car drives forward by
-itself; the only job is steering left and right.
+A gentle 3D supercar race for Viaan. Pick a paint colour, a trail and a track in the
+garage, then race three laps over hills against Panda, Penguin and Frog. The car drives
+forward by itself; the only job is steering left and right. Coins collected in races
+unlock special paints and trails, and every track gives a cup.
 
 ## Play locally
 
@@ -24,17 +25,27 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 - Grass is slower and nudges the car back. A soft wall stops it wandering further.
   Cars that touch slide apart. Nothing spins, crashes, or stops.
 - Driving through a star gives a short zoom boost. Stars return every lap.
+- Holding a turn through a corner charges a drift: blue sparks after about a second,
+  orange after two. Letting go spends it as a short or longer boost. Sliding onto the
+  grass loses the charge. The bar under the speed shows the charge.
+- Coins sit in rows on the road and in an arc over each ramp, and return every lap.
+  They are banked when the race finishes, whatever the place.
 - Each track has two jump ramps across the whole road and one tunnel. A ramp sends
   every car flying for about a second; nothing needs to be pressed and landing is safe.
 - The animal drivers slow down when they are ahead and hurry when they are behind,
   so the pack stays together. A driver who never steers still finishes in about two minutes.
-- Every finish gets the same celebration and shows the finishing order. There is no
-  timer, lap record, or trophy shelf.
-- The chosen colour and track save locally under `viaan-racer-v1`; other games'
-  progress is untouched.
+- Every finish gets the same celebration, shows the finishing order, and earns that
+  track's cup; winning turns the cup gold. Cups never downgrade. There is no timer or
+  lap record, and nothing is ever taken away.
+- In the garage, locked paints (gold, rainbow, galaxy) and trails (bubbles, rainbow,
+  fire) show their price. Tapping one buys it when there are enough coins and otherwise
+  says how many more are needed. Coins are only earned by playing; there is no shop.
+- Colour, trail, track, coins, unlocks and cups save locally under `viaan-racer-v1`;
+  other games' progress is untouched. Saves from the first release still load.
 - Pause stops the simulation. Changing tabs or losing focus also pauses.
-- Sound starts muted. The music-note button enables a quiet synthesized engine, horn,
-  chimes, and optional device speech. Play works without sound or speech support.
+- Sound starts muted. The music-note button enables synthesized music (one tune per
+  track, a little faster on the last lap), engine, tyre squeal, horn, chimes, and
+  optional device speech. Play works without sound or speech support.
 
 ## Art and implementation
 
@@ -51,8 +62,10 @@ The game repaints the material named `Paint` and spins the four `Wheel_*` object
 keep those names. All four cars share the one model; rivals carry a `memory-assets/`
 portrait above the roof.
 
-`race.js` holds every rule and runs in Node tests: track shapes, car movement, rival
-pacing, stars, bumps, laps, finishing order, and saved-choice validation. Cars live in
+`race.js` holds every rule and runs in Node tests: track shapes and hills, car movement,
+drifting, rival pacing, stars, coins, bumps, laps, finishing order, overtakes, and the
+saved choices with their coins, unlocks and cups. `audio.js` builds all sound from
+oscillators and noise; no audio files are used. Cars live in
 track coordinates (distance along the centre line, metres to the right of it), which is
 why nobody can drive backwards or get lost. `game.js` owns the scene, scenery, camera,
 input, sound, and page lifecycle. Tracks, road markings, terrain, and scenery are generated
@@ -61,7 +74,8 @@ in code from the control points in `race.js`; changing a track's points needs no
 
 The look comes from a few pieces in `game.js`: a gradient sky with a sun that also feeds
 the paint reflections, rolling terrain that stays flat beside the road, a sun shadow box
-that follows the player, a cheering crowd of `memory-assets/` animals, bunting, balloons,
+that follows the player, one landmark per track (sandcastle and lighthouse, ice castle,
+temple and smoking volcano), a cheering crowd of `memory-assets/` animals, bunting, balloons,
 snow or pollen in the air, and one shared particle pool for dust, sparkles, smoke,
 confetti and fireworks. If frames stay slow for a few seconds the game switches off
 shadows and lowers sharpness by itself. Reduced motion removes particles, weather,
@@ -77,7 +91,9 @@ node --test little-racer/*.test.mjs
 Tests cover closed, non-overlapping tracks and corner radius, hands-off and
 steering-held drivers finishing every track, a careful driver winning at 20–120 Hz,
 single lap announcements, star boosts and respawn, ramp and tunnel placement, jumps,
-grass slowdown, rival pacing, soft
+hill limits, drift charging and release, coin rows and air coins, unlock buying, cups,
+overtake announcements, grass slowdown, rival pacing, soft
 bumps, bad input, fixed finishing order, saved choices, and model/page wiring.
-Browser checks should cover a full race to the finish card, pause and resume, a colour
+Browser checks should cover a full race to the finish card, a drift boost, an unlock in
+the garage, pause and resume, a colour
 and track change, saved choices after reload, and portrait/landscape layouts.

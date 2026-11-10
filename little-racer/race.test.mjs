@@ -218,11 +218,122 @@ test('finishing order is fixed once a car crosses the line', () => {
 });
 
 test('saved choices are validated before use', () => {
-  const fallback = { paint: R.PAINTS[0].id, track: R.TRACKS[0].id };
-  for (const bad of [null, undefined, '', 'nonsense', '[]', '{"paint":7}', 42, '{"paint":"mud","track":"moon"}']) assert.deepEqual(R.normalizePrefs(bad), fallback);
-  assert.deepEqual(R.normalizePrefs('{"paint":"grape","track":"snow","extra":1}'), { paint: 'grape', track: 'snow' });
-  assert.deepEqual(R.normalizePrefs({ paint: 'ocean', track: 'moon' }), { paint: 'ocean', track: 'beach' });
-  assert.equal(new Set(R.PAINTS.map(p => p.id)).size, 6);
+  const fallback = { paint: 'sunshine', track: 'beach', trail: 'none', coins: 0, owned: [], cups: {} };
+  for (const bad of [null, undefined, '', 'nonsense', '[]', '{"paint":7}', 42, '{"paint":"mud","track":"moon"}', '{"coins":-5,"owned":"gold","cups":[3]}']) assert.deepEqual(R.normalizePrefs(bad), fallback);
+  // The first release saved only a paint and a track; that still loads.
+  assert.deepEqual(R.normalizePrefs('{"paint":"grape","track":"snow","extra":1}'), { ...fallback, paint: 'grape', track: 'snow' });
+  // Locked paints and trails fall back until they are owned.
+  assert.equal(R.normalizePrefs({ paint: 'gold', trail: 'fire' }).paint, 'sunshine');
+  assert.equal(R.normalizePrefs({ paint: 'gold', trail: 'fire' }).trail, 'none');
+  const rich = R.normalizePrefs({ paint: 'gold', trail: 'fire', owned: ['gold', 'fire', 'gold', 'cheat', 7], coins: 12.5, cups: { beach: 2, snow: 9, moon: 1 } });
+  assert.deepEqual(rich, { paint: 'gold', track: 'beach', trail: 'fire', coins: 0, owned: ['gold', 'fire'], cups: { beach: 2 } });
+  assert.equal(R.normalizePrefs({ coins: 1e9 }).coins, 99999);
+  assert.equal(R.PAINTS.filter(p => !p.cost).length, 6);
+  assert.equal(new Set([...R.PAINTS, ...R.TRAILS].map(i => i.id)).size, R.PAINTS.length + R.TRAILS.length);
+});
+
+test('coins buy unlocks exactly once and only when there are enough', () => {
+  let prefs = R.normalizePrefs({ coins: 120 });
+  assert.deepEqual(R.buy(prefs, 'gold'), prefs, 'gold costs 150');
+  prefs = R.buy(prefs, 'bubbles');
+  assert.deepEqual([prefs.coins, prefs.owned], [20, ['bubbles']]);
+  assert.deepEqual(R.buy(prefs, 'bubbles'), prefs, 'already owned');
+  assert.deepEqual(R.buy(prefs, 'sunshine'), prefs, 'free paints are not for sale');
+  assert.deepEqual(R.buy(prefs, 'nonsense'), prefs);
+  assert.equal(R.nextUnlock(prefs).id, 'gold');
+  assert.equal(R.nextUnlock(R.normalizePrefs({ owned: ['gold', 'rainbow', 'galaxy', 'bubbles', 'ribbon', 'fire'] })), null);
+});
+
+test('finishing banks coins and a cup; winning makes the cup gold and it never downgrades', () => {
+  let prefs = R.award(R.normalizePrefs(null), 'snow', 3, 40);
+  assert.deepEqual([prefs.coins, prefs.cups], [40, { snow: 1 }]);
+  prefs = R.award(prefs, 'snow', 1, 25);
+  assert.deepEqual([prefs.coins, prefs.cups], [65, { snow: 2 }]);
+  prefs = R.award(prefs, 'snow', 4, 5);
+  assert.deepEqual([prefs.coins, prefs.cups], [70, { snow: 2 }]);
+  assert.deepEqual(R.award(prefs, 'moon', 1, 50), prefs);
+  assert.equal(R.award(prefs, 'beach', 2, -30).coins, 70);
+});
+
+test('roads climb and dip gently, stay level at the start and never sink below zero', () => {
+  for (const { id } of R.TRACKS) {
+    const track = R.getTrack(id);
+    let top = 0, steepest = 0;
+    for (let i = 0; i < track.n; i++) { assert.ok(track.ys[i] >= 0); top = Math.max(top, track.ys[i]); steepest = Math.max(steepest, Math.abs(track.slopes[i])); }
+    assert.ok(top > 5 && top < 20, `${id} highest point ${top}`);
+    assert.ok(steepest > .05 && steepest < .2, `${id} steepest slope ${steepest}`);
+    for (const d of [-28, -10, 0, 10, 28]) assert.ok(R.trackPose(track, d, 0).y < .01);
+    assert.ok(Math.abs(track.ys[0] - track.ys[track.n - 1]) < .01, 'the lap closes without a step');
+    const pose = R.trackPose(track, 300.5, 2);
+    assert.ok(Math.abs(pose.y - (track.ys[300] + track.ys[301]) / 2) < .05 && Number.isFinite(pose.slope));
+  }
+});
+
+test('holding a turn through a corner charges a drift and letting go gives a boost', () => {
+  const race = R.createRace('snow'), player = R.playerOf(race), track = race.track;
+  for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
+  // Find a long bend and sit the car on its outside edge at full speed.
+  let s = 0; for (let i = 120; i < track.n - 120; i++) { let ok = true; for (let j = 0; j < 70; j++) if (Math.abs(track.ks[i + j]) < .012 || Math.sign(track.ks[i + j]) !== Math.sign(track.ks[i])) { ok = false; break; } if (ok) { s = i; break; } }
+  assert.ok(s > 0, 'the track has a long corner');
+  const dir = Math.sign(track.ks[s]);
+  const setUp = () => { player.d = s; player.lat = -dir * 5; player.speed = R.CRUISE; player.boost = 0; player.drift = 0; player.driftDir = 0; player.air = 0; race.cars.slice(1).forEach(c => { c.d = s + 400; }); };
+  setUp();
+  const events = [];
+  for (let i = 0; i < 80; i++) events.push(...R.stepRace(race, dir, 1 / 60));
+  assert.ok(events.includes('drift'), 'blue sparks after holding the corner');
+  assert.equal(player.boost, 0, 'no boost while still holding');
+  assert.ok(Math.abs(player.lat) < R.HALF_ROAD, 'the drift holds the car on the road');
+  assert.ok(R.stepRace(race, 0, 1 / 60).includes('turbo'));
+  assert.ok(player.boost > .8 && player.drift === 0);
+  // A quick tap charges nothing, and steering away from the bend does not count.
+  setUp(); events.length = 0;
+  for (let i = 0; i < 20; i++) events.push(...R.stepRace(race, dir, 1 / 60));
+  events.push(...R.stepRace(race, 0, 1 / 60));
+  setUp();
+  for (let i = 0; i < 40; i++) events.push(...R.stepRace(race, -dir, 1 / 60));
+  events.push(...R.stepRace(race, 0, 1 / 60));
+  assert.equal(events.includes('turbo'), false);
+  // Sliding onto the grass throws the charge away.
+  setUp(); player.drift = 1.5; player.driftDir = dir; player.lat = dir * (R.HALF_ROAD + 1);
+  assert.equal(R.stepRace(race, dir, 1 / 60).includes('turbo'), false);
+  assert.equal(player.drift, 0);
+});
+
+test('coins sit in rows and over ramps, count once and return each lap', () => {
+  for (const { id } of R.TRACKS) {
+    const track = R.getTrack(id), coins = R.coinsFor(track);
+    assert.ok(coins.length >= 40, `${id} has ${coins.length} coins`);
+    assert.equal(coins.filter(c => c.air).length, 10);
+    for (const coin of coins) assert.ok(Math.abs(coin.lat) < R.HALF_ROAD - 2 && coin.s > 20 && coin.s < track.length - 10);
+    for (const coin of coins.filter(c => !c.air)) for (const star of R.starsFor(track)) assert.ok(Math.abs(coin.s - star.s) > 4 || coin.lat !== star.lat);
+  }
+  const race = R.createRace('beach'), player = R.playerOf(race);
+  for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
+  race.cars.slice(1).forEach(c => { c.d = 500; });
+  const row = race.coins.filter(c => !c.air).slice(0, 5);
+  player.d = row[0].s - 3; player.lat = row[0].lat; player.speed = R.CRUISE;
+  const events = [];
+  for (let i = 0; i < 60; i++) events.push(...R.stepRace(race, 0, 1 / 60));
+  assert.equal(events.filter(e => e === 'coin').length, 5);
+  assert.equal(race.collected, 5);
+  // Air coins need the car to be flying.
+  const air = race.coins.find(c => c.air);
+  player.d = air.s - 1; player.lat = 0; player.air = 0; player.speed = 5;
+  R.stepRace(race, 0, 1 / 60); assert.equal(air.taken, false);
+  player.d = air.s - 1; player.air = .5;
+  assert.ok(R.stepRace(race, 0, 1 / 60).includes('coin'));
+  player.air = 0; player.d = race.track.length - .2; player.lat = 6.5;
+  R.stepRace(race, 0, 1 / 20);
+  assert.ok(race.coins.every(c => !c.taken));
+  assert.equal(race.collected, 6, 'the count keeps growing across laps');
+});
+
+test('passing a friend is announced with their name, but not off the start line', () => {
+  const events = [];
+  const race = drive('beach', careful, 60, (e, r) => { if (e === 'pass') events.push([r.time, r.passed]); });
+  assert.ok(events.length >= 1 && events.length <= 12, `${events.length} passes`);
+  for (const [time, name] of events) { assert.ok(time > 4); assert.ok(['Panda', 'Penguin', 'Frog'].includes(name)); }
+  for (let i = 1; i < events.length; i++) assert.ok(events[i][0] - events[i - 1][0] > 2.5);
 });
 
 test('the supercar model, portraits and page wiring are all present', () => {
