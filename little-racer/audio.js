@@ -5,7 +5,8 @@ const pitch = note => 440 * 2 ** ((note - 69) / 12);
 const SONGS = {
   beach: { bpm: 124, chords: [[60, 64, 67], [67, 71, 74], [69, 72, 76], [65, 69, 72]] },
   snow: { bpm: 110, chords: [[62, 66, 69], [59, 62, 66], [55, 59, 62], [57, 61, 64]] },
-  jungle: { bpm: 134, chords: [[57, 60, 64], [53, 57, 60], [60, 64, 67], [55, 59, 62]] }
+  jungle: { bpm: 134, chords: [[57, 60, 64], [53, 57, 60], [60, 64, 67], [55, 59, 62]] },
+  galaxy: { bpm: 128, chords: [[64, 68, 71], [61, 64, 68], [57, 61, 64], [59, 63, 66]] }
 };
 const ARP = [0, 1, 2, 1, 2, 1, 0, 1], LEAD = [[0, 2], [3, 1], [6, 0]];
 
@@ -90,6 +91,11 @@ export function createSound() {
     tone(frequency, delay = 0, seconds = .3, type = 'sine', volume = .09, slideTo = 0) { if (ready()) note(frequency, ctx.currentTime + delay, seconds, type, volume, master, slideTo); },
     chime(notes, gap = .09) { if (ready()) notes.forEach((f, i) => note(f, ctx.currentTime + i * gap, .35, 'sine', .09)); },
     horn() { if (ready()) { note(392, ctx.currentTime, .42, 'square', .035); note(494, ctx.currentTime, .42, 'square', .035); } },
+    // Two happy barks: a quick falling yelp with a little breath of noise, twice.
+    woof(volume = .3) {
+      if (!ready()) return;
+      for (const delay of [0, .17]) { note(520, ctx.currentTime + delay, .11, 'sawtooth', volume * .22, master, 250); note(260, ctx.currentTime + delay, .12, 'square', volume * .1, master, 150); puff(ctx.currentTime + delay, .08, 'bandpass', 1100, volume * .3); }
+    },
     coin() { if (ready()) { note(1568, ctx.currentTime, .1, 'sine', .05); note(2093, ctx.currentTime + .06, .16, 'sine', .05); } },
     whoosh() { if (ready()) puff(ctx.currentTime, .6, 'bandpass', 500, .09, master, 3200); },
     thud() { if (ready()) { note(95, ctx.currentTime, .22, 'triangle', .15); puff(ctx.currentTime, .12, 'lowpass', 400, .08); } },

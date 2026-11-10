@@ -60,19 +60,21 @@ obstacle data and the runtime terrain formula aligned with island edits.
 ## Little Racer (standalone game)
 
 The home Little Racer link opens `little-racer/`, a static Three.js supercar race:
-garage (three vehicles, paints, trails, three tracks), three laps over hills against Panda,
-Penguin and Frog, gas/brake/steer/nitro controls, drift boosts, boost stars, coins, a
+garage (three vehicles, paints, trails, four tracks), three laps over hills against three
+cartoon dogs (Biscuit, Pepper, Waffle) with the puppy Scout riding in Viaan's car,
+steer/boost/brake controls, drift boosts, boost stars, zoom strips, coins, a
 loop-the-loop, a jump and a mega jump, a tunnel, boss races, and a finish card. Read `little-racer/README.md` when
 changing race rules, tracks, art, or sound. `race.js` holds all rules in track coordinates
 and runs in Node; `game.js` owns the scene, generated scenery, input and lifecycle;
+`dogs.js` builds every dog (drivers, the instanced crowd, the race-order faces) in code from `DOGS` in `race.js`;
 `audio.js` synthesizes music and effects. It imports Three.js from `sky-playground/vendor`,
 so keep those files in place. The car is an original Blender model with no real maker's
-name or badge. Nothing crashes the car, the loop carries every car round safely, rivals
+name or badge, and the dogs are original characters, not copies of a known cartoon. The car drives by itself (there is no go button). Nothing crashes the car, the loop carries every car round safely, rivals
 rubber-band to stay close, and there is no timer. Cups unlock vehicles and boss races. Coins only come from playing and unlock paints and trails; every
 finish earns a cup and nothing is ever lost. Choices, coins, unlocks and cups persist in
-`viaan-racer-v1`, validated by `normalizePrefs`.
+`viaan-racer-v1`, validated by `normalizePrefs`. `index.html` and `game.js` load their files with a `?v=` number; raise it in both whenever code or styles change.
 Run `node --test little-racer/*.test.mjs` after changes and verify a full race, a drift
-boost, an unlock, pause, saved choices, and portrait/landscape controls in a browser.
+boost, an unlock, pause, saved choices, and the garage and race display on a wide screen and a phone both ways up.
 
 ## Shared conventions
 

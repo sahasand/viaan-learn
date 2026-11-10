@@ -20,7 +20,7 @@ const careful = race => {
 };
 
 test('every track is a smooth closed loop that starts at the line heading along +x', () => {
-  assert.equal(R.TRACKS.length, 3);
+  assert.equal(R.TRACKS.length, 4);
   for (const definition of R.TRACKS) {
     const track = R.getTrack(definition.id);
     assert.ok(track.length > 750 && track.length < 1100, `${definition.id} length ${track.length}`);
@@ -55,7 +55,7 @@ test('track poses wrap around the lap and place lateral offsets on the driver’
 
 test('the grid puts Viaan behind three animal friends and nobody moves before GO', () => {
   const race = R.createRace('snow');
-  assert.deepEqual(race.cars.map(c => c.id), ['viaan', 'panda', 'penguin', 'frog']);
+  assert.deepEqual(race.cars.map(c => c.id), ['viaan', 'biscuit', 'pepper', 'waffle']);
   assert.ok(race.cars.every(c => c.d < 0));
   assert.equal(R.placeOf(race), 4);
   const events = [];
@@ -463,7 +463,7 @@ test('passing a friend is announced with their name, but not off the start line'
   const events = [];
   const race = drive('beach', careful, 60, (e, r) => { if (e === 'pass') events.push([r.time, r.passed]); });
   assert.ok(events.length >= 1 && events.length <= 12, `${events.length} passes`);
-  for (const [time, name] of events) { assert.ok(time > 4); assert.ok(['Panda', 'Penguin', 'Frog'].includes(name)); }
+  for (const [time, name] of events) { assert.ok(time > 4); assert.ok(['Biscuit', 'Pepper', 'Waffle'].includes(name)); }
   for (let i = 1; i < events.length; i++) assert.ok(events[i][0] - events[i - 1][0] > 2.5);
 });
 
@@ -476,10 +476,40 @@ test('the supercar model, portraits and page wiring are all present', () => {
   assert.ok(materials.includes('Paint'), 'the game repaints the Paint material');
   assert.ok(existsSync(here('./assets/supercar.blend')));
   assert.ok(existsSync(here('./assets/supercar.png')));
-  for (const rival of R.RIVALS) assert.ok(existsSync(here(`../memory-assets/${rival.id}.png`)), rival.id);
+  // Every driver is a cartoon dog with a full look, and the puppy who rides with Viaan is there too.
+  for (const id of ['scout', ...R.RIVALS.map(r => r.id), ...R.TRACKS.map(t => R.BOSSES[t.id].id)]) {
+    const look = R.DOGS[id]; assert.ok(look, id);
+    for (const key of ['fur', 'muzzle', 'ear', 'collar']) assert.match(look[key], /^#[0-9a-f]{6}$/, `${id} ${key}`);
+    assert.ok(['floppy', 'pointy'].includes(look.ears), id);
+  }
+  assert.ok(existsSync(here('./dogs.js')));
   for (const vendor of ['three.module.js', 'three.core.js', 'GLTFLoader.js', 'BufferGeometryUtils.js']) assert.ok(existsSync(here(`../sky-playground/vendor/${vendor}`)));
   const html = readFileSync(here('./index.html'), 'utf8'), game = readFileSync(here('./game.js'), 'utf8');
   for (const id of game.matchAll(/\$\('([A-Za-z]+)'\)/g)) assert.ok(html.includes(`id="${id[1]}"`), `missing #${id[1]}`);
   assert.match(html, /href="\.\.\/index\.html"/);
   assert.match(readFileSync(here('../index.html'), 'utf8'), /href="little-racer\/"/);
+});
+
+test('zoom strips sit on clear road and give a short boost each time they are crossed', () => {
+  for (const { id } of R.TRACKS) {
+    const track = R.getTrack(id), pads = R.padsFor(track);
+    assert.ok(pads.length >= 4 && pads.length <= 9, `${id} has ${pads.length} strips`);
+    for (const pad of pads) {
+      assert.ok(Math.abs(pad.lat) < R.HALF_ROAD - 2.7, 'the whole strip is on the road');
+      assert.equal(R.loopPhase(track, pad.s), -1);
+      for (const ramp of track.ramps) assert.ok(pad.s < ramp - 8 || pad.s > ramp + 40, 'not on a ramp or under a jump');
+    }
+  }
+  const race = R.createRace('beach'), player = R.playerOf(race), pad = race.pads[1];
+  race.phase = 'racing'; player.d = pad.s - 6; player.lat = pad.lat; player.speed = R.CRUISE;
+  const events = [];
+  for (let i = 0; i < 40; i++) events.push(...R.stepRace(race, { steer: 0, gas: true }, 1 / 60));
+  assert.equal(events.filter(e => e === 'pad').length, 1, 'one whoosh per crossing');
+  assert.ok(player.boost > 0 && player.boost <= R.PAD_SECONDS);
+  // Driving past in another lane does nothing.
+  const wide = R.createRace('beach'), other = R.playerOf(wide);
+  wide.phase = 'racing'; other.d = wide.pads[1].s - 6; other.lat = wide.pads[1].lat > 0 ? -5 : 5; other.speed = R.CRUISE;
+  let touched = 0;
+  for (let i = 0; i < 40; i++) touched += R.stepRace(wide, { steer: other.lat > 0 ? 1 : -1, gas: true }, 1 / 60).filter(e => e === 'pad').length;
+  assert.equal(touched, 0);
 });

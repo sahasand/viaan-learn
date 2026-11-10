@@ -1,43 +1,49 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../sky-playground/vendor/GLTFLoader.js';
-import { createSound } from './audio.js?v=6';
-import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, LOOP, STORAGE_KEY, PAINTS, TRAILS, CARS, BOSSES, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=6';
+import { createSound } from './audio.js?v=7';
+import { makeDog, poseDriver, portrait, makeCrowd } from './dogs.js?v=7';
+import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, LOOP, STORAGE_KEY, PAINTS, TRAILS, CARS, BOSSES, DOGS, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=7';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+// Every place has its own road: sunny tarmac, blue ice, a jungle dirt track and a rainbow among the stars.
 const THEMES = {
-  beach: { icon: '🏖️', top: '#2f9fe6', horizon: '#cfeef4', sun: [.45, .78, .35], road: '#5a626d', kerb: ['#eb6548', '#fff9e9'], verge: '#ecd9a4', hemi: '#c8b27a', dust: '#e6cf96', rock: '#d9b98a', amp: 8,
+  beach: { icon: '🏖️', top: '#2f9fe6', horizon: '#cfeef4', sun: [.45, .78, .35], road: '#6d7480', line: '#fffdf2', dash: '#ffd95a', shine: .82, kerb: ['#eb6548', '#fff9e9'], verge: '#ecd9a4', hemi: '#c8b27a', dust: '#e6cf96', rock: '#d9b98a', amp: 8,
     land: [[-2, '#dcc487'], [.8, '#f0dba0'], [5, '#c9da8f'], [11, '#8cc474']] },
-  snow: { icon: '🏔️', top: '#5b9de0', horizon: '#e8f2f9', sun: [-.5, .5, .45], road: '#566070', kerb: ['#2f7fe3', '#ffffff'], verge: '#eef4f9', hemi: '#b9cbd9', dust: '#ffffff', rock: '#bcd6ea', amp: 30,
+  snow: { icon: '🏔️', top: '#5b9de0', horizon: '#e8f2f9', sun: [-.5, .5, .45], road: '#9fc3e2', line: '#ffffff', dash: '#2f7fe3', shine: .3, kerb: ['#2f7fe3', '#ffffff'], verge: '#eef4f9', hemi: '#b9cbd9', dust: '#ffffff', rock: '#bcd6ea', amp: 30,
     land: [[0, '#f4f8fb'], [12, '#e6eff7'], [26, '#cfdfee'], [40, '#b9cfe4']] },
-  jungle: { icon: '🌴', top: '#3fa7c4', horizon: '#f4e6b8', sun: [.6, .42, -.5], road: '#575b63', kerb: ['#f7bf12', '#fff9e9'], verge: '#7dbb62', hemi: '#5c8a4c', dust: '#9ccf7a', rock: '#6d9a5c', amp: 15,
-    land: [[0, '#66ad5d'], [7, '#56a257'], [15, '#43934f'], [24, '#357f47']] }
+  jungle: { icon: '🌴', top: '#3fa7c4', horizon: '#f4e6b8', sun: [.6, .42, -.5], road: '#a8703f', line: '#f3deb0', dash: '#f3deb0', shine: .95, kerb: ['#f7bf12', '#fff9e9'], verge: '#7dbb62', hemi: '#5c8a4c', dust: '#c79a63', rock: '#6d9a5c', amp: 15,
+    land: [[0, '#66ad5d'], [7, '#56a257'], [15, '#43934f'], [24, '#357f47']] },
+  galaxy: { icon: '🚀', space: true, top: '#070522', horizon: '#3b1f7a', sun: [-.35, .62, .5], road: '#ffffff', line: '#ffffff', dash: '#ffffff', shine: .35, kerb: ['#ff5fa2', '#3df0c2'], verge: '#2a1d6b', hemi: '#8f7bd6', dust: '#cbb8ff', rock: '#6a55b0', amp: 0,
+    land: [[0, '#2a1d6b'], [1, '#2a1d6b']] }
 };
 const SWATCH = { gold: 'linear-gradient(135deg,#fff3b0,#ffc21a 45%,#c98a00)', rainbow: 'conic-gradient(#ff5f5f,#ffd24a,#58d68d,#4aa8ff,#b06bff,#ff5f5f)', galaxy: 'radial-gradient(circle at 30% 30%,#8f6bff,#2f1f7a 60%,#150c3d)' };
 const TRAIL_ICON = { none: '✕', bubbles: '🫧', ribbon: '🌈', fire: '🔥' };
 const ORDINALS = ['1st', '2nd', '3rd', '4th'];
-const FANS = ['bear', 'cat', 'dog', 'duck', 'elephant', 'giraffe', 'lion', 'owl', 'turtle'];
+// The crowd is a pack of dogs in every coat colour.
+const COATS = [['#f3c56d', '#fff4dc', '#d6953a'], ['#c9884a', '#fbe9cf', '#8a5527'], ['#fbfaf6', '#ffffff', '#c9884a'], ['#8d96aa', '#ffffff', '#5c6479'], ['#4a3f3a', '#d39a5c', '#2a2422'], ['#e9b98a', '#fff4dc', '#b9793f'], ['#fbfaf6', '#ffffff', '#2d2d36']];
 const PARTY = ['#eb6548', '#ffc44e', '#58c7b0', '#f2559c', '#5b8def', '#ffffff'];
 const sound = createSound();
 let renderer, scene, camera, hemisphere, sun, sky, pmrem, envScene, envGround, envTarget, world, builtTrack = '', race, heightAt = () => 0;
 let phase = 'loading', paused = false, lastTime = 0, clock = 0, lowQuality = false, slowFor = 0, rewardText = '';
 let toastUntil = 0, countdownUntil = 0, finishAt = 0, nextFirework = 0, nextSmoke = 0, lastCoinSound = 0, lastHud = 0, orderKey = '', frameKey = '';
 let cameraHeading = 0, cameraLat = 0, cameraRoll = 0, cameraKick = 0;
-let mapBase, mapView, weather, dotTexture, coinMesh, coinSpots = [], volcano = null;
+let mapBase, mapView, weather, dotTexture, coinMesh, coinSpots = [], volcano = null, pack = null, starfield = null, padTexture = null;
 let savedPrefs; try { savedPrefs = localStorage.getItem(STORAGE_KEY); } catch {}
 let prefs = normalizePrefs(savedPrefs);
-const starMeshes = [], lamps = [], crowd = [], floaters = [], fireRings = [], shiny = [], faces = {};
-const held = { left: new Set(), right: new Set(), gas: new Set(), brake: new Set(), nitro: new Set() };
+const starMeshes = [], lamps = [], floaters = [], fireRings = [], shiny = [], mugs = {};
+const held = { left: new Set(), right: new Set(), brake: new Set(), nitro: new Set() };
 // Every vehicle model, where its flames and driver sit, and how big its wheels are.
+// `seat` is where the dog driver sits: height, distance back from the middle, and size.
 const SPECS = {
-  supercar: { flame: [.27, .34, 3.1], head: [1.72, .3, 1.75], blob: [1.35, 2.7], wheel: .36 },
-  truck: { flame: [.5, 1.2, 2.95], head: [3.3, -.05, 2.5], blob: [1.9, 3.2], wheel: .66 },
-  formula: { flame: [.12, .5, 2.8], head: [1.5, .1, 1.4], blob: [1.3, 2.9], wheel: .35 }
+  supercar: { flame: [.27, .34, 3.1], seat: [.2, .42, .92], blob: [1.35, 2.7], wheel: .36 },
+  truck: { flame: [.5, 1.2, 2.95], seat: [1.05, .1, 1.3], blob: [1.9, 3.2], wheel: .66 },
+  formula: { flame: [.12, .5, 2.8], seat: [-.02, .25, .82], blob: [1.3, 2.9], wheel: .35 }
 };
 const CAR_ICON = { supercar: 'supercar', truck: 'truck', formula: 'formula' };
 const templates = {}, everyView = [], playerViews = {}, bossViews = {}, rivalViews = [];
-let views = [], bossMode = false, idleFor = 0, hinted = false, cruise = true;
+let views = [], bossMode = false;
 const basis = new THREE.Matrix4(), vf = new THREE.Vector3(), vu = new THREE.Vector3(), vr = new THREE.Vector3();
 const dummy = new THREE.Object3D(), tint = new THREE.Color(), va = new THREE.Vector3(), vb = new THREE.Vector3(), mapContext = $('map').getContext('2d');
 const rand = (() => { let n = 2027; return () => ((n = (n * 1664525 + 1013904223) >>> 0) / 4294967296); })();
@@ -178,12 +184,14 @@ const bannerTexture = () => canvasTexture(1024, 128, g => {
   g.fillStyle = '#eb6548'; g.font = '900 86px "Avenir Next", "Trebuchet MS", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText('LITTLE RACER', 512, 70);
 });
-function asphaltTexture(color) {
+function roadTexture(theme) {
   const texture = canvasTexture(256, 256, g => {
-    g.fillStyle = color; g.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 2600; i++) { g.fillStyle = rand() < .5 ? '#ffffff12' : '#00000016'; g.fillRect(rand() * 256, rand() * 256, 1 + rand() * 2, 1 + rand() * 2); }
-    g.fillStyle = '#00000012'; g.fillRect(52, 0, 34, 256); g.fillRect(170, 0, 34, 256);
-    g.fillStyle = '#fffdf2'; g.fillRect(9, 0, 5, 256); g.fillRect(242, 0, 5, 256); g.fillRect(125, 0, 6, 128);
+    g.fillStyle = theme.road; g.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 2600; i++) { g.fillStyle = rand() < .5 ? '#ffffff16' : '#00000016'; g.fillRect(rand() * 256, rand() * 256, 1 + rand() * 2, 1 + rand() * 2); }
+    // Two faint tyre lines, an edge line down each side and a dashed line along the middle.
+    g.fillStyle = theme.space ? '#ffffff30' : '#00000014'; g.fillRect(52, 0, 34, 256); g.fillRect(170, 0, 34, 256);
+    g.fillStyle = theme.line; g.fillRect(9, 0, 6, 256); g.fillRect(241, 0, 6, 256);
+    g.fillStyle = theme.dash; g.fillRect(124, 0, 8, 128);
   });
   texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = renderer.capabilities.getMaxAnisotropy(); return texture;
 }
@@ -192,13 +200,14 @@ const rampTexture = () => canvasTexture(512, 128, g => {
   g.strokeStyle = '#fff9e9'; g.lineWidth = 16; g.lineJoin = 'miter';
   for (let i = 0; i < 6; i++) { const x = 44 + i * 85; g.beginPath(); g.moveTo(x - 30, 100); g.lineTo(x, 34); g.lineTo(x + 30, 100); g.stroke(); }
 });
-function face(id) {
-  if (!faces[id]) {
-    const texture = new THREE.TextureLoader().load(`../memory-assets/${id}.png`); texture.colorSpace = THREE.SRGBColorSpace; texture.userData.keep = true;
-    faces[id] = new THREE.SpriteMaterial({ map: texture, transparent: true, alphaTest: .05 }); faces[id].userData.keep = true;
+// Yellow boards with black arrows show which way a corner bends.
+const arrowBoard = flip => new THREE.MeshStandardMaterial({ roughness: .6, map: canvasTexture(256, 96, g => {
+  g.fillStyle = '#ffcf3f'; g.fillRect(0, 0, 256, 96); g.fillStyle = '#1b2a2e';
+  for (let i = 0; i < 3; i++) {
+    const w = flip ? -1 : 1, x = flip ? 232 - i * 80 : 24 + i * 80;
+    g.beginPath(); g.moveTo(x, 12); g.lineTo(x + 28 * w, 12); g.lineTo(x + 58 * w, 48); g.lineTo(x + 28 * w, 84); g.lineTo(x, 84); g.lineTo(x + 30 * w, 48); g.closePath(); g.fill();
   }
-  return faces[id];
-}
+}) });
 function starGeometry() {
   const shape = new THREE.Shape();
   for (let i = 0; i < 10; i++) {
@@ -221,7 +230,7 @@ function disposeWorld() {
     if (o.geometry) o.geometry.dispose();
     if (o.material && !o.material.userData.keep) { if (o.material.map && !o.material.map.userData.keep) o.material.map.dispose(); o.material.dispose(); }
   });
-  scene.remove(world); starMeshes.length = lamps.length = crowd.length = floaters.length = fireRings.length = 0; weather = coinMesh = volcano = null;
+  scene.remove(world); starMeshes.length = lamps.length = floaters.length = fireRings.length = 0; weather = coinMesh = volcano = pack = starfield = null;
 }
 function buildTerrain(track, trackId, theme, cx, cz, reach) {
   const half = reach + 420, cells = 170, size = half * 2 / cells;
@@ -356,6 +365,13 @@ function buildLandmarks(track, trackId, s, shapes, m, cx, cz, reach) {
       const a = i * 1.26 + .5, ix = x + Math.cos(a) * 30 * k, iz = z + Math.sin(a) * 30 * k, iy = heightAt(ix, iz);
       s.put('snowball', sphere, m.snow, ix, iy, iz, 4.2, 3.3, 4.2); s.put('hat', box, m.hat, ix + Math.cos(a) * 3.9, iy + .9, iz + Math.sin(a) * 3.9, 1.5, 1.9, 1.5, -a);
     }
+  } else if (trackId === 'galaxy') {
+    // A rocket waits on a floating rock, ready for lift-off.
+    s.put('lmIsle', rock, m.rock, x, y - 5 * k, z, 26 * k, 9 * k, 24 * k, .4);
+    s.put('lmTower', tube, m.cream, x, y + 15 * k, z, 4.6 * k, 24 * k, 4.6 * k);
+    s.put('lmRoof', cone, m.coral, x, y + 32 * k, z, 4.6 * k, 10 * k, 4.6 * k);
+    for (let i = 0; i < 3; i++) { const a = i * 2.094 + .5; s.put('lmFin', box, m.coral, x + Math.cos(a) * 5.2 * k, y + 6.5 * k, z + Math.sin(a) * 5.2 * k, 4.4 * k, 9 * k, 1 * k, -a); }
+    for (let i = 0; i < 3; i++) { const a = i * 2.094 + 1.55; s.put('glow', sphere, new THREE.MeshBasicMaterial({ color: '#7fe9ff' }), x + Math.cos(a) * 4.3 * k, y + 21 * k, z + Math.sin(a) * 4.3 * k, 1.5 * k); }
   } else {
     // A stepped temple with a golden top, and a smoking volcano far away.
     const stone = mat('#b9ab8c', { roughness: 1, flatShading: true });
@@ -378,12 +394,14 @@ function buildWorld(trackId) {
   let cx = 0, cz = 0, reach = 0;
   for (let i = 0; i < track.n; i++) { cx += track.xs[i] / track.n; cz += track.zs[i] / track.n; }
   for (let i = 0; i < track.n; i++) reach = Math.max(reach, Math.hypot(track.xs[i] - cx, track.zs[i] - cz));
-  buildTerrain(track, trackId, theme, cx, cz, reach);
+  // The galaxy road floats in space, so there is no ground to build.
+  if (theme.space) heightAt = () => -12; else buildTerrain(track, trackId, theme, cx, cz, reach);
 
   // Road, kerbs, a wide level verge that slopes down to the ground, and the chequered start line.
-  world.add(ribbon(track, -HALF_ROAD, HALF_ROAD, .03, .03, 2, () => '#ffffff', new THREE.MeshStandardMaterial({ map: asphaltTexture(theme.road), roughness: .82 })));
+  world.add(ribbon(track, -HALF_ROAD, HALF_ROAD, .03, .03, 2, i => theme.space ? '#' + tint.setHSL((i * .012) % 1, 1, .6).getHexString() : '#ffffff', new THREE.MeshStandardMaterial({ map: roadTexture(theme), roughness: theme.shine, vertexColors: true })));
   for (const side of [-1, 1]) {
-    const edge = (a, b, ya, yb, length, color) => world.add(side < 0 ? ribbon(track, -b, -a, yb, ya, length, color) : ribbon(track, a, b, ya, yb, length, color));
+    const glass = () => theme.space ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .35, transparent: true, opacity: .62 }) : undefined;
+    const edge = (a, b, ya, yb, length, color) => world.add(side < 0 ? ribbon(track, -b, -a, yb, ya, length, color, glass()) : ribbon(track, a, b, ya, yb, length, color, glass()));
     edge(HALF_ROAD, HALF_ROAD + 1, .04, .04, 3, i => theme.kerb[i % 2]);
     edge(HALF_ROAD + 1, 14, 0, 0, 3, () => theme.verge);
     edge(14, 18.5, 0, -1.3, 3, () => theme.verge);
@@ -424,12 +442,29 @@ function buildWorld(trackId) {
     return { x: p.x, y: p.y + (coin.air ? 1.5 + (mega ? 30 : 9.6) * t * (1 - t) : 1.05), z: p.z };
   });
 
-  const shapes = { sphere: new THREE.SphereGeometry(1, 12, 8), cone: new THREE.ConeGeometry(1, 1, 9), tube: new THREE.CylinderGeometry(1, 1, 1, 10), rock: new THREE.DodecahedronGeometry(1), box: new THREE.BoxGeometry(1, 1, 1), flag: new THREE.BufferGeometry() };
-  const { sphere, cone, tube, rock, box, flag } = shapes;
+  // Zoom strips: glowing arrows painted on the road that slide forward.
+  if (!padTexture) {
+    padTexture = canvasTexture(128, 128, g => {
+      g.fillStyle = '#1787ff'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#ffe14d'; g.fillRect(0, 0, 9, 128); g.fillRect(119, 0, 9, 128); g.strokeStyle = '#ffffff'; g.lineWidth = 15; g.lineJoin = 'round'; g.lineCap = 'round';
+      for (let i = 0; i < 2; i++) { const y = 56 + i * 64; g.beginPath(); g.moveTo(24, y); g.lineTo(64, y - 38); g.lineTo(104, y); g.stroke(); }
+    });
+    padTexture.wrapT = THREE.RepeatWrapping; padTexture.userData.keep = true;
+  }
+  const padMaterial = new THREE.MeshBasicMaterial({ map: padTexture });
+  for (const pad of sample.pads) {
+    const positions = [], uvs = [], index = [], rows = 6;
+    for (let r = 0; r <= rows; r++) for (const u of [0, 1]) { const p = trackPose(track, pad.s - 3.6 + 7.2 * r / rows, pad.lat + (u ? 2.7 : -2.7)); positions.push(p.x, p.y + .08, p.z); uvs.push(u, r / rows * 1.5); }
+    for (let r = 0; r < rows; r++) { const k = r * 2; index.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+    world.add(custom(positions, index, padMaterial, uvs));
+  }
+
+  const shapes = { sphere: new THREE.SphereGeometry(1, 12, 8), cone: new THREE.ConeGeometry(1, 1, 9), tube: new THREE.CylinderGeometry(1, 1, 1, 10), rock: new THREE.DodecahedronGeometry(1), box: new THREE.BoxGeometry(1, 1, 1), flag: new THREE.BufferGeometry(),
+    arc: new THREE.TorusGeometry(HALF_ROAD + 3.4, .6, 8, 8, Math.PI / 6), hoop: new THREE.TorusGeometry(1, .035, 6, 44).rotateX(Math.PI / 2) };
+  const { sphere, cone, tube, rock, box, flag, arc, hoop } = shapes;
   flag.setAttribute('position', new THREE.Float32BufferAttribute([-.5, 0, 0, .5, 0, 0, 0, -1, 0], 3)); flag.computeVertexNormals();
   const m = { trunk: mat('#a9794a'), palm: mat('#4fae5d'), leaf: mat('#2f8f4f'), deep: mat('#237a45'), pine: mat('#2c7a5a'), snow: mat('#ffffff', { roughness: .6 }),
-    rock: mat(trackId === 'snow' ? '#aab8c6' : '#b9ab8e', { flatShading: true }), coral: mat('#eb6548'), gold: mat('#ffc44e'), pink: mat('#f58fb4'), hat: mat('#28424a'), cream: mat('#fff9e9'), cloud: mat('#ffffff', { roughness: 1 }) };
-  const s = scatterer();
+    rock: mat(trackId === 'snow' ? '#aab8c6' : theme.space ? theme.rock : '#b9ab8e', { flatShading: true }), teal: mat('#58c7b0'), ice: mat('#9fe6ff', { roughness: .15 }), coral: mat('#eb6548'), gold: mat('#ffc44e'), pink: mat('#f58fb4'), hat: mat('#28424a'), cream: mat('#fff9e9'), cloud: mat('#ffffff', { roughness: 1 }) };
+  const s = scatterer(), gems = [new THREE.MeshBasicMaterial({ color: '#7fe9ff' }), new THREE.MeshBasicMaterial({ color: '#ff8ad0' })];
 
   // The mega jump flies over a line of buses and through two rings of fire.
   for (const lane of [-3.5, 3.5]) for (let k = 0; k < 3; k++) {
@@ -443,21 +478,44 @@ function buildWorld(trackId) {
     fireRings.push({ x: ring.position.x, y: ring.position.y, z: ring.position.z, rx: Math.cos(p.heading), rz: Math.sin(p.heading) });
   }
   // Red and white barriers line the outside of every corner.
+  const walls = [mat(theme.kerb[0]), mat(theme.kerb[1])], boards = [arrowBoard(false), arrowBoard(true)];
   for (let d = 0; d < track.length; d += 2.5) {
     const k = trackPose(track, d, 0).k; if (Math.abs(k) < .0105 || inFeature(track, d, 6)) continue;
-    const p = trackPose(track, d, -Math.sign(k) * (EDGE + 1.4)), odd = Math.round(d / 2.5) % 2;
-    s.put(odd ? 'wallA' : 'wallB', box, odd ? m.coral : m.cream, p.x, p.y + .5, p.z, .8, 1, 2.3, -p.heading);
+    const p = trackPose(track, d, -Math.sign(k) * (EDGE + 1.4)), n = Math.round(d / 2.5), odd = n % 2;
+    s.put(odd ? 'wallA' : 'wallB', box, walls[odd], p.x, p.y + .5, p.z, .8, 1, 2.3, -p.heading);
+    // Arrow boards stand behind the barrier and point round the bend.
+    if (n % 6 === 0) {
+      const q = trackPose(track, d, -Math.sign(k) * (EDGE + 3.2));
+      s.put(k > 0 ? 'signR' : 'signL', box, boards[k > 0 ? 0 : 1], q.x, q.y + 2.4, q.z, 3.8, 1.4, .18, -q.heading);
+      s.put('pole', tube, m.cream, q.x, q.y + .9, q.z, .1, 1.8, .1);
+    }
   }
-  // Animal fans cheer from the start line and from little groups around the lap.
+  // Striped arches stand over the road; in space they are glowing rings to fly through.
+  for (const part of [.34, .58, .86]) {
+    let d = track.length * part; while (inFeature(track, d, 26)) d += 22;
+    const p = trackPose(track, d, 0);
+    if (theme.space) { const ring = new THREE.Mesh(new THREE.TorusGeometry(HALF_ROAD + 5, .45, 8, 48), new THREE.MeshBasicMaterial({ color: theme.kerb[Math.round(part * 10) % 2] })); ring.position.set(p.x, p.y + 4.5, p.z); ring.rotation.y = -p.heading; world.add(ring); }
+    else for (let i = 0; i < 6; i++) s.put('arch' + i % 2, arc, walls[i % 2], p.x, p.y - .4, p.z, 1, 1, 1, -p.heading, i * Math.PI / 6);
+  }
+  // A pack of dogs cheers from the grandstand at the start line and from little groups around the lap.
+  const fans = [];
   const fan = (d, lat, raised) => {
     if (inFeature(track, d, 8)) return;
-    const p = trackPose(track, d, lat), sprite = new THREE.Sprite(face(FANS[Math.floor(rand() * FANS.length)]));
-    sprite.scale.set(2.1, 2.1, 1); sprite.position.set(p.x, p.y + raised + 1.05, p.z); sprite.userData = { base: p.y + raised + 1.05, beat: rand() * 6, d: ((d % track.length) + track.length) % track.length, back: raised > 0 };
-    if (raised) s.put('stand' + (Math.round(d) % 2), box, Math.round(d) % 2 ? m.coral : m.gold, p.x, p.y + raised / 2, p.z, 2.4, raised, 3.3, -p.heading);
-    world.add(sprite); crowd.push(sprite);
+    const p = trackPose(track, d, lat), side = Math.sign(lat), coat = COATS[Math.floor(rand() * COATS.length)], kind = rand();
+    const look = { fur: coat[0], muzzle: coat[1], ear: coat[2], ears: rand() < .65 ? 'floppy' : 'pointy', collar: PARTY[Math.floor(rand() * 5)], patch: kind < .25 ? coat[2] : null, spots: kind > .86 ? coat[2] : null };
+    // Each dog faces the road, turned a little toward the cars coming.
+    fans.push({ x: p.x, y: p.y + raised, z: p.z, facing: Math.atan2(-Math.cos(p.heading) * side, -Math.sin(p.heading) * side) + side * .3 + (rand() - .5) * .4, look, scale: .9 + rand() * .28, beat: rand() * 6, d: ((d % track.length) + track.length) % track.length, back: raised > 0 });
+    if (!raised) return;
+    const odd = Math.round(d / 3.6) % 2, back = trackPose(track, d, lat + side * 1.5);
+    s.put('stand' + odd, box, odd ? m.coral : m.gold, p.x, p.y + raised / 2, p.z, 2.6, raised, 3.7, -p.heading);
+    s.put('roof' + odd, box, odd ? m.cream : m.coral, p.x, p.y + raised + 3.5, p.z, 3.6, .22, 3.7, -p.heading);
+    s.put('pole', tube, m.cream, back.x, back.y + raised / 2 + 1.75, back.z, .1, raised + 3.5, .1);
   };
-  for (let d = -27; d < 46; d += 3.3) for (const side of [-1, 1]) { fan(d, side * (HALF_ROAD + 3.3), 0); if (side < 0 || d < 6) fan(d + 1.6, side * (HALF_ROAD + 5.6), 1.2); }
-  for (let g = 1; g < 7; g++) { const d = track.length * g / 7 + 20, side = g % 2 ? 1 : -1; for (let i = 0; i < 3; i++) fan(d + i * 2.4, side * (HALF_ROAD + 3.4), 0); }
+  for (let d = -27; d < 46; d += 3.6) for (const side of [-1, 1]) { fan(d, side * (HALF_ROAD + 3.3), 0); if (side < 0 || d < 6) fan(d + 1.8, side * (HALF_ROAD + 5.7), 1.2); }
+  for (let g = 1; g < 7; g++) { const d = track.length * g / 7 + 20, side = g % 2 ? 1 : -1; for (let i = 0; i < 3; i++) fan(d + i * 2.6, side * (HALF_ROAD + 3.4), 0); }
+  // The front row comes first, so a slow device can leave the back row out.
+  fans.sort((a, b) => a.back - b.back);
+  pack = makeCrowd(fans); pack.show(lowQuality ? .55 : 1); world.add(pack.group);
   // Bunting hangs over the road in three places.
   for (const part of [.2, .47, .7]) {
     let d = track.length * part; while (inFeature(track, d, 30)) d += 25;
@@ -478,7 +536,13 @@ function buildWorld(trackId) {
     const kind = rand(), size = .8 + rand() * .7, turn = rand() * 6, y = heightAt(p.x, p.z) - .15;
     let near = 1e9; for (let j = 0; j < track.n; j += 3) near = Math.min(near, Math.hypot(track.xs[j] - p.x, track.zs[j] - p.z));
     if (near < 19.5) continue;
-    if (trackId === 'beach') {
+    if (theme.space) {
+      // Rocks, little moons and glowing crystals drift all around the road.
+      const high = p.y + (rand() - .62) * 44;
+      if (kind < .55 || (kind >= .8 && near < 55)) s.put('rock', rock, m.rock, p.x, high, p.z, (1.5 + rand() * 4) * size, (1 + rand() * 2.4) * size, (1.4 + rand() * 3.4) * size, turn, turn);
+      else if (kind < .8) { s.put('rock', rock, m.rock, p.x, high, p.z, 3.4 * size, 1.5 * size, 3 * size, turn); for (let c = 0; c < 3; c++) s.put('glowGem' + c % 2, cone, gems[c % 2], p.x + Math.cos(turn + c * 2.1) * size, high + 1.2 * size + c * .4, p.z + Math.sin(turn + c * 2.1) * size, .55 * size, (2.6 + c) * size, .55 * size, turn, (c - 1) * .3); }
+      else { const moon = PARTY[Math.floor(rand() * 5)]; s.put('moon' + moon, sphere, mat(moon, { roughness: .9 }), p.x, high + 14, p.z, 4.5 * size); if (kind > .88) s.put('hoop', hoop, m.cream, p.x, high + 14, p.z, 7.6 * size, 7.6 * size, 7.6 * size, turn, .4); }
+    } else if (trackId === 'beach') {
       if (y < .15) continue;
       if (kind < .5) palm(p.x, y, p.z, size, m.palm, 'palm');
       else if (kind < .68) { s.put('stick', tube, m.snow, p.x, y + 1.4, p.z, .07, 2.8, .07); s.put(kind < .59 ? 'shadeA' : 'shadeB', cone, kind < .59 ? m.coral : m.gold, p.x, y + 3, p.z, 2.3, .9, 2.3, turn); }
@@ -506,19 +570,70 @@ function buildWorld(trackId) {
       } else palm(p.x, y, p.z, size * 1.15, m.deep, 'fern');
     }
   }
+  // Each place has its own things standing just beyond the verge, close enough to see as you race by.
+  for (let i = 0; i < 54; i++) {
+    const d = 64 + rand() * (track.length - 120), side = rand() < .5 ? -1 : 1, pick = rand(), turn = rand() * 6, size = .85 + rand() * .4;
+    if (inFeature(track, d, 12)) continue;
+    const p = trackPose(track, d, side * (theme.space ? 14.6 + rand() * 2.6 : 20.5 + rand() * 4)), y = theme.space ? p.y - .5 : heightAt(p.x, p.z) - .1;
+    let near = 1e9; for (let j = 0; j < track.n; j += 3) near = Math.min(near, Math.hypot(track.xs[j] - p.x, track.zs[j] - p.z));
+    if (near < (theme.space ? 13.5 : 19.5) || (trackId === 'beach' && y < .3)) continue;
+    // `to` steps toward the road, so doors and faces look at the cars.
+    const tx = -Math.cos(p.heading) * side, tz = -Math.sin(p.heading) * side;
+    if (theme.space) {
+      for (let c = 0; c < 3; c++) s.put('glowGem' + (i + c) % 2, cone, gems[(i + c) % 2], p.x + Math.cos(turn + c * 2.1) * .7, y + (1.1 + c * .5) * size, p.z + Math.sin(turn + c * 2.1) * .7, .5 * size, (2.2 + c) * size, .5 * size, turn, (c - 1) * .28);
+    } else if (trackId === 'beach') {
+      if (pick < .4) for (let b = 0; b < 3; b++) s.put('board' + b, sphere, [m.coral, m.teal, m.gold][b], p.x + Math.sin(p.heading) * (b - 1) * 1.15, y + 1.55, p.z - Math.cos(p.heading) * (b - 1) * 1.15, .42, 1.7, .1, -p.heading + Math.PI / 2, (b - 1) * .14);
+      else if (pick < .72) {
+        const hut = [m.teal, m.pink, m.gold][i % 3];
+        s.put('hut' + i % 3, box, hut, p.x, y + 1.4, p.z, 3.2, 2.8, 3.2, -p.heading); s.put('hutRoof', cone, m.cream, p.x, y + 3.7, p.z, 2.9, 1.8, 2.9, -p.heading + .78);
+        s.put('door', box, m.hat, p.x + tx * 1.56, y + 1, p.z + tz * 1.56, 1.1, 2, 1.1, -p.heading);
+      } else {
+        // A giant ice cream.
+        s.put('wafer', cone, mat('#e2a45c'), p.x, y + 1.5, p.z, 1.25 * size, -3 * size, 1.25 * size);
+        s.put('scoopA', sphere, m.pink, p.x, y + 3.6 * size, p.z, 1.35 * size); s.put('scoopB', sphere, m.cream, p.x, y + 5.2 * size, p.z, 1.1 * size); s.put('ballA', sphere, m.coral, p.x, y + 6.4 * size, p.z, .36 * size);
+      }
+    } else if (trackId === 'snow') {
+      if (pick < .36) { s.put('snowball', sphere, m.snow, p.x, y, p.z, 2.9 * size, 2.3 * size, 2.9 * size); s.put('door', box, m.hat, p.x + tx * 2.5 * size, y + .7, p.z + tz * 2.5 * size, 1.3, 1.5, 1.3, -p.heading); }
+      else if (pick < .72) { for (let c = 0; c < 6; c++) s.put(c % 2 ? 'caneA' : 'caneB', tube, c % 2 ? m.cream : m.coral, p.x, y + .35 + c * .7, p.z, .2, .7, .2); s.put('ballA', sphere, m.coral, p.x, y + 4.5, p.z, .42); }
+      else for (let c = 0; c < 4; c++) s.put('ice', cone, m.ice, p.x + Math.cos(turn + c * 1.6) * .8, y + (1 + c * .45) * size, p.z + Math.sin(turn + c * 1.6) * .8, .6 * size, (2.4 + c * .9) * size, .6 * size, turn, (c - 1.5) * .22);
+    } else {
+      if (pick < .38) {
+        s.put('stalk', tube, m.cream, p.x, y + 1.2 * size, p.z, .5 * size, 2.4 * size, .5 * size); s.put('shroom', sphere, m.coral, p.x, y + 2.6 * size, p.z, 2.2 * size, 1.15 * size, 2.2 * size);
+        for (let c = 0; c < 5; c++) s.put('dot', sphere, m.cream, p.x + Math.cos(turn + c * 1.26) * 1.25 * size, y + 3.35 * size, p.z + Math.sin(turn + c * 1.26) * 1.25 * size, .3 * size, .16 * size, .3 * size);
+      } else if (pick < .7) {
+        [m.gold, m.coral, m.teal].forEach((paint, c) => s.put('totem' + c, box, paint, p.x, y + .7 + c * 1.4, p.z, 1.5, 1.4, 1.5, -p.heading));
+        s.put('totemWing', box, m.coral, p.x, y + 3.4, p.z, .5, .5, 4, -p.heading);
+        for (const eye of [-1, 1]) s.put('dot', sphere, m.cream, p.x + tx * .78 + Math.sin(p.heading) * eye * .36, y + 2.3, p.z + tz * .78 - Math.cos(p.heading) * eye * .36, .2);
+      } else {
+        s.put('stem', tube, m.leaf, p.x, y + 1.5 * size, p.z, .14, 3 * size, .14); s.put('flowerB', sphere, m.gold, p.x, y + 3.1 * size, p.z, .6 * size);
+        for (let c = 0; c < 6; c++) s.put('flowerA', sphere, m.pink, p.x + Math.cos(c * 1.047) * .95 * size, y + 3.05 * size, p.z + Math.sin(c * 1.047) * .95 * size, .62 * size, .2 * size, .42 * size, -c * 1.047);
+      }
+    }
+  }
+  // In space, little lights mark both edges of the road like a runway.
+  if (theme.space) for (let d = 0; d < track.length; d += 7) {
+    if (inFeature(track, d, 2)) continue;
+    for (const side of [-1, 1]) { const p = trackPose(track, d, side * (HALF_ROAD + 1.7)); s.put('glowLamp' + Math.round(d / 7) % 2, sphere, gems[Math.round(d / 7) % 2], p.x, p.y + .32, p.z, .2); }
+  }
   buildLandmarks(track, trackId, s, shapes, m, cx, cz, reach);
-  for (let i = 0; i < 18; i++) {
+  if (!theme.space) for (let i = 0; i < 18; i++) {
     const a = rand() * Math.PI * 2, r = 60 + rand() * 420, x = cx + Math.cos(a) * r, y = 85 + rand() * 50, z = cz + Math.sin(a) * r;
     for (let j = 0; j < 4; j++) s.put('cloud', sphere, m.cloud, x + (j - 1.5) * 8, y + (j % 2 ? 3 : 0), z, 9 + rand() * 5, 5 + rand() * 3, 7 + rand() * 4);
   }
   // Far hills give the horizon a shape for each place.
   const far = mat(trackId === 'snow' ? '#e7eff6' : trackId === 'beach' ? '#86c79a' : '#3f8a52', { roughness: 1, flatShading: trackId === 'snow' }), far2 = mat(trackId === 'snow' ? '#c9dbe9' : trackId === 'beach' ? '#6fb98a' : '#357a49', { roughness: 1, flatShading: trackId === 'snow' });
-  for (let i = 0; i < 14; i++) {
+  // Planets hang in the sky around the galaxy road, two of them with rings.
+  if (theme.space) [['#ff9a5a', '#ffe0b8'], ['#4fd6c4', '#c9fff5'], ['#ff7db8', '#ffd9ee'], ['#7aa2ff', '#e2eaff'], ['#ffd95a', '#fff5c9'], ['#b98cff', '#eadcff']].forEach(([shade, light], i) => {
+    const a = i * 1.07 + .5, r = reach + 250 + rand() * 150, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r, y = -20 + rand() * 170, size = 30 + rand() * 44;
+    s.put('farWorld' + i, sphere, mat(shade, { roughness: 1, fog: false }), x, y, z, size);
+    if (i % 2 === 0) s.put('farRing' + i, hoop, mat(light, { roughness: 1, fog: false }), x, y, z, size * 1.75, size * 1.75, size * 1.75, a, .42);
+  });
+  else for (let i = 0; i < 14; i++) {
     const a = i / 14 * Math.PI * 2 + rand() * .3, r = reach + 300 + rand() * 110, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r, w = 60 + rand() * 60;
     if (trackId === 'snow') s.put('far' + i % 2, cone, i % 2 ? far : far2, x, 60 + w * .35, z, w, 130 + w * .7, w, a);
     else s.put('far' + i % 2, sphere, i % 2 ? far : far2, x, -2, z, w * 1.3, 30 + w * .4, w * 1.3);
   }
-  s.build(world, ['cloud', 'far', 'flag', 'flower', 'nose', 'glow', 'lmFlag', 'busGlass']);
+  s.build(world, ['cloud', 'far', 'flag', 'flower', 'nose', 'glow', 'lmFlag', 'busGlass', 'dot', 'hoop', 'moon', 'sign', 'roof']);
 
   // Hot-air balloons drift overhead; sailboats bob off the beach.
   for (let i = 0; i < 5; i++) {
@@ -526,7 +641,13 @@ function buildWorld(trackId) {
     const envelope = new THREE.Mesh(sphere, mat(colors[0], { roughness: .6 })); envelope.scale.set(5, 6.2, 5);
     const band = new THREE.Mesh(sphere, mat(colors[1], { roughness: .6 })); band.scale.set(5.12, 1.7, 5.12);
     const basket = new THREE.Mesh(box, m.trunk); basket.scale.set(1.5, 1.2, 1.5); basket.position.y = -8;
-    group.add(envelope, band, basket); group.position.set(cx + Math.cos(a) * r, 48 + rand() * 30, cz + Math.sin(a) * r);
+    if (theme.space) {
+      // Flying saucers instead of balloons.
+      const disc = new THREE.Mesh(sphere, mat('#d5dbea', { metalness: .55, roughness: .3 })); disc.scale.set(7, 1.25, 7);
+      const dome = new THREE.Mesh(sphere, mat(colors[0], { roughness: .2 })); dome.scale.set(3.2, 2.6, 3.2); dome.position.y = .9;
+      const beam = new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: colors[1] })); beam.scale.set(2.4, .5, 2.4); beam.position.y = -1.1;
+      group.add(disc, dome, beam);
+    } else group.add(envelope, band, basket); group.position.set(cx + Math.cos(a) * r, 48 + rand() * 30, cz + Math.sin(a) * r);
     group.userData = { base: group.position.y, beat: rand() * 6, rise: 1.5 }; world.add(group); floaters.push(group);
   }
   if (trackId === 'beach') for (let i = 0; i < 7; i++) {
@@ -538,12 +659,24 @@ function buildWorld(trackId) {
     group.userData = { base: -1, beat: rand() * 6, rise: .25 }; world.add(group); floaters.push(group);
   }
   // Snowflakes fall on the mountain; golden pollen drifts through the jungle.
+  if (theme.space) {
+    // Stars all around, near and far; they travel with the camera so they never get closer.
+    starfield = new THREE.Group(); starfield.userData.far = true;
+    for (const [count, size] of [[1500, 2.2], [260, 4.2]]) {
+      const positions = new Float32Array(count * 3);
+      for (let i = 0; i < count; i++) { const a = rand() * Math.PI * 2, h = rand() * 2 - 1, r = Math.sqrt(1 - h * h) * 780; positions.set([Math.cos(a) * r, h * 780, Math.sin(a) * r], i * 3); }
+      const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const points = new THREE.Points(geometry, new THREE.PointsMaterial({ map: dotTexture, color: size > 3 ? '#fff3c9' : '#ffffff', size, sizeAttenuation: false, transparent: true, alphaTest: .2, depthWrite: false, fog: false }));
+      points.frustumCulled = false; points.renderOrder = -1; starfield.add(points);
+    }
+    world.add(starfield);
+  }
   if (trackId !== 'beach' && !reducedMotion) {
     const count = trackId === 'snow' ? 800 : 320, positions = new Float32Array(count * 3);
     for (let i = 0; i < count * 3; i++) positions[i] = (rand() - .5) * (i % 3 === 1 ? 44 : 90);
     const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    weather = new THREE.Points(geometry, new THREE.PointsMaterial({ map: dotTexture, color: trackId === 'snow' ? '#ffffff' : '#ffe28a', size: trackId === 'snow' ? .5 : .32, transparent: true, alphaTest: .2, depthWrite: false, fog: false }));
-    weather.material.userData.keep = true; weather.frustumCulled = false; weather.userData.fall = trackId === 'snow' ? 6 : -.7; world.add(weather);
+    weather = new THREE.Points(geometry, new THREE.PointsMaterial({ map: dotTexture, color: trackId === 'snow' ? '#ffffff' : theme.space ? '#d9ccff' : '#ffe28a', size: trackId === 'snow' ? .5 : .32, transparent: true, alphaTest: .2, depthWrite: false, fog: false }));
+    weather.material.userData.keep = true; weather.frustumCulled = false; weather.userData.fall = trackId === 'snow' ? 6 : theme.space ? -.25 : -.7; world.add(weather);
   }
   drawMapBase(track);
 }
@@ -552,11 +685,12 @@ function updateWorld(dt) {
   // Start lamps: red, red, red, then green for go.
   const lit = phase === 'countdown' ? 4 - Math.ceil(race.countdown) : 0, green = phase === 'racing' && race.time < 1.6;
   lamps.forEach((lamp, i) => lamp.material.color.set(green ? '#3df07a' : i < lit ? '#ff3b30' : '#3a2626'));
-  for (const fan of crowd) {
-    const near = Math.abs(((fan.userData.d - s + length * 1.5) % length) - length / 2) < 45;
-    fan.visible = !(lowQuality && fan.userData.back);
-    fan.position.y = fan.userData.base + (reducedMotion ? 0 : Math.abs(Math.sin(clock * (near ? 9 : 3) + fan.userData.beat)) * (near ? .55 : .15));
-  }
+  // Dogs wave and wag their tails, and throw both paws up as Viaan drives by. Far-away dogs keep still.
+  if (pack) pack.update(clock, spot => {
+    const gap = Math.abs(((spot.d - s + length * 1.5) % length) - length / 2);
+    return gap > 150 ? -1 : phase === 'garage' ? 0 : clamp(1.7 - gap / 34, 0, 1);
+  }, reducedMotion);
+  if (!reducedMotion && padTexture) padTexture.offset.y = -(clock * 1.7 % 1);
   for (const thing of floaters) if (!reducedMotion) thing.position.y = thing.userData.base + Math.sin(clock * .6 + thing.userData.beat) * thing.userData.rise;
   race.stars.forEach((star, i) => {
     const mesh = starMeshes[i]; if (!mesh) return;
@@ -601,7 +735,7 @@ function applyPaint(material, id) {
   else if (id === 'galaxy') { Object.assign(material, { metalness: .7, roughness: .25, envMapIntensity: .9, emissiveIntensity: .4 }); material.emissive.set('#3a1fa8'); }
   else Object.assign(material, { metalness: .1, roughness: .34, envMapIntensity: .5 });
 }
-function makeCar(model, color, portrait) {
+function makeCar(model, color, driver) {
   const spec = SPECS[model], group = new THREE.Group(), lift = new THREE.Group(), body = templates[model].clone(true);
   const coat = new THREE.MeshPhysicalMaterial({ color, metalness: .1, roughness: .34, clearcoat: .9, clearcoatRoughness: .08, envMapIntensity: .5 });
   shiny.push(coat); if (envTarget) coat.envMap = envTarget.texture;
@@ -614,16 +748,17 @@ function makeCar(model, color, portrait) {
     flame.rotation.x = Math.PI / 2; flame.position.set(side * spec.flame[0], spec.flame[1], spec.flame[2]); flame.visible = false; return flame;
   });
   lift.rotation.order = 'YXZ'; lift.add(body, ...flames);
-  // Each animal pokes its head out through the roof of its car.
-  if (portrait) { const head = new THREE.Sprite(face(portrait)); head.scale.set(spec.head[2], spec.head[2], 1); head.position.set(0, spec.head[0], spec.head[1]); lift.add(head); }
+  // A dog drives every car, poking out through the roof with its paws on top and its ears in the wind.
+  const dog = makeDog(DOGS[driver], true);
+  dog.group.position.set(0, spec.seat[0], spec.seat[1]); dog.group.scale.setScalar(spec.seat[2]); dog.group.rotation.y = Math.PI; lift.add(dog.group);
   group.add(lift, blob); group.visible = false; scene.add(group);
-  const view = { model, spec, group, lift, wheels, paint: coat, flames, blob, spin: 0 };
+  const view = { model, spec, group, lift, wheels, paint: coat, flames, blob, dog, spin: 0 };
   everyView.push(view); return view;
 }
-// Puts the right vehicles on the grid: Viaan's chosen one, then his friends or the boss.
+// Puts the right vehicles on the grid: Viaan's chosen one with his puppy Scout, then his friends or the boss.
 function seatViews() {
   for (const view of everyView) view.group.visible = false;
-  const mine = playerViews[prefs.car] || (playerViews[prefs.car] = makeCar(prefs.car, paint().color, null));
+  const mine = playerViews[prefs.car] || (playerViews[prefs.car] = makeCar(prefs.car, paint().color, 'scout'));
   applyPaint(mine.paint, prefs.paint);
   if (race.boss) {
     const boss = BOSSES[race.trackId];
@@ -656,6 +791,7 @@ function updateCars(dt) {
     view.wheels.forEach((wheel, w) => wheel.rotation.set(view.spin, w < 2 ? -car.steer * .32 : 0, 0));
     view.blob.visible = !sun.castShadow && !looping; view.blob.scale.set(view.spec.blob[0] / (1 + rise * .25), view.spec.blob[1] / (1 + rise * .25), 1);
     for (const flame of view.flames) { flame.visible = car.boost > 0; flame.scale.y = .8 + Math.sin(clock * 40 + i) * .3; }
+    poseDriver(view.dog, clock, phase === 'garage' ? 0 : car.speed, car.steer, car.boost > 0, flying, reducedMotion);
     if (paused || phase === 'garage' || looping) return;
     // Effects trail from the back wheels.
     const backX = f.x - fx * 2, backZ = f.z - fz * 2, ground = f.y + rise, off = Math.abs(car.lat) > HALF_ROAD && !flying, wheel = () => (rand() < .5 ? -1 : 1) * .95;
@@ -678,15 +814,17 @@ function updateCars(dt) {
 /* ---------- camera ---------- */
 function applyFrame() {
   // Slide the picture so the car stays clear of the garage and finish cards.
-  const w = innerWidth, h = innerHeight, narrow = w <= 650, card = phase === 'garage' || phase === 'finished';
+  // The garage is a sheet at the bottom of a narrow screen, one card on the left of a short screen and two side cards on a wide one.
+  const w = innerWidth, h = innerHeight, garage = phase === 'garage', card = garage || phase === 'finished';
   const key = [w, h, phase].join();
   if (key === frameKey) return;
   frameKey = key;
   camera.aspect = w / h; camera.fov = w / h < .8 ? 74 : 58;
   if (!card) camera.clearViewOffset();
-  else if (narrow) camera.setViewOffset(w, h, 0, h * (phase === 'garage' ? .3 : .24), w, h);
-  else if (h <= 500) camera.setViewOffset(w, h, (phase === 'garage' ? -1 : 1) * w * .24, 0, w, h);
-  else camera.setViewOffset(w, h, (phase === 'garage' ? -1 : 1) * w * .14, 0, w, h);
+  else if (h <= 500 && w > h) camera.setViewOffset(w, h, (garage ? -1 : 1) * w * .24, 0, w, h);
+  else if (w < (garage ? 900 : 651)) camera.setViewOffset(w, h, 0, h * (garage ? .3 : .24), w, h);
+  else if (garage) camera.clearViewOffset();
+  else camera.setViewOffset(w, h, w * .14, 0, w, h);
   camera.updateProjectionMatrix();
 }
 function updateCamera(dt) {
@@ -735,14 +873,14 @@ function updateCamera(dt) {
   }
   const fov = (tall ? 74 : 58) + (racing() && player.boost > 0 && !reducedMotion ? 9 : 0);
   if (Math.abs(camera.fov - fov) > .05) { camera.fov += (fov - camera.fov) * (1 - Math.exp(-4 * dt)); camera.updateProjectionMatrix(); }
-  sky.position.copy(camera.position);
+  sky.position.copy(camera.position); if (starfield) starfield.position.copy(camera.position);
   // The sun's shadow box follows the player.
   const dir = sun.userData.dir;
   sun.position.set(f.x + dir.x * 150, f.y + dir.y * 150, f.z + dir.z * 150); sun.target.position.set(f.x, f.y, f.z); sun.target.updateMatrixWorld();
   $('rush').classList.toggle('on', racing() && player.boost > 0);
 }
 /* ---------- heads-up display ---------- */
-const avatar = car => car.player ? `<i style="background:${swatch(paint())}" title="Viaan"></i>` : `<img src="../memory-assets/${car.id}.png" alt="${car.name}">`;
+const avatar = car => `<img src="${mugs[car.player ? 'scout' : car.id]}" alt="${car.player ? 'Viaan and Scout' : car.name}">`;
 function drawMapBase(track) {
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (let i = 0; i < track.n; i++) { minX = Math.min(minX, track.xs[i]); maxX = Math.max(maxX, track.xs[i]); minZ = Math.min(minZ, track.zs[i]); maxZ = Math.max(maxZ, track.zs[i]); }
@@ -752,7 +890,7 @@ function drawMapBase(track) {
   const g = mapBase.getContext('2d');
   g.lineJoin = g.lineCap = 'round'; g.beginPath();
   for (let i = 0; i <= track.n; i += 4) { const j = i % track.n; g[i ? 'lineTo' : 'moveTo'](track.xs[j] * scale + mapView.x, track.zs[j] * scale + mapView.z); }
-  g.closePath(); g.strokeStyle = '#143f42'; g.lineWidth = 13; g.stroke(); g.strokeStyle = '#fff9e9'; g.lineWidth = 8; g.stroke();
+  g.closePath(); g.strokeStyle = '#0d2f33'; g.lineWidth = 15; g.stroke(); g.strokeStyle = '#ffffff'; g.lineWidth = 8; g.stroke();
 }
 function drawMap() {
   if (!mapBase) return;
@@ -761,7 +899,7 @@ function drawMap() {
     const p = trackPose(race.track, car.d, car.lat), x = p.x * mapView.scale + mapView.x, z = p.z * mapView.scale + mapView.z;
     mapContext.beginPath(); mapContext.arc(x, z, car.player ? 10 : 7, 0, Math.PI * 2);
     mapContext.fillStyle = car.player ? paint().color : (RIVALS.find(r => r.id === car.id) || BOSSES[race.trackId]).color; mapContext.fill();
-    mapContext.lineWidth = car.player ? 4 : 2.5; mapContext.strokeStyle = '#143f42'; mapContext.stroke();
+    mapContext.lineWidth = car.player ? 4 : 2.5; mapContext.strokeStyle = car.player ? '#ffffff' : '#0d2f33'; mapContext.stroke();
   });
 }
 function updateHud(force = false) {
@@ -770,15 +908,16 @@ function updateHud(force = false) {
   // The bar under the speed shows boost time left, or a drift charging up.
   const charge = player.boost > 0 ? player.boost / BOOST_SECONDS : Math.min(player.drift / DRIFT_BIG, 1);
   $('boostBar').style.width = (charge * 100).toFixed(0) + '%';
-  $('boostBar').style.background = player.boost > 0 ? '' : player.drift >= DRIFT_BIG ? '#ff9a2e' : player.drift >= DRIFT_SMALL ? '#5bc8ff' : '#cfd8cf';
+  $('boostBar').style.background = player.boost > 0 ? '' : player.drift >= DRIFT_BIG ? '#ff9a2e' : player.drift >= DRIFT_SMALL ? '#5bc8ff' : '#ffffff80';
   if (!force && clock - lastHud < .12) return;
   lastHud = clock;
   // The nitro button shows how many bursts are in the tank.
   const bursts = Math.floor(player.nitro / NITRO_COST + 1e-6);
   if ($('nitro').dataset.bursts !== String(bursts)) { $('nitro').dataset.bursts = bursts; $('nitro').classList.toggle('ready', bursts > 0); $('nitroPips').textContent = '●'.repeat(bursts) + '○'.repeat(3 - bursts); }
   const order = standings(race), key = order.map(c => c.id).join() + prefs.paint;
-  $('lapText').textContent = `Lap ${lapOf(race, player)} of ${LAPS}`;
-  $('placeText').textContent = ORDINALS[placeOf(race) - 1];
+  $('lapText').textContent = `Lap ${lapOf(race, player)}/${LAPS}`;
+  const place = placeOf(race);
+  if ($('placeText').dataset.place !== String(place)) { $('placeText').dataset.place = place; $('placeText').innerHTML = `${place}<sup>${ORDINALS[place - 1].slice(1)}</sup>`; }
   $('coinText').textContent = race.collected;
   if (key !== orderKey) { orderKey = key; $('order').innerHTML = order.map(c => `<li class="${c.player ? 'me' : ''}">${avatar(c)}</li>`).join(''); }
   drawMap();
@@ -789,8 +928,8 @@ function renderGarage() {
   $('bank').textContent = prefs.coins;
   const won = Object.keys(prefs.cups).length;
   $('cars').innerHTML = CARS.map(c => carUnlocked(prefs, c)
-    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${CAR_ICON[c.id]}.png?v=6" alt=""><small>${c.name}</small></button>`
-    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${CAR_ICON[c.id]}.png?v=6" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
+    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${CAR_ICON[c.id]}.png?v=7" alt=""><small>${c.name}</small></button>`
+    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${CAR_ICON[c.id]}.png?v=7" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
   $('swatches').innerHTML = PAINTS.map(p => owns(p)
     ? `<button data-paint="${p.id}" style="background:${swatch(p)}" aria-label="${p.name}" aria-pressed="${p.id === prefs.paint}"></button>`
     : `<button data-paint="${p.id}" class="locked" style="background:${swatch(p)}" aria-label="${p.name}, locked, costs ${p.cost} coins" aria-pressed="false">🔒<br>${p.cost}</button>`).join('');
@@ -799,12 +938,12 @@ function renderGarage() {
   $('tracks').innerHTML = TRACKS.map(t => `<button data-track="${t.id}" aria-label="${t.name}${prefs.cups[t.id] === 3 ? ', boss beaten' : prefs.cups[t.id] === 2 ? ', gold cup won' : prefs.cups[t.id] ? ', cup won' : ''}" aria-pressed="${t.id === prefs.track}"><span aria-hidden="true">${THEMES[t.id].icon}</span><strong>${t.name}${cupMark(t.id)}</strong><small>${t.blurb}</small></button>`).join('');
   // A track's boss appears once its cup has been earned.
   $('bossStart').hidden = !prefs.cups[prefs.track];
-  $('bossStart').textContent = `👑 Boss race: ${BOSSES[prefs.track].name}`;
+  $('bossStart').innerHTML = `<img src="${mugs[BOSSES[prefs.track].id]}" alt=""> Boss race: ${BOSSES[prefs.track].name} <span aria-hidden="true">👑</span>`;
 }
 function choose(kind, id) {
   if (kind === 'car') {
     const car = CARS.find(c => c.id === id); if (!car) return;
-    if (!carUnlocked(prefs, car)) { toast(car.cups === 1 ? `Finish a race to unlock the ${car.name}` : `Finish all ${car.cups} tracks to unlock the ${car.name}`, 2.6); sound.tone(220, 0, .2, 'triangle', .08); return; }
+    if (!carUnlocked(prefs, car)) { toast(car.cups === 1 ? `Finish a race to unlock the ${car.name}` : `Finish ${car.cups} tracks to unlock the ${car.name}`, 2.6); sound.tone(220, 0, .2, 'triangle', .08); return; }
     prefs = normalizePrefs({ ...prefs, car: id }); savePrefs(); seatViews(); orderKey = ''; renderGarage(); sound.horn();
     const chosen = $('cars').querySelector('[aria-pressed="true"]'); if (chosen) chosen.focus({ preventScroll: true });
     return;
@@ -823,7 +962,7 @@ function resetRace() {
   race = createRace(prefs.track, { boss: bossMode }); buildWorld(prefs.track); seatViews();
   orderKey = ''; $('trackName').textContent = (race.boss ? `BOSS · ${BOSSES[race.trackId].name}` : race.track.name).toUpperCase();
   $('countdown').textContent = ''; $('toast').classList.remove('show'); $('rush').classList.remove('on');
-  cameraHeading = trackPose(race.track, playerOf(race).d, 0).heading; cameraKick = 0; idleFor = 0; hinted = false; setCruise(true);
+  cameraHeading = trackPose(race.track, playerOf(race).d, 0).heading; cameraKick = 0; $('placeText').dataset.place = '';
   sound.music(prefs.track); sound.squeal(false); sound.hurry(race.boss);
   releaseAll();
 }
@@ -870,6 +1009,7 @@ function handle(event) {
   const player = playerOf(race), pose = trackPose(race.track, player.d, player.lat);
   if (event === 'count') { showCount(String(Math.ceil(race.countdown))); sound.tone(440, 0, .25); }
   else if (event === 'go') { setPhase('racing'); showCount('GO!'); countdownUntil = clock + .9; sound.tone(880, 0, .6); }
+  else if (event === 'pad') { toast('Whoosh! 💨', 1); sound.whoosh(); sound.tone(520, 0, .25, 'sine', .06, 1040); burst(pose.x, pose.y + .6, pose.z, 12, 6, .14, .5, ['#7fe9ff', '#ffffff'], 3); }
   else if (event === 'star') { toast('Zoom! ⭐', 1.2); sound.chime([784, 1047, 1319], .07); sound.whoosh(); burst(pose.x, pose.y + 1.4, pose.z, 18, 7, .16, .7, ['#ffd84a', '#fff6c9'], 4); }
   else if (event === 'coin') {
     if (clock - lastCoinSound > .07) { lastCoinSound = clock; sound.coin(); }
@@ -888,7 +1028,7 @@ function handle(event) {
   else if (event === 'drift') sound.tone(660, 0, .12, 'sine', .06, 990);
   else if (event === 'drift2') sound.tone(880, 0, .14, 'sine', .07, 1320);
   else if (event === 'turbo') { toast('Drift boost!', 1.1); sound.whoosh(); }
-  else if (event === 'pass') { toast(`You passed ${race.passed}!`, 1.6); sound.chime([784, 988], .08); }
+  else if (event === 'pass') { toast(`You passed ${race.passed}!`, 1.6); sound.chime([784, 988], .08); sound.woof(.25); }
   else if (event === 'bump') { sound.tone(120, 0, .18, 'triangle', .12); burst(pose.x, pose.y + .8, pose.z, 8, 5, .12, .4, ['#ffd84a', '#ffffff'], 8); }
   else if (event === 'finish') {
     bankRace(); setPhase('finished'); releaseAll(); sound.chime([523, 659, 784, 1047, 1319], .12); sound.cheer(); sound.hurry(false);
@@ -902,20 +1042,19 @@ function openMenu() {
 }
 
 /* ---------- input ---------- */
-// The car drives by itself from the green light, so one finger is enough to steer. GO only ever switches driving on.
-const pad = () => ({ steer: (held.right.size ? 1 : 0) - (held.left.size ? 1 : 0), gas: cruise || held.gas.has('key'), brake: held.brake.size > 0, nitro: held.nitro.size > 0 });
+// The car drives by itself from the green light, so one finger is enough to steer.
+const pad = () => ({ steer: (held.right.size ? 1 : 0) - (held.left.size ? 1 : 0), gas: true, brake: held.brake.size > 0, nitro: held.nitro.size > 0 });
 function hold(side, source, on) {
   if (on) held[side].add(source); else held[side].delete(source);
   $(side).classList.toggle('down', held[side].size > 0);
 }
-function setCruise(on) { cruise = on; $('gas').classList.toggle('on', on); $('gas').setAttribute('aria-pressed', on); if (on) $('gas').classList.remove('nudge'); }
 function releaseAll() { for (const side of Object.keys(held)) { held[side].clear(); $(side).classList.remove('down'); } }
 function setupControls() {
   for (const side of Object.keys(held)) {
     const button = $(side);
-    button.addEventListener('pointerdown', e => { e.preventDefault(); try { button.setPointerCapture(e.pointerId); } catch {} hold(side, 'p' + e.pointerId, true); if (side === 'gas') setCruise(true); });
+    button.addEventListener('pointerdown', e => { e.preventDefault(); try { button.setPointerCapture(e.pointerId); } catch {} hold(side, 'p' + e.pointerId, true); });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(name, e => hold(side, 'p' + e.pointerId, false));
-    button.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); hold(side, 'button', true); if (side === 'gas') setCruise(true); } });
+    button.addEventListener('keydown', e => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); hold(side, 'button', true); } });
     button.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') hold(side, 'button', false); });
     button.addEventListener('blur', () => hold(side, 'button', false));
     button.addEventListener('contextmenu', e => e.preventDefault());
@@ -923,15 +1062,15 @@ function setupControls() {
   // Touching either half of the picture steers too.
   canvas.addEventListener('pointerdown', e => { if (racing()) hold(e.clientX < innerWidth / 2 ? 'left' : 'right', 'c' + e.pointerId, true); });
   for (const name of ['pointerup', 'pointercancel', 'pointerleave']) canvas.addEventListener(name, e => { hold('left', 'c' + e.pointerId, false); hold('right', 'c' + e.pointerId, false); });
-  const keySide = key => ({ ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'gas', w: 'gas', W: 'gas', ArrowDown: 'brake', s: 'brake', S: 'brake', n: 'nitro', N: 'nitro', Shift: 'nitro' })[key];
+  const keySide = key => ({ ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'nitro', w: 'nitro', W: 'nitro', ArrowDown: 'brake', s: 'brake', S: 'brake', n: 'nitro', N: 'nitro', Shift: 'nitro' })[key];
   window.addEventListener('keydown', e => {
     const side = keySide(e.key);
     if (side && racing() && !paused) { e.preventDefault(); hold(side, 'key', true); }
-    else if ((e.key === 'h' || e.key === 'H') && !e.repeat) sound.horn();
+    else if ((e.key === 'h' || e.key === 'H') && !e.repeat) { sound.horn(); sound.woof(.3); }
     else if ((e.key === 'p' || e.key === 'P') && racing()) openMenu();
   });
   window.addEventListener('keyup', e => { const side = keySide(e.key); if (side) hold(side, 'key', false); });
-  $('horn').addEventListener('click', () => { sound.horn(); if (!sound.on) toast('Tap ♫ to hear the horn', 1.6); });
+  $('horn').addEventListener('click', () => { sound.horn(); sound.woof(.3); if (!sound.on) toast('Turn the sound on to hear the horn', 1.6); });
   $('sound').addEventListener('click', toggleSound);
   $('pause').addEventListener('click', openMenu);
   $('menu').addEventListener('close', () => { paused = false; lastTime = 0; updateSound(); });
@@ -974,7 +1113,7 @@ function watchSpeed(dt) {
   // A device that cannot keep up drops shadows and sharpness instead of stuttering.
   if (lowQuality || !dt || paused || phase !== 'racing') return;
   slowFor = dt > 1 / 26 ? slowFor + dt : Math.max(0, slowFor - dt * 2);
-  if (slowFor > 2.5) { lowQuality = true; sun.castShadow = false; renderer.setPixelRatio(1); }
+  if (slowFor > 2.5) { lowQuality = true; sun.castShadow = false; renderer.setPixelRatio(1); if (pack) pack.show(.55); }
 }
 function animate(now) {
   requestAnimationFrame(animate);
@@ -1001,7 +1140,7 @@ async function init() {
     makeSky(); makeParticles();
     canvas.tabIndex = -1;
     const loader = new GLTFLoader();
-    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=6`)]))) {
+    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=7`)]))) {
       templates[id] = asset.scene;
       asset.scene.traverse(o => {
         if (!o.isMesh || shiny.includes(o.material)) return;
@@ -1009,6 +1148,8 @@ async function init() {
         if (['Glass', 'Silver', 'Charcoal'].includes(o.material.name)) shiny.push(o.material);
       });
     }
+    // Every dog has its picture taken once for the race order and the finish card.
+    for (const [id, look] of Object.entries(DOGS)) mugs[id] = portrait(renderer, look);
     rivalViews.push(...RIVALS.map(r => makeCar('supercar', r.color, r.id)));
     setupControls(); openGarage();
     $('loading').classList.add('done'); $('loading').setAttribute('aria-hidden', 'true'); $('loading').inert = true;

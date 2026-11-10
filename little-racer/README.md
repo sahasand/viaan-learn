@@ -1,10 +1,10 @@
 # Little Racer
 
-A gentle 3D race for Viaan. Pick a vehicle, a paint colour, a trail and a track in the
-garage, then race three laps over hills, round a loop-the-loop and over a mega jump
-against Panda, Penguin and Frog. He holds GO to drive, steers left and right, and has a
-brake and a nitro button. Coins collected in races
-unlock special paints and trails, and every track gives a cup.
+A gentle 3D race for Viaan. Pick a vehicle, a paint colour, a trail and one of four tracks
+in the garage, then race three laps over hills, round a loop-the-loop and over a mega jump
+against three cartoon dogs: Biscuit, Pepper and Waffle. His puppy Scout rides along in his
+car. The car drives by itself; he steers left and right and has a boost and a brake button.
+Coins collected in races unlock special paints and trails, and every track gives a cup.
 
 ## Play locally
 
@@ -15,16 +15,22 @@ python3 -m http.server 8765 --bind 127.0.0.1
 ```
 
 Open `http://127.0.0.1:8765/little-racer/`. The home Little Racer card opens this game.
-No build, account, API key, or network asset service is required. Serve through HTTP;
+No build, account or API key is required. The page asks Google Fonts for Baloo 2 and
+falls back to a local rounded font when offline. Serve through HTTP;
 browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 
 ## Controls and rules
 
 - The car drives by itself from the green light, so one finger is enough to steer.
-  Hold **STOP** to brake; letting go drives on. **GO** is lit while driving and pressing
-  it only ever switches driving on. Steer with the **left** and **right** buttons or by
-  touching either half of the picture. Keys: arrows or WASD, N or Shift for nitro, H for
-  the horn, P to pause.
+  There is no go button. Hold **STOP** to brake; letting go drives on. Steer with the
+  **left** and **right** buttons or by touching either half of the picture. **BOOST** is
+  the big button under the right thumb. Keys: left/right arrows or A/D to steer, down or S
+  to brake, up, W, N or Shift for boost, H for the horn, P to pause.
+- The race display is the place (a big outlined number) with the running order of dog
+  faces under it, a lap and a coin chip in the middle, and the map on the right. The home
+  button and name are hidden while racing; the pause card links back to Viaan.
+- **Zoom strips** are blue arrows painted on the road between the stars. Driving over one
+  gives a short boost every time; they are never used up.
 - `index.html` and `game.js` load their files with a `?v=` number so phones do not keep an
   old copy. Raise that number in both files whenever the game's code or styles change.
 - **Nitro** holds three bursts. Coins, stars and drift boosts fill it; one tap spends one.
@@ -33,9 +39,9 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 - The second ramp of each lap is a **mega jump** over a line of buses and through two
   rings of fire, with a long arc of coins.
 - **Vehicles** unlock with cups: the monster truck after finishing any race, the formula
-  racer after finishing all three tracks. They drive the same; only the look changes.
-- A track's **boss race** opens once its cup is earned: one-on-one against Lion, Elephant
-  or Giraffe in a monster truck. Winning turns the cup into a crown. Losing changes
+  racer after finishing three tracks. They drive the same; only the look changes.
+- A track's **boss race** opens once its cup is earned: one-on-one against a big dog in a
+  crown (Bruno, Frosty, Rumble or Comet) in a monster truck. Winning turns the cup into a crown. Losing changes
   nothing and it can be tried again at once.
 - Corners push the car gently outward, so steering into the bend holds the road.
 - Grass is slower and nudges the car back. A soft wall stops it wandering further.
@@ -48,7 +54,7 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
   They are banked when the race finishes, whatever the place.
 - Each track has two jump ramps across the whole road and one tunnel. A ramp sends
   every car flying for about a second; nothing needs to be pressed and landing is safe.
-- The animal drivers slow down when they are ahead and hurry when they are behind,
+- The dog drivers slow down when they are ahead and hurry when they are behind,
   so the pack stays together. A driver who never steers still finishes in about two minutes.
 - Every finish gets the same celebration, shows the finishing order, and earns that
   track's cup; winning turns the cup gold. Cups never downgrade. There is no timer or
@@ -78,8 +84,16 @@ blender --background --factory-startup --python little-racer/tools/build_car.py 
 ```
 
 The game repaints the material named `Paint` and spins the four `Wheel_*` objects, so
-keep those names in every model. Friends drive the supercar and bosses the truck; rivals carry a `memory-assets/`
-portrait above the roof.
+keep those names in every model. Friends drive the supercar and bosses the truck.
+
+`dogs.js` builds every cartoon dog from soft round shapes in code; there are no dog image
+or model files. `DOGS` in `race.js` holds each named dog's look (fur, muzzle, ears, collar,
+markings, crown). A driver pokes out of the roof with ears that stream back with speed and
+a head that turns into bends; the seat for each vehicle is `SPECS[...].seat` in `game.js`.
+The crowd is drawn as a handful of instanced meshes, so its size costs almost nothing; dogs
+wave and wag, throw both paws up as Viaan passes, and far-away dogs are left still. The
+faces in the race order and on the finish card are small pictures of the same models taken
+once at start-up. The dogs are original characters; do not model them on a known cartoon.
 
 `race.js` holds every rule and runs in Node tests: track shapes and hills, car movement,
 drifting, rival pacing, stars, coins, bumps, laps, finishing order, overtakes, and the
@@ -89,12 +103,18 @@ track coordinates (distance along the centre line, metres to the right of it), w
 why nobody can drive backwards or get lost. `game.js` owns the scene, scenery, camera,
 input, sound, and page lifecycle. Tracks, road markings, terrain, and scenery are generated
 in code from the control points in `race.js`; changing a track's points needs no art work.
+Each place has its own road surface from `THEMES` in `game.js`: tarmac with yellow dashes
+on the beach, blue ice on the mountain, a dirt track in the jungle and a rainbow road for
+Rainbow Galaxy, which floats in space with no ground, a star field, planets, flying saucers
+and glowing ring gates. Corners carry arrow boards, striped arches stand over the road, and
+each place has its own roadside things (surfboards, beach huts and giant ice creams; igloos,
+candy poles and ice crystals; mushrooms, totems and giant flowers; glowing crystals).
 `race.js` also picks the straightest stretches for the tunnel and ramps.
 
 The look comes from a few pieces in `game.js`: a gradient sky with a sun that also feeds
 the paint reflections, rolling terrain that stays flat beside the road, a sun shadow box
 that follows the player, one landmark per track (sandcastle and lighthouse, ice castle,
-temple and smoking volcano), a cheering crowd of `memory-assets/` animals, bunting, balloons,
+temple and smoking volcano, rocket), a grandstand of cheering dogs, bunting, balloons,
 snow or pollen in the air, and one shared particle pool for dust, sparkles, smoke,
 confetti and fireworks. If frames stay slow for a few seconds the game switches off
 shadows and lowers sharpness by itself. Reduced motion removes particles, weather,
@@ -113,7 +133,9 @@ single lap announcements, star boosts and respawn, ramp and tunnel placement, ju
 hill limits, the loop's shape and lane, gas and brake, nitro, the mega jump, boss races,
 vehicle unlocks, drift charging and release, coin rows and air coins, unlock buying, cups,
 overtake announcements, grass slowdown, rival pacing, soft
-bumps, bad input, fixed finishing order, saved choices, and model/page wiring.
+bumps, zoom strips, bad input, fixed finishing order, saved choices, every dog's look, and
+model/page wiring.
 Browser checks should cover a full race to the finish card, the loop, the mega jump, a
-nitro burst, a boss race, a drift boost, an unlock in the garage, pause and resume, a colour
-and track change, saved choices after reload, and portrait/landscape layouts.
+nitro burst, a zoom strip, a boss race, a drift boost, an unlock in the garage, pause and
+resume, a colour and track change, all four tracks, saved choices after reload, and the
+garage and race display on a wide screen, a phone upright and a phone sideways.

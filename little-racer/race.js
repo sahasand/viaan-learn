@@ -19,6 +19,7 @@ export const DRIFT_SMALL = .9;     // seconds of holding a corner for blue spark
 export const DRIFT_BIG = 1.9;      // ... and for orange sparks
 export const MEGA_AIR = 1.9;       // the second ramp of every lap is a mega jump
 export const NITRO_SECONDS = 1.7;
+export const PAD_SECONDS = 1.3;     // a zoom strip on the road
 export const NITRO_COST = 1 / 3;   // the tank holds three bursts
 // A vertical loop: cars enter on the left lane, go right round and leave on the right.
 // Distance counts slowly inside it so the trip round takes a few seconds.
@@ -49,17 +50,30 @@ export const CARS = [
   { id: 'truck', name: 'Monster truck', cups: 1 },
   { id: 'formula', name: 'Formula racer', cups: 3 }
 ];
-// Each track's boss waits behind its cup and drives the monster truck.
+// Each track's boss is a big dog in a crown who waits behind its cup and drives the monster truck.
 export const BOSSES = {
-  beach: { id: 'lion', name: 'Lion', color: '#f2a516' },
-  snow: { id: 'elephant', name: 'Elephant', color: '#6f8fd8' },
-  jungle: { id: 'giraffe', name: 'Giraffe', color: '#e2553a' }
+  beach: { id: 'bruno', name: 'Bruno', color: '#f2a516' },
+  snow: { id: 'frosty', name: 'Frosty', color: '#6f8fd8' },
+  jungle: { id: 'rumble', name: 'Rumble', color: '#e2553a' },
+  galaxy: { id: 'comet', name: 'Comet', color: '#b06bff' }
+};
+// How every cartoon dog looks: fur, muzzle and ear colours, ear shape, collar and markings.
+// 'scout' is the puppy who rides along in Viaan's car.
+export const DOGS = {
+  scout: { fur: '#c9884a', muzzle: '#fbe9cf', ear: '#8a5527', ears: 'floppy', collar: '#eb6548', patch: '#8a5527' },
+  biscuit: { fur: '#f3c56d', muzzle: '#fff4dc', ear: '#d6953a', ears: 'floppy', collar: '#2274dd' },
+  pepper: { fur: '#fbfaf6', muzzle: '#ffffff', ear: '#2d2d36', ears: 'floppy', collar: '#dd2b2b', patch: '#2d2d36', spots: '#2d2d36' },
+  waffle: { fur: '#8d96aa', muzzle: '#ffffff', ear: '#5c6479', ears: 'pointy', collar: '#ffc21a', eyes: '#3d8fe0' },
+  bruno: { fur: '#b97a41', muzzle: '#fff1dc', ear: '#7a4a22', ears: 'floppy', collar: '#28424a', crown: true },
+  frosty: { fur: '#e3ecf7', muzzle: '#ffffff', ear: '#9fb4d0', ears: 'pointy', collar: '#2f7fe3', eyes: '#3d8fe0', crown: true },
+  rumble: { fur: '#4a3f3a', muzzle: '#d39a5c', ear: '#2a2422', ears: 'pointy', collar: '#eb6548', crown: true },
+  comet: { fur: '#9c7cf2', muzzle: '#efe6ff', ear: '#6a4fd0', ears: 'pointy', collar: '#3df0c2', spots: '#6a4fd0', crown: true }
 };
 const SHOP = [...PAINTS, ...TRAILS].filter(item => item.cost);
 export const RIVALS = [
-  { id: 'panda', name: 'Panda', color: '#f4efe2', pace: .98, lane: 3.2 },
-  { id: 'penguin', name: 'Penguin', color: '#17b3a6', pace: .94, lane: -3.2 },
-  { id: 'frog', name: 'Frog', color: '#2c9a52', pace: .90, lane: 3.2 }
+  { id: 'biscuit', name: 'Biscuit', color: '#17b3a6', pace: .98, lane: 3.2 },
+  { id: 'pepper', name: 'Pepper', color: '#f4efe2', pace: .94, lane: -3.2 },
+  { id: 'waffle', name: 'Waffle', color: '#2c9a52', pace: .90, lane: 3.2 }
 ];
 // Control points are [x, z] in metres. Each loop starts at the origin heading +x.
 // Hills are [height, bumps per lap, phase]; the start line always stays level.
@@ -69,7 +83,9 @@ export const TRACKS = [
   { id: 'snow', name: 'Snowy Mountain', blurb: 'Twisty turns in the snow', scale: 1.3, hills: [[10, 2, 1.2], [3.5, 4, 0]],
     points: [[0, 0], [68, 0], [120, -28], [128, -84], [88, -118], [42, -98], [14, -62], [-22, -78], [-48, -124], [-108, -130], [-142, -84], [-116, -34], [-60, -8]] },
   { id: 'jungle', name: 'Jungle Loop', blurb: 'Wiggly roads through the trees', scale: 1.22, hills: [[7, 3, .4], [3.5, 5, 1.7]],
-    points: [[0, 0], [56, 4], [102, -20], [108, -72], [74, -104], [78, -154], [32, -184], [-24, -164], [-36, -112], [-82, -92], [-122, -122], [-154, -82], [-128, -30], [-66, -6]] }
+    points: [[0, 0], [56, 4], [102, -20], [108, -72], [74, -104], [78, -154], [32, -184], [-24, -164], [-36, -112], [-82, -92], [-122, -122], [-154, -82], [-128, -30], [-66, -6]] },
+  { id: 'galaxy', name: 'Rainbow Galaxy', blurb: 'A rainbow road among the stars', scale: 1.2, hills: [[11, 3, 2.2], [3, 7, .5]],
+    points: [[0, 0], [64, -2], [116, -30], [112, -86], [62, -100], [36, -142], [66, -186], [22, -214], [-40, -196], [-58, -144], [-104, -122], [-146, -148], [-176, -102], [-142, -48], [-80, -10]] }
 ];
 
 function catmull(p0, p1, p2, p3, t) {
@@ -220,6 +236,12 @@ export function starsFor(track) {
     // Nothing to collect where the car is flying off a ramp or going round the loop.
     .filter(star => clearOf(track, star.s));
 }
+// Zoom strips are painted on the road between the stars: driving over one gives a short boost.
+export function padsFor(track) {
+  const lanes = [-3.4, 3.4, 0], pads = [];
+  for (let s = 81, i = 0; s < track.length - 60; s += 124) if (clearOf(track, s - 6) && clearOf(track, s + 6)) pads.push({ s, lat: lanes[i++ % lanes.length], last: -9 });
+  return pads;
+}
 export function coinsFor(track) {
   const coins = [], stars = starsFor(track), lanes = [-4, 0, 4, 0];
   // Rows of five on the road, weaving between lanes ...
@@ -243,7 +265,7 @@ export function createRace(trackId, options = {}) {
   const cars = boss
     ? [car('viaan', 'Viaan', -13, -3.2, { player: true, nitro: NITRO_COST }), car(boss.id, boss.name, -6, 3.2, { pace: 1, lane: 3.2, wobble: 1, boss: true })]
     : [car('viaan', 'Viaan', -24, -3.2, { player: true }), ...RIVALS.map((r, i) => car(r.id, r.name, -6 - i * 6, r.lane, { pace: r.pace, lane: r.lane, wobble: i * 2.1 }))];
-  return { trackId: track.id, track, boss: !!boss, phase: 'countdown', countdown: 3, time: 0, cars, stars: starsFor(track), coins: coinsFor(track), collected: 0, finishOrder: [], bumped: {}, passed: '', lastPass: 0 };
+  return { trackId: track.id, track, boss: !!boss, phase: 'countdown', countdown: 3, time: 0, cars, stars: starsFor(track), coins: coinsFor(track), pads: padsFor(track), collected: 0, finishOrder: [], bumped: {}, passed: '', lastPass: 0 };
 }
 export const playerOf = race => race.cars[0];
 export const lapOf = (race, car) => clamp(Math.floor(car.d / race.track.length) + 1, 1, LAPS);
@@ -376,6 +398,10 @@ export function stepRace(race, input, elapsed) {
     for (const coin of race.coins) {
       if (coin.taken || !near(coin, coin.loop ? 1.2 : 2.8) || Math.abs(player.lat - coin.lat) > (coin.air ? 4 : 2) || (coin.air && !(player.air > 0))) continue;
       coin.taken = true; race.collected++; player.nitro = Math.min(1, player.nitro + .05); events.push('coin');
+    }
+    for (const pad of race.pads) {
+      if (player.air > 0 || !near(pad, 3.2) || Math.abs(player.lat - pad.lat) > 2.7 || race.time - pad.last < 1.5) continue;
+      pad.last = race.time; player.boost = Math.max(player.boost, PAD_SECONDS); events.push('pad');
     }
   }
   for (const car of race.cars) {
