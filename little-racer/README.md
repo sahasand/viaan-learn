@@ -1,10 +1,10 @@
 # Little Racer
 
-A gentle 3D race for Viaan. Pick a vehicle, a paint colour, a trail and one of four tracks
+A gentle 3D race for Viaan. Pick one of four vehicles, a paint colour and one of four tracks
 in the garage, then race three laps over hills, round a loop-the-loop and over a mega jump
 against three cartoon dogs: Biscuit, Pepper and Waffle. Viaan's own car has no dog in it.
 The car drives by itself; he steers left and right and has a boost and a brake button.
-Coins collected in races unlock special paints and trails, and every track gives a cup.
+Coins collected in races unlock special paints, and every track gives a cup.
 
 ## Play locally
 
@@ -38,8 +38,8 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
   at a safe speed whatever is pressed, with a ring of coins on the way.
 - The second ramp of each lap is a **mega jump** over a line of buses and through two
   rings of fire, with a long arc of coins.
-- **Vehicles** unlock with cups: the monster truck after finishing any race, the formula
-  racer after finishing three tracks. They drive the same; only the look changes.
+- **Vehicles** unlock with cups: the monster truck after finishing any race, the sports
+  car after two tracks and the formula racer after three. They drive the same; only the look changes.
 - A track's **boss race** opens once its cup is earned: one-on-one against a big dog in a
   crown (Bruno, Frosty, Rumble or Comet) in a monster truck. Winning turns the cup into a crown. Losing changes
   nothing and it can be tried again at once.
@@ -59,11 +59,12 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 - Every finish gets the same celebration, shows the finishing order, and earns that
   track's cup; winning turns the cup gold. Cups never downgrade. There is no timer or
   lap record, and nothing is ever taken away.
-- In the garage, locked paints (gold, rainbow, galaxy) and trails (bubbles, rainbow,
-  fire) show their price. Tapping one buys it when there are enough coins and otherwise
+- In the garage, locked paints (gold, rainbow, galaxy) show their price. Tapping one buys it when there are enough coins and otherwise
   says how many more are needed. Coins are only earned by playing; there is no shop.
-- Colour, trail, track, coins, unlocks and cups save locally under `viaan-racer-v1`;
+- Vehicle, colour, track, coins, unlocks and cups save locally under `viaan-racer-v1`;
   other games' progress is untouched. Saves from the first release still load.
+- There are no trails behind the car any more. A save that bought one gets those coins
+  back the next time it is read (`OLD_TRAILS` in `race.js`).
 - Pause stops the simulation. Changing tabs or losing focus also pauses.
 - Sound starts muted. The music-note button enables synthesized music (one tune per
   track, a little faster on the last lap), engine, tyre squeal, horn, chimes, and
@@ -71,20 +72,24 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 
 ## Art and implementation
 
-`assets/supercar.blend`, `truck.blend` and `formula.blend` are the editable Blender
-sources for the three original vehicles. The supercar is styled as a sharp, flat-faceted
-Italian-style wedge with Y-shaped lamps and a hexagonal exhaust. They carry no real maker's name, badge, or
+`assets/supercar.blend`, `truck.blend`, `sports.blend` and `formula.blend` are the editable Blender
+sources for the four original vehicles. The supercar is styled as a sharp, flat-faceted
+Italian-style wedge with Y-shaped lamps and a hexagonal exhaust. The sports car is a round
+rear-engined coupé in the classic German style: round lamps on raised front wings, a roof
+that falls in one curve to the tail, wide back wheels and a light bar across the back. They carry no real maker's name, badge, or
 exact model shape; keep it that way, since the site is public. Rebuild a model, its GLB
 export, and its card render with:
 
 ```sh
 blender --background --factory-startup --python little-racer/tools/build_car.py -- supercar
 blender --background --factory-startup --python little-racer/tools/build_car.py -- truck
+blender --background --factory-startup --python little-racer/tools/build_car.py -- sports
 blender --background --factory-startup --python little-racer/tools/build_car.py -- formula
 ```
 
 The game repaints the material named `Paint` and spins the four `Wheel_*` objects, so
 keep those names in every model. Friends drive the supercar and bosses the truck.
+A new vehicle needs its three files in `assets/`, a line in `CARS` in `race.js` and a line in `SPECS` in `game.js`.
 
 `dogs.js` builds every cartoon dog from soft round shapes in code; there are no dog image
 or model files. `DOGS` in `race.js` holds each named dog's look (fur, muzzle, ears, collar,
@@ -133,8 +138,8 @@ single lap announcements, star boosts and respawn, ramp and tunnel placement, ju
 hill limits, the loop's shape and lane, gas and brake, nitro, the mega jump, boss races,
 vehicle unlocks, drift charging and release, coin rows and air coins, unlock buying, cups,
 overtake announcements, grass slowdown, rival pacing, soft
-bumps, zoom strips, bad input, fixed finishing order, saved choices, every dog's look, and
-model/page wiring.
+bumps, zoom strips, bad input, fixed finishing order, saved choices, the trail refund, every dog's look, and
+every vehicle's model and page wiring.
 Browser checks should cover a full race to the finish card, the loop, the mega jump, a
 nitro burst, a zoom strip, a boss race, a drift boost, an unlock in the garage, pause and
 resume, a colour and track change, all four tracks, saved choices after reload, and the

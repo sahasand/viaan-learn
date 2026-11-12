@@ -220,30 +220,39 @@ test('finishing order is fixed once a car crosses the line', () => {
 });
 
 test('saved choices are validated before use', () => {
-  const fallback = { car: 'supercar', paint: 'sunshine', track: 'beach', trail: 'none', coins: 0, owned: [], cups: {} };
+  const fallback = { car: 'supercar', paint: 'sunshine', track: 'beach', coins: 0, owned: [], cups: {} };
   for (const bad of [null, undefined, '', 'nonsense', '[]', '{"paint":7}', 42, '{"paint":"mud","track":"moon"}', '{"coins":-5,"owned":"gold","cups":[3]}']) assert.deepEqual(R.normalizePrefs(bad), fallback);
   // The first release saved only a paint and a track; that still loads.
   assert.deepEqual(R.normalizePrefs('{"paint":"grape","track":"snow","extra":1}'), { ...fallback, paint: 'grape', track: 'snow' });
-  // Locked paints and trails fall back until they are owned.
-  assert.equal(R.normalizePrefs({ paint: 'gold', trail: 'fire' }).paint, 'sunshine');
-  assert.equal(R.normalizePrefs({ paint: 'gold', trail: 'fire' }).trail, 'none');
-  const rich = R.normalizePrefs({ paint: 'gold', trail: 'fire', owned: ['gold', 'fire', 'gold', 'cheat', 7], coins: 12.5, cups: { beach: 2, snow: 9, moon: 1 } });
-  assert.deepEqual(rich, { car: 'supercar', paint: 'gold', track: 'beach', trail: 'fire', coins: 0, owned: ['gold', 'fire'], cups: { beach: 2 } });
+  // Locked paints fall back until they are owned.
+  assert.equal(R.normalizePrefs({ paint: 'gold' }).paint, 'sunshine');
+  const rich = R.normalizePrefs({ paint: 'gold', owned: ['gold', 'gold', 'cheat', 7], coins: 12.5, cups: { beach: 2, snow: 9, moon: 1 } });
+  assert.deepEqual(rich, { car: 'supercar', paint: 'gold', track: 'beach', coins: 0, owned: ['gold'], cups: { beach: 2 } });
   assert.equal(R.normalizePrefs({ coins: 1e9 }).coins, 99999);
   assert.equal(R.PAINTS.filter(p => !p.cost).length, 6);
-  assert.equal(new Set([...R.PAINTS, ...R.TRAILS].map(i => i.id)).size, R.PAINTS.length + R.TRAILS.length);
+  assert.equal(new Set(R.PAINTS.map(i => i.id)).size, R.PAINTS.length);
+});
+
+test('trails are gone and the coins once spent on them come back exactly once', () => {
+  assert.equal(R.TRAILS, undefined);
+  const old = { paint: 'gold', trail: 'bubbles', coins: 659, owned: ['gold', 'bubbles', 'fire', 'bubbles'], cups: { beach: 3 } };
+  const now = R.normalizePrefs(old);
+  assert.deepEqual(now, { car: 'supercar', paint: 'gold', track: 'beach', coins: 659 + 100 + 400, owned: ['gold'], cups: { beach: 3 } });
+  assert.deepEqual(R.normalizePrefs(JSON.stringify(now)), now, 'reading the new save again adds nothing');
+  assert.equal(R.normalizePrefs({ coins: 99990, owned: ['ribbon'] }).coins, 99999);
+  assert.deepEqual(R.buy(R.normalizePrefs({ coins: 500 }), 'bubbles'), R.normalizePrefs({ coins: 500 }), 'trails are not for sale');
 });
 
 test('coins buy unlocks exactly once and only when there are enough', () => {
   let prefs = R.normalizePrefs({ coins: 120 });
   assert.deepEqual(R.buy(prefs, 'gold'), prefs, 'gold costs 150');
-  prefs = R.buy(prefs, 'bubbles');
-  assert.deepEqual([prefs.coins, prefs.owned], [20, ['bubbles']]);
-  assert.deepEqual(R.buy(prefs, 'bubbles'), prefs, 'already owned');
+  prefs = R.buy(R.normalizePrefs({ coins: 170 }), 'gold');
+  assert.deepEqual([prefs.coins, prefs.owned], [20, ['gold']]);
+  assert.deepEqual(R.buy(prefs, 'gold'), prefs, 'already owned');
   assert.deepEqual(R.buy(prefs, 'sunshine'), prefs, 'free paints are not for sale');
   assert.deepEqual(R.buy(prefs, 'nonsense'), prefs);
-  assert.equal(R.nextUnlock(prefs).id, 'gold');
-  assert.equal(R.nextUnlock(R.normalizePrefs({ owned: ['gold', 'rainbow', 'galaxy', 'bubbles', 'ribbon', 'fire'] })), null);
+  assert.equal(R.nextUnlock(prefs).id, 'rainbow');
+  assert.equal(R.nextUnlock(R.normalizePrefs({ owned: ['gold', 'rainbow', 'galaxy'] })), null);
 });
 
 test('finishing banks coins and a cup; winning makes the cup gold and it never downgrades', () => {
@@ -449,9 +458,14 @@ test('cups unlock vehicles and beating a boss crowns the track', () => {
   prefs = R.award(prefs, 'beach', 4, 0);
   assert.equal(R.carUnlocked(prefs, R.CARS[1]), true);
   assert.equal(R.normalizePrefs({ ...prefs, car: 'truck' }).car, 'truck');
+  assert.equal(R.normalizePrefs({ ...prefs, car: 'sports' }).car, 'supercar', 'the sports car needs two cups');
   assert.equal(R.normalizePrefs({ ...prefs, car: 'formula' }).car, 'supercar');
-  prefs = R.award(R.award(prefs, 'snow', 2, 0), 'jungle', 3, 0);
+  prefs = R.award(prefs, 'snow', 2, 0);
+  assert.equal(R.normalizePrefs({ ...prefs, car: 'sports' }).car, 'sports');
+  assert.equal(R.normalizePrefs({ ...prefs, car: 'formula' }).car, 'supercar');
+  prefs = R.award(prefs, 'jungle', 3, 0);
   assert.equal(R.normalizePrefs({ ...prefs, car: 'formula' }).car, 'formula');
+  assert.deepEqual(R.CARS.map(c => c.id), ['supercar', 'truck', 'sports', 'formula']);
   assert.equal(R.award(prefs, 'beach', 2, 0, true).cups.beach, 1, 'losing to the boss changes nothing');
   prefs = R.award(prefs, 'beach', 1, 0, true);
   assert.equal(prefs.cups.beach, 3);
@@ -467,15 +481,18 @@ test('passing a friend is announced with their name, but not off the start line'
   for (let i = 1; i < events.length; i++) assert.ok(events[i][0] - events[i - 1][0] > 2.5);
 });
 
-test('the supercar model, portraits and page wiring are all present', () => {
-  const glb = readFileSync(here('./assets/supercar.glb'));
-  assert.equal(glb.toString('latin1', 0, 4), 'glTF');
-  const json = JSON.parse(glb.toString('utf8', 20, 20 + glb.readUInt32LE(12)));
-  const nodes = json.nodes.map(n => n.name), materials = json.materials.map(m => m.name);
-  for (const wheel of ['Wheel_FL', 'Wheel_FR', 'Wheel_RL', 'Wheel_RR']) assert.ok(nodes.includes(wheel), wheel);
-  assert.ok(materials.includes('Paint'), 'the game repaints the Paint material');
-  assert.ok(existsSync(here('./assets/supercar.blend')));
-  assert.ok(existsSync(here('./assets/supercar.png')));
+test('every vehicle model, the portraits and the page wiring are all present', () => {
+  for (const { id } of R.CARS) {
+    const glb = readFileSync(here(`./assets/${id}.glb`));
+    assert.equal(glb.toString('latin1', 0, 4), 'glTF', id);
+    const json = JSON.parse(glb.toString('utf8', 20, 20 + glb.readUInt32LE(12)));
+    const nodes = json.nodes.map(n => n.name), materials = json.materials.map(m => m.name);
+    for (const wheel of ['Wheel_FL', 'Wheel_FR', 'Wheel_RL', 'Wheel_RR']) assert.ok(nodes.includes(wheel), `${id} ${wheel}`);
+    assert.ok(materials.includes('Paint'), `the game repaints the Paint material of the ${id}`);
+    assert.ok(existsSync(here(`./assets/${id}.blend`)), id);
+    assert.ok(existsSync(here(`./assets/${id}.png`)), id);
+    assert.match(readFileSync(here('./game.js'), 'utf8'), new RegExp(`\\n  ${id}: \\{ flame:`), `${id} needs its SPECS`);
+  }
   // Every rival and boss is a cartoon dog with a full look.
   for (const id of [...R.RIVALS.map(r => r.id), ...R.TRACKS.map(t => R.BOSSES[t.id].id)]) {
     const look = R.DOGS[id]; assert.ok(look, id);

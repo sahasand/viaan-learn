@@ -1,7 +1,7 @@
 """Original Little Racer supercar. Run with:
 blender --background --factory-startup --python little-racer/tools/build_car.py
 Writes assets/supercar.blend, supercar.glb and the card render supercar.png.
-Add `-- truck` or `-- formula` for the other vehicles, and `-- [model] side /tmp/out.png`
+Add `-- truck`, `-- formula` or `-- sports` for the other vehicles, and `-- [model] side /tmp/out.png`
 (or front, rear, top) for a check render from another angle.
 Coordinates below are game coordinates: x right, y up, the nose points to -z."""
 import bpy, math, sys
@@ -300,11 +300,74 @@ def formula():
     wheel('Wheel_FL', -1, *front, .34); wheel('Wheel_FR', 1, *front, .34)
     wheel('Wheel_RL', -1, *rear, .42); wheel('Wheel_RR', 1, *rear, .42)
 
-# Usage after "--": [model] [view out.png]; model is supercar, truck or formula.
+def sports():
+    """A round rear-engined sports coupe: raised front wings with round lamps, a roof that
+    falls in one curve to the tail, wide back wheels and a light bar right across."""
+    FRONT, REAR = (.94, -1.36, .33), (.99, 1.34, .37)      # wheel x, z, radius
+    def ring(z, w, floor, wing, centre):
+        # The wings stand higher than the middle of the bonnet, as on the classic shape.
+        half = [(0, floor), (w * .78, floor), (w, floor + .10), (w, wing - .12), (w * .93, wing), (w * .70, wing + .005), (w * .42, (wing + centre) / 2 - .01), (0, centre)]
+        return [(x, y, z) for x, y in half] + [(-x, y, z) for x, y in reversed(half[1:-1])]
+    # (z, half width, floor, wing height, centre height)
+    body = loft('Body', [ring(*s) for s in [
+        (-2.36, .62, .30, .47, .45), (-2.26, .86, .22, .60, .52), (-1.92, .99, .17, .78, .62), (-1.36, 1.03, .16, .86, .70),
+        (-.86, 1.01, .16, .82, .74), (-.20, .99, .16, .80, .76), (.50, 1.01, .16, .80, .78), (.98, 1.09, .16, .85, .81),
+        (1.38, 1.13, .17, .88, .83), (1.86, 1.09, .20, .84, .81), (2.24, 1.00, .27, .74, .72), (2.38, .84, .36, .62, .62)]], paint)
+    modify(body, 'SUBSURF', levels=2, render_levels=2)
+    cut_arches(body, (FRONT, REAR), .085, .76, .72)
+
+    # ---- cabin: an upright screen, an arched roof and one long fall to the tail ----
+    # The sides lie in one sloping plane so the side glass sits flat on them.
+    side_x = lambda y: .9 - .5 * (y - .66)
+    cab = lambda z, yb, yt: (z, side_x(yb), yb, side_x(yt), yt)
+    # (z, base half width, base height, roof half width, roof height)
+    A, B, C, D, E, F, G, H = CABIN = [(-.98, .80, .64, .70, .73), cab(-.52, .68, 1.34), cab(-.05, .70, 1.42), cab(.45, .72, 1.40), cab(.95, .74, 1.26),
+                                      cab(1.40, .76, 1.04), (1.92, .82, .76, .72, .78), (2.18, .78, .68, .66, .70)]
+    cabin = loft('Cabin', [cabin_ring(*c) for c in CABIN], paint)
+    modify(cabin, 'BEVEL', width=.07, segments=4); shade(cabin, 50)
+    top = lambda c, side: (side * c[3], c[4], c[0])
+    base = lambda c, side: (side * c[1], c[2] + .12, c[0])
+    panel('Windscreen', [top(A, -1), top(A, 1), top(B, 1), top(B, -1)], glass, .1, .03)
+    # The back window bends with the roof, so it is laid in two pieces that meet edge to edge.
+    def across(c1, c2, t, side): return (side * (c1[3] + (c2[3] - c1[3]) * t) * .84, c1[4] + (c2[4] - c1[4]) * t, c1[0] + (c2[0] - c1[0]) * t)
+    panel('Rear glass', [across(D, E, .2, -1), across(D, E, .2, 1), across(D, E, 1, 1), across(D, E, 1, -1)], glass, 0, .035)
+    panel('Rear glass', [across(E, F, 0, -1), across(E, F, 0, 1), across(E, F, .86, 1), across(E, F, .86, -1)], glass, 0, .035)
+    panel('Engine grille', [top(F, -1), top(F, 1), top(G, 1), top(G, -1)], dark, .16, .03)
+    for i in range(4):
+        t = .2 + i * .2
+        box('Grille slat', (0, F[4] + (G[4] - F[4]) * t + .035, F[0] + (G[0] - F[0]) * t), (.82, .03, .05), paint, .006, (-.45, 0, 0))
+    for side in (-1, 1):
+        on_side = lambda z, y: (side * side_x(y), y, z)
+        panel('Quarter light', [base(A, side), base(B, side), top(B, side), top(A, side)], glass, .2, .03)
+        # One sweep of side glass: flat along the bottom, arched like the roof, ending in a point.
+        panel('Side glass', [on_side(-.44, .80), on_side(1.0, .88), on_side(1.27, .97), on_side(.95, 1.15), on_side(.45, 1.30), on_side(-.05, 1.32), on_side(-.46, 1.25)], glass, 0, .03)
+        # Round lamps standing on the front of each wing.
+        ellipsoid('Front wing', (side * .58, .67, -1.62), (.235, .2, .6), paint)
+        ellipsoid('Lamp ring', (side * .58, .65, -2.0), (.215, .2, .15), silver)
+        ellipsoid('Headlamp', (side * .58, .65, -2.035), (.19, .175, .15), lamp)
+        box('Indicator', (side * .64, .37, -2.3), (.26, .05, .06), lamp, .02, (0, side * -.3, 0))
+        box('Door line', (side * 1.0, .44, -.62), (.03, .46, .03), dark, .008)
+        box('Door line', (side * 1.0, .44, .52), (.03, .46, .03), dark, .008)
+        box('Door handle', (side * 1.01, .64, .30), (.03, .035, .2), silver, .008)
+        box('Sill', (side * .96, .19, 0), (.1, .08, 1.7), dark, .03)
+        ellipsoid('Mirror', (side * .98, .86, -.56), (.12, .075, .1), paint)
+        box('Mirror arm', (side * .9, .80, -.56), (.14, .03, .05), dark, .008)
+        cylinder('Exhaust', (side * .44, .30, 2.34), .085, .16, silver, 'z', 18, .012)
+        cylinder('Exhaust core', (side * .44, .30, 2.415), .06, .02, dark, 'z', 18)
+    box('Front intake', (0, .33, -2.36), (.8, .09, .08), dark, .025)
+    box('Light bar', (0, .56, 2.36), (1.5, .06, .07), tail, .02)
+    box('Rear valance', (0, .30, 2.22), (1.5, .2, .24), dark, .03)
+    box('Ducktail', (0, .77, 2.22), (1.5, .045, .28), paint, .018, (.34, 0, 0))
+    join_by_material()
+    wheel('Wheel_FL', -1, *FRONT); wheel('Wheel_FR', 1, *FRONT)
+    wheel('Wheel_RL', -1, *REAR, .36); wheel('Wheel_RR', 1, *REAR, .36)
+
+# Usage after "--": [model] [view out.png]; model is supercar, truck, formula or sports.
+MODELS = {'supercar': supercar, 'truck': truck, 'formula': formula, 'sports': sports}
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
-MODEL = ARGS[0] if ARGS and ARGS[0] in ('supercar', 'truck', 'formula') else 'supercar'
+MODEL = ARGS[0] if ARGS and ARGS[0] in MODELS else 'supercar'
 if ARGS and ARGS[0] == MODEL: ARGS = ARGS[1:]
-{'supercar': supercar, 'truck': truck, 'formula': formula}[MODEL]()
+MODELS[MODEL]()
 
 bpy.ops.wm.save_as_mainfile(filepath=str(ROOT / (MODEL + '.blend')))
 bpy.ops.export_scene.gltf(filepath=str(ROOT / (MODEL + '.glb')), export_format='GLB', export_cameras=False, export_lights=False, export_apply=True)

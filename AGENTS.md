@@ -60,7 +60,7 @@ obstacle data and the runtime terrain formula aligned with island edits.
 ## Little Racer (standalone game)
 
 The home Little Racer link opens `little-racer/`, a static Three.js supercar race:
-garage (three vehicles, paints, trails, four tracks), three laps over hills against three
+garage (four vehicles, paints, four tracks), three laps over hills against three
 cartoon dogs (Biscuit, Pepper, Waffle; Viaan's own car carries no dog),
 steer/boost/brake controls, drift boosts, boost stars, zoom strips, coins, a
 loop-the-loop, a jump and a mega jump, a tunnel, boss races, and a finish card. Read `little-racer/README.md` when
@@ -70,7 +70,7 @@ and runs in Node; `game.js` owns the scene, generated scenery, input and lifecyc
 `audio.js` synthesizes music and effects. It imports Three.js from `sky-playground/vendor`,
 so keep those files in place. The car is an original Blender model with no real maker's
 name or badge, and the dogs are original characters, not copies of a known cartoon. The car drives by itself (there is no go button). Nothing crashes the car, the loop carries every car round safely, rivals
-rubber-band to stay close, and there is no timer. Cups unlock vehicles and boss races. Coins only come from playing and unlock paints and trails; every
+rubber-band to stay close, and there is no timer. Cups unlock vehicles and boss races. Coins only come from playing and unlock paints (trails were removed; old saves get those coins back); every
 finish earns a cup and nothing is ever lost. Choices, coins, unlocks and cups persist in
 `viaan-racer-v1`, validated by `normalizePrefs`. `index.html` and `game.js` load their files with a `?v=` number; raise it in both whenever code or styles change.
 Run `node --test little-racer/*.test.mjs` after changes and verify a full race, a drift

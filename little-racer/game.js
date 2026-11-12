@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../sky-playground/vendor/GLTFLoader.js';
-import { createSound } from './audio.js?v=8';
-import { makeDog, poseDriver, portrait, makeCrowd } from './dogs.js?v=8';
-import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, LOOP, STORAGE_KEY, PAINTS, TRAILS, CARS, BOSSES, DOGS, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=8';
+import { createSound } from './audio.js?v=9';
+import { makeDog, poseDriver, portrait, makeCrowd } from './dogs.js?v=9';
+import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, LOOP, STORAGE_KEY, PAINTS, CARS, BOSSES, DOGS, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=9';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
@@ -19,7 +19,6 @@ const THEMES = {
     land: [[0, '#2a1d6b'], [1, '#2a1d6b']] }
 };
 const SWATCH = { gold: 'linear-gradient(135deg,#fff3b0,#ffc21a 45%,#c98a00)', rainbow: 'conic-gradient(#ff5f5f,#ffd24a,#58d68d,#4aa8ff,#b06bff,#ff5f5f)', galaxy: 'radial-gradient(circle at 30% 30%,#8f6bff,#2f1f7a 60%,#150c3d)' };
-const TRAIL_ICON = { none: '✕', bubbles: '🫧', ribbon: '🌈', fire: '🔥' };
 const ORDINALS = ['1st', '2nd', '3rd', '4th'];
 // The crowd is a pack of dogs in every coat colour.
 const COATS = [['#f3c56d', '#fff4dc', '#d6953a'], ['#c9884a', '#fbe9cf', '#8a5527'], ['#fbfaf6', '#ffffff', '#c9884a'], ['#8d96aa', '#ffffff', '#5c6479'], ['#4a3f3a', '#d39a5c', '#2a2422'], ['#e9b98a', '#fff4dc', '#b9793f'], ['#fbfaf6', '#ffffff', '#2d2d36']];
@@ -39,9 +38,9 @@ const held = { left: new Set(), right: new Set(), brake: new Set(), nitro: new S
 const SPECS = {
   supercar: { flame: [.27, .34, 3.1], seat: [.2, .42, .92], blob: [1.35, 2.7], wheel: .36 },
   truck: { flame: [.5, 1.2, 2.95], seat: [1.05, .1, 1.3], blob: [1.9, 3.2], wheel: .66 },
+  sports: { flame: [.44, .3, 3.15], seat: [.5, .2, .92], blob: [1.4, 2.75], wheel: .35 },
   formula: { flame: [.12, .5, 2.8], seat: [-.02, .25, .82], blob: [1.3, 2.9], wheel: .35 }
 };
-const CAR_ICON = { supercar: 'supercar', truck: 'truck', formula: 'formula' };
 const templates = {}, everyView = [], playerViews = {}, bossViews = {}, rivalViews = [];
 let views = [], bossMode = false;
 const basis = new THREE.Matrix4(), vf = new THREE.Vector3(), vu = new THREE.Vector3(), vr = new THREE.Vector3();
@@ -803,12 +802,6 @@ function updateCars(dt) {
       if (car.drift >= DRIFT_SMALL) spawn(backX + rx * w, ground + .2, backZ + rz * w, -fx * 3 + (rand() - .5) * 4, 2 + rand() * 3, -fz * 3 + (rand() - .5) * 4, .09 + rand() * .06, .32, level, 9);
       else spawn(backX + rx * w, ground + .25, backZ + rz * w, -fx, .8, -fz, .24, .5, level, 0, 1);
     }
-    if (phase === 'racing' && car.speed > 12 && prefs.trail !== 'none') {
-      const w = wheel();
-      if (prefs.trail === 'bubbles' && rand() < 18 * dt) spawn(backX + rx * w, ground + .5, backZ + rz * w, -fx + (rand() - .5), 1.4 + rand(), -fz + (rand() - .5), .14 + rand() * .16, 1.1, rand() < .5 ? '#bfe9ff' : '#ffffff', -.6, 1);
-      if (prefs.trail === 'ribbon' && rand() < 46 * dt) spawn(backX + rx * w, ground + .45, backZ + rz * w, -fx * 1.5, .3, -fz * 1.5, .12, .7, PARTY[Math.floor(clock * 9) % 5]);
-      if (prefs.trail === 'fire' && rand() < 46 * dt) spawn(backX + rx * w * .4, ground + .4, backZ + rz * w * .4, -fx * 2 + (rand() - .5), 1.5 + rand() * 1.5, -fz * 2 + (rand() - .5), .15 + rand() * .1, .42, ['#ff7a1a', '#ffd23f', '#ff3b30'][Math.floor(rand() * 3)]);
-    }
   });
 }
 /* ---------- camera ---------- */
@@ -929,12 +922,11 @@ function renderGarage() {
   $('bank').textContent = prefs.coins;
   const won = Object.keys(prefs.cups).length;
   $('cars').innerHTML = CARS.map(c => carUnlocked(prefs, c)
-    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${CAR_ICON[c.id]}.png?v=8" alt=""><small>${c.name}</small></button>`
-    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${CAR_ICON[c.id]}.png?v=8" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
+    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${c.id}.png?v=9" alt=""><small>${c.name}</small></button>`
+    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${c.id}.png?v=9" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
   $('swatches').innerHTML = PAINTS.map(p => owns(p)
     ? `<button data-paint="${p.id}" style="background:${swatch(p)}" aria-label="${p.name}" aria-pressed="${p.id === prefs.paint}"></button>`
     : `<button data-paint="${p.id}" class="locked" style="background:${swatch(p)}" aria-label="${p.name}, locked, costs ${p.cost} coins" aria-pressed="false">🔒<br>${p.cost}</button>`).join('');
-  $('trails').innerHTML = TRAILS.map(t => `<button data-trail="${t.id}" class="${owns(t) ? '' : 'locked'}" aria-label="${t.name}${owns(t) ? '' : `, locked, costs ${t.cost} coins`}" aria-pressed="${t.id === prefs.trail}"><span aria-hidden="true">${TRAIL_ICON[t.id]}</span><small>${!owns(t) ? '🔒 ' + t.cost : t.id === 'none' ? 'None' : t.name.replace(' trail', '')}</small></button>`).join('');
   const cupMark = id => prefs.cups[id] === 3 ? '<em class="cup gold" aria-hidden="true">👑</em>' : prefs.cups[id] ? `<em class="cup ${prefs.cups[id] === 2 ? 'gold' : ''}" aria-hidden="true">🏆</em>` : '';
   $('tracks').innerHTML = TRACKS.map(t => `<button data-track="${t.id}" aria-label="${t.name}${prefs.cups[t.id] === 3 ? ', boss beaten' : prefs.cups[t.id] === 2 ? ', gold cup won' : prefs.cups[t.id] ? ', cup won' : ''}" aria-pressed="${t.id === prefs.track}"><span aria-hidden="true">${THEMES[t.id].icon}</span><strong>${t.name}${cupMark(t.id)}</strong><small>${t.blurb}</small></button>`).join('');
   // A track's boss appears once its cup has been earned.
@@ -949,15 +941,15 @@ function choose(kind, id) {
     const chosen = $('cars').querySelector('[aria-pressed="true"]'); if (chosen) chosen.focus({ preventScroll: true });
     return;
   }
-  const item = (kind === 'paint' ? PAINTS : TRAILS).find(i => i.id === id); if (!item) return;
+  const item = PAINTS.find(i => i.id === id); if (!item) return;
   if (!owns(item)) {
     if (prefs.coins < item.cost) { toast(`${item.cost - prefs.coins} more coins for ${item.name}`, 2.4); sound.tone(220, 0, .2, 'triangle', .08); return; }
     prefs = buy(prefs, id); toast(`You unlocked ${item.name}!`, 2.4); sound.chime([659, 784, 1047, 1319], .1);
     const pose = trackPose(race.track, playerOf(race).d, playerOf(race).lat); burst(pose.x, pose.y + 1.5, pose.z, 40, 6, .22, 1.4, PARTY, 5);
   }
-  prefs = normalizePrefs({ ...prefs, [kind]: id }); savePrefs();
+  prefs = normalizePrefs({ ...prefs, paint: id }); savePrefs();
   applyPaint(views[0].paint, prefs.paint); orderKey = ''; renderGarage();
-  const pressed = $(kind === 'paint' ? 'swatches' : 'trails').querySelector('[aria-pressed="true"]'); if (pressed) pressed.focus({ preventScroll: true });
+  const pressed = $('swatches').querySelector('[aria-pressed="true"]'); if (pressed) pressed.focus({ preventScroll: true });
 }
 function resetRace() {
   race = createRace(prefs.track, { boss: bossMode }); buildWorld(prefs.track); seatViews();
@@ -1085,7 +1077,6 @@ function setupControls() {
   $('change').addEventListener('click', openGarage);
   $('finish').addEventListener('cancel', e => e.preventDefault());
   $('swatches').addEventListener('click', e => { const button = e.target.closest('[data-paint]'); if (button) choose('paint', button.dataset.paint); });
-  $('trails').addEventListener('click', e => { const button = e.target.closest('[data-trail]'); if (button) choose('trail', button.dataset.trail); });
   $('tracks').addEventListener('click', e => {
     const button = e.target.closest('[data-track]'); if (!button) return;
     prefs = normalizePrefs({ ...prefs, track: button.dataset.track }); savePrefs();
@@ -1141,7 +1132,7 @@ async function init() {
     makeSky(); makeParticles();
     canvas.tabIndex = -1;
     const loader = new GLTFLoader();
-    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=8`)]))) {
+    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=9`)]))) {
       templates[id] = asset.scene;
       asset.scene.traverse(o => {
         if (!o.isMesh || shiny.includes(o.material)) return;

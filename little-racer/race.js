@@ -26,7 +26,7 @@ export const NITRO_COST = 1 / 3;   // the tank holds three bursts
 export const LOOP = { ground: 22, radius: 11, lead: 24, lane: 4.5, half: 3, pace: 22 / (22 + Math.PI * 22) };
 export const STORAGE_KEY = 'viaan-racer-v1';
 
-// Paints and trails with a cost are unlocked with coins collected in races.
+// Paints with a cost are unlocked with coins collected in races.
 export const PAINTS = [
   { id: 'sunshine', name: 'Sunshine yellow', color: '#f7bf12' },
   { id: 'tangerine', name: 'Tangerine orange', color: '#f5741a' },
@@ -38,16 +38,13 @@ export const PAINTS = [
   { id: 'rainbow', name: 'Rainbow', color: '#ff5fa2', cost: 300 },
   { id: 'galaxy', name: 'Galaxy', color: '#2f1f7a', cost: 450 }
 ];
-export const TRAILS = [
-  { id: 'none', name: 'No trail' },
-  { id: 'bubbles', name: 'Bubble trail', cost: 100 },
-  { id: 'ribbon', name: 'Rainbow trail', cost: 250 },
-  { id: 'fire', name: 'Fire trail', cost: 400 }
-];
+// Trails behind the car were taken out. Coins once spent on them come back the next time the save is read.
+const OLD_TRAILS = { bubbles: 100, ribbon: 250, fire: 400 };
 // Vehicles unlock with cups: finish a race on that many different tracks.
 export const CARS = [
   { id: 'supercar', name: 'Supercar', cups: 0 },
   { id: 'truck', name: 'Monster truck', cups: 1 },
+  { id: 'sports', name: 'Sports car', cups: 2 },
   { id: 'formula', name: 'Formula racer', cups: 3 }
 ];
 // Each track's boss is a big dog in a crown who waits behind its cup and drives the monster truck.
@@ -67,7 +64,7 @@ export const DOGS = {
   rumble: { fur: '#4a3f3a', muzzle: '#d39a5c', ear: '#2a2422', ears: 'pointy', collar: '#eb6548', crown: true },
   comet: { fur: '#9c7cf2', muzzle: '#efe6ff', ear: '#6a4fd0', ears: 'pointy', collar: '#3df0c2', spots: '#6a4fd0', crown: true }
 };
-const SHOP = [...PAINTS, ...TRAILS].filter(item => item.cost);
+const SHOP = PAINTS.filter(item => item.cost);
 export const RIVALS = [
   { id: 'biscuit', name: 'Biscuit', color: '#17b3a6', pace: .98, lane: 3.2 },
   { id: 'pepper', name: 'Pepper', color: '#f4efe2', pace: .94, lane: -3.2 },
@@ -204,9 +201,10 @@ export function normalizePrefs(raw) {
   for (const track of TRACKS) { const cup = saved.cups && typeof saved.cups === 'object' ? saved.cups[track.id] : 0; if (cup === 1 || cup === 2) cups[track.id] = cup; }
   for (const track of TRACKS) { const cup = saved.cups && typeof saved.cups === 'object' ? saved.cups[track.id] : 0; if (cup === 3) cups[track.id] = 3; }
   const won = Object.keys(cups).length, car = CARS.find(c => c.id === saved.car && c.cups <= won) || CARS[0];
+  const refund = Array.isArray(saved.owned) ? Object.keys(OLD_TRAILS).reduce((sum, id) => sum + (saved.owned.includes(id) ? OLD_TRAILS[id] : 0), 0) : 0;
   return {
-    car: car.id, paint: pick(PAINTS, saved.paint), track: (TRACKS.find(t => t.id === saved.track) || TRACKS[0]).id, trail: pick(TRAILS, saved.trail),
-    coins: Number.isInteger(saved.coins) && saved.coins > 0 ? Math.min(saved.coins, 99999) : 0, owned, cups
+    car: car.id, paint: pick(PAINTS, saved.paint), track: (TRACKS.find(t => t.id === saved.track) || TRACKS[0]).id,
+    coins: Math.min((Number.isInteger(saved.coins) && saved.coins > 0 ? saved.coins : 0) + refund, 99999), owned, cups
   };
 }
 // Buying never fails loudly: without enough coins the choices come back unchanged.
