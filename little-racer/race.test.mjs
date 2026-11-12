@@ -88,7 +88,7 @@ test('a careful driver wins, in about a minute and a half, at any frame rate', (
       assert.equal(R.placeOf(race), 1, `${id} at ${fps} fps`);
       return race.time;
     });
-    assert.ok(times[1] > 70 && times[1] < 120, `${id} took ${times[1]}s`);
+    assert.ok(times[1] > 70 && times[1] < 130, `${id} took ${times[1]}s`);
     assert.ok(Math.max(...times) - Math.min(...times) < 2, `${id} frame-rate spread ${times}`);
   }
 });
@@ -132,9 +132,10 @@ test('each track has a tunnel and two jump ramps on straight road, well apart', 
     assert.equal(track.tunnel.length, R.TUNNEL_LENGTH);
     for (const s of spots) {
       assert.ok(s >= 100 && s <= track.length - 110, `${id} feature at ${s}`);
-      for (let d = s; d < s + 40; d += 2) assert.ok(Math.abs(R.trackPose(track, d, 0).k) < 1 / 45, `${id} is nearly straight at ${d}`);
+      // Ramps need nearly straight road for the flight; the tunnel just follows a gentle bend.
+      for (let d = s; d < s + 40; d += 2) assert.ok(Math.abs(R.trackPose(track, d, 0).k) < 1 / (s === track.tunnel.s ? 30 : 45), `${id} is nearly straight at ${d}`);
     }
-    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) assert.ok(Math.abs(spots[i] - spots[j]) > 170);
+    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) assert.ok(Math.abs(spots[i] - spots[j]) > 150);
     for (const star of R.starsFor(track)) for (const ramp of track.ramps) assert.ok(star.s < ramp - 6 || star.s > ramp + 38);
   }
 });
@@ -315,7 +316,7 @@ test('coins sit in rows and over ramps, count once and return each lap', () => {
     const track = R.getTrack(id), coins = R.coinsFor(track);
     assert.ok(coins.length >= 40, `${id} has ${coins.length} coins`);
     assert.equal(coins.filter(c => c.air).length, 14 + 3 * R.bouncersFor(track).length);
-    assert.equal(coins.filter(c => c.loop).length, 8);
+    assert.equal(coins.filter(c => c.loop).length, 8 * track.loop.turns);
     for (const coin of coins) assert.ok(Math.abs(coin.lat) < R.HALF_ROAD - 2 + (coin.loop ? 2 : 0) && coin.s > 20 && coin.s < track.length - 10);
     for (const coin of coins.filter(c => !c.air)) for (const star of R.starsFor(track)) assert.ok(Math.abs(coin.s - star.s) > 4 || coin.lat !== star.lat);
   }
@@ -341,42 +342,87 @@ test('coins sit in rows and over ramps, count once and return each lap', () => {
 });
 
 test('the loop joins the road smoothly, turns the car right over and carries it across lanes', () => {
+  assert.deepEqual(R.TRACKS.map(t => R.getTrack(t.id).loop.turns), [1, 1, 2, 2]);
   for (const { id } of R.TRACKS) {
-    const track = R.getTrack(id), s = track.loop.s, G = R.LOOP.ground;
-    for (const [d, lat] of [[s + 1e-4, -R.LOOP.lane], [s + G - 1e-4, R.LOOP.lane]]) {
+    const track = R.getTrack(id), s = track.loop.s, turns = track.loop.turns, G = track.loop.ground;
+    assert.equal(G, R.LOOP.ground * turns);
+    // In on the left; out on the right after one turn, back on the left after two.
+    for (const [d, lat] of [[s + 1e-4, -R.LOOP.lane], [s + G - 1e-4, turns % 2 ? R.LOOP.lane : -R.LOOP.lane]]) {
       const frame = R.trackFrame(track, d, lat), road = R.trackPose(track, d, lat);
       assert.ok(Math.hypot(frame.x - road.x, frame.y - road.y, frame.z - road.z) < .05, 'no step where the loop meets the road');
       assert.ok(frame.uy > .98);
+      assert.ok(Math.abs(R.loopLane(R.loopPhase(track, d), turns) - lat) < .01);
     }
-    const top = R.trackFrame(track, s + G / 2, 0);
-    assert.ok(Math.abs(top.y - R.trackPose(track, s + G / 2, 0).y - 2 * R.LOOP.radius) < .01);
-    assert.ok(top.uy < -.98, 'upside down at the top');
+    for (let k = 0; k < turns; k++) {
+      const d = s + G * (k + .5) / turns, top = R.trackFrame(track, d, 0);
+      assert.ok(Math.abs(top.y - R.trackPose(track, d, 0).y - 2 * R.LOOP.radius) < .01);
+      assert.ok(top.uy < -.98, 'upside down at the top');
+      assert.ok(Math.abs(R.loopHeight((k + .5) / turns, turns) - 2 * R.LOOP.radius) < 1e-9);
+    }
     for (let t = .02; t < 1; t += .02) {
-      const f = R.trackFrame(track, s + G * t, R.loopLane(t));
+      const f = R.trackFrame(track, s + G * t, R.loopLane(t, turns));
       assert.ok(Math.abs(Math.hypot(f.fx, f.fy, f.fz) - 1) < 1e-6 && Math.abs(Math.hypot(f.ux, f.uy, f.uz) - 1) < 1e-6);
       assert.ok(Math.abs(f.fx * f.ux + f.fy * f.uy + f.fz * f.uz) < 1e-6, 'up stays square to forward');
+      assert.ok(Math.abs(R.loopLane(t, turns)) <= R.LOOP.lane + 1e-9);
     }
+    // The ribbon never runs through itself: where two parts pass each other there is room for a car between them.
+    const spots = Array.from({ length: 200 }, (_, i) => { const t = (i + .5) / 200; return [R.trackFrame(track, s + G * t, R.loopLane(t, turns)), t]; });
+    for (const [a, ta] of spots) for (const [b, tb] of spots) if (tb - ta > .12 / turns) assert.ok(Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z) > 4, `${id} ribbon meets itself at ${ta} and ${tb}`);
     assert.equal(R.loopPhase(track, s - 1), -1);
     assert.equal(R.loopPhase(track, s + G + 1), -1);
     assert.equal(R.trackFrame(track, 50, 0).loop, -1);
-    // The loop stands clear of the tunnel and both ramps.
-    for (const other of [track.tunnel.s, ...track.ramps]) assert.ok(Math.abs(other - s) > 60);
+    assert.equal(R.coinsFor(track).filter(c => c.loop).length, 8 * turns);
+    // The loop stands clear of the tunnel and both ramps, on road that is very nearly straight.
+    for (const other of [track.tunnel.s, ...track.ramps]) assert.ok(other < s - R.LOOP.lead - 30 || other > s + G + 30, `${id} loop too close to ${other}`);
+    for (let i = -R.LOOP.lead; i <= G; i++) assert.ok(Math.abs(track.ks[Math.round(s + i) % track.n]) < 1 / 50, `${id} loop on a bend`);
   }
-  const race = R.createRace('beach'), player = R.playerOf(race), s = race.track.loop.s;
-  for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
-  race.cars.slice(1).forEach(c => { c.d = s + 300; });
-  player.d = s - R.LOOP.lead; player.lat = 5; player.speed = R.CRUISE;
-  const events = []; let seconds = 0, inside = 0, steps = 0;
-  // Holding full right and no gas cannot fall out of the loop or stall in it.
-  while (player.d < s + R.LOOP.ground + 2 && steps++ < 2000) {
-    events.push(...R.stepRace(race, { steer: 1, gas: false }, 1 / 60)); seconds += 1 / 60;
-    const t = R.loopPhase(race.track, player.d);
-    if (t >= 0) { inside += 1 / 60; assert.ok(Math.abs(player.lat - R.loopLane(t)) < 1.6, `lane at ${t}`); if (t > .05) assert.ok(player.speed >= 20); }
+});
+
+test('the launch strip fires every car into the loop, which slows it over the top and slings it out', () => {
+  for (const id of ['beach', 'galaxy']) {
+    const race = R.createRace(id), player = R.playerOf(race), track = race.track, s = track.loop.s, turns = track.loop.turns;
+    for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
+    race.cars.slice(1).forEach(c => { c.d = s + 300; });
+    player.d = s - R.LOOP.lead - 1; player.lat = 5; player.speed = 6; player.nitro = 0; player.boost = 0;
+    const events = [], speeds = []; let inside = 0, steps = 0, entry = 0;
+    // Holding full right, no gas and the brake cannot fall out of the loop or stall in it.
+    while (player.d < s + track.loop.ground + 1 && steps++ < 3000) {
+      events.push(...R.stepRace(race, { steer: 1, gas: false, brake: true }, 1 / 60));
+      const t = R.loopPhase(track, player.d);
+      if (t < 0) continue;
+      inside += 1 / 60; speeds.push([t, player.speed]); entry ||= player.speed;
+      assert.ok(Math.abs(player.lat - R.loopLane(t, turns)) < 1.6, `lane at ${t}`);
+      assert.ok(player.speed >= R.LOOP.slow - 1e-9 && player.speed <= R.CRUISE + R.BOOST + 2, `speed ${player.speed} at ${t}`);
+      // Fast enough at every height to stay pressed onto the ribbon.
+      assert.ok(player.speed * player.speed / R.LOOP.radius > R.LOOP.gravity * .95);
+    }
+    assert.ok(steps < 3000);
+    assert.ok(entry > R.LOOP.launch - 2, `${id} enters at ${entry}`);
+    assert.deepEqual(events.filter(e => ['launch', 'loop', 'looptop', 'looped'].includes(e)), ['launch', 'loop', ...Array(turns).fill('looptop'), 'looped']);
+    // Slowest at each top, quick again at each bottom.
+    const at = where => speeds.reduce((best, pair) => Math.abs(pair[0] - where) < Math.abs(best[0] - where) ? pair : best)[1];
+    for (let k = 0; k < turns; k++) assert.ok(at((k + .5) / turns) < R.LOOP.launch - 10, `${id} top ${k} at ${at((k + .5) / turns)}`);
+    for (let k = 1; k < turns; k++) assert.ok(at(k / turns) > R.LOOP.launch - 1);
+    assert.ok(inside > 2.2 * turns && inside < 4.2 * turns, `${id}: the loop takes ${inside}s`);
+    assert.ok(player.speed >= R.LOOP.launch - 6 && player.boost > R.LOOP.kick - .2, `slung out with a boost: ${player.speed}, ${player.boost}`);
+    assert.ok(Math.abs(player.nitro - Math.min(1, turns * R.NITRO_COST + .05 * 8 * turns)) < .05 || player.nitro === 1, 'each top fills a burst');
+    assert.ok(race.coins.filter(c => c.loop).every(c => c.taken), 'the ring of coins is swept up on the way round');
   }
-  assert.ok(steps < 2000);
-  assert.equal(events.filter(e => e === 'loop').length, 1);
-  assert.ok(inside > 2.5 && inside < 5, `the loop takes ${inside}s`);
-  assert.ok(race.coins.filter(c => c.loop).every(c => c.taken), 'the ring of coins is swept up on the way round');
+  // A boost burning inside makes the trip quicker, and friends ride the loop the same way.
+  const time = boosted => {
+    const race = R.createRace('beach'), player = R.playerOf(race), s = race.track.loop.s;
+    race.phase = 'racing'; race.cars.slice(1).forEach(c => { c.d = s + 300; });
+    player.d = s - 1; player.lat = -R.LOOP.lane; player.speed = R.LOOP.launch; player.nitro = 1;
+    let steps = 0;
+    while (player.d < s + race.track.loop.ground && steps++ < 2000) R.stepRace(race, { steer: 0, gas: true, nitro: boosted && steps % 2 === 0 }, 1 / 60);
+    return steps / 60;
+  };
+  assert.ok(time(true) < time(false) - .2);
+  const race = R.createRace('snow'), rival = race.cars[1], s = race.track.loop.s;
+  race.phase = 'racing'; rival.d = s - R.LOOP.lead - 1; rival.speed = 10; R.playerOf(race).d = s - 200;
+  let slowest = 99, steps = 0;
+  while (rival.d < s + race.track.loop.ground + 1 && steps++ < 3000) { R.stepRace(race, { steer: 0, gas: true, brake: true }, 1 / 60); if (R.loopPhase(race.track, rival.d) >= 0) slowest = Math.min(slowest, rival.speed); }
+  assert.ok(steps < 3000 && slowest >= R.LOOP.slow - 1e-9 && slowest < R.LOOP.launch - 10);
 });
 
 test('gas makes the car go, letting go coasts, and the brake stops it without ever reversing', () => {

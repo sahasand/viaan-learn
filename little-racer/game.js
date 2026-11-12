@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../sky-playground/vendor/GLTFLoader.js';
-import { createSound } from './audio.js?v=10';
-import { makeDog, poseDriver, portrait, makeCrowd } from './dogs.js?v=10';
-import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, CRUISE, HOP_SECONDS, SMASH_BACK, LOOP, STORAGE_KEY, PAINTS, CARS, BOSSES, DOGS, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=10';
+import { createSound } from './audio.js?v=11';
+import { makeDog, poseDriver, portrait, makeCrowd } from './dogs.js?v=11';
+import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, CRUISE, HOP_SECONDS, SMASH_BACK, LOOP, STORAGE_KEY, PAINTS, CARS, BOSSES, DOGS, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=11';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
@@ -36,8 +36,8 @@ const sound = createSound();
 let renderer, scene, camera, hemisphere, sun, sky, pmrem, envScene, envGround, envTarget, world, builtTrack = '', race, heightAt = () => 0;
 let phase = 'loading', paused = false, lastTime = 0, clock = 0, lowQuality = false, slowFor = 0, rewardText = '';
 let toastUntil = 0, countdownUntil = 0, finishAt = 0, nextFirework = 0, nextSmoke = 0, lastCoinSound = 0, lastHud = 0, orderKey = '', frameKey = '';
-let cameraHeading = 0, cameraLat = 0, cameraRoll = 0, cameraKick = 0;
-let mapBase, mapView, weather, dotTexture, coinMesh, coinSpots = [], volcano = null, pack = null, starfield = null, padTexture = null, propMesh = null, propSpots = [], lastSmash = 0;
+let cameraHeading = 0, cameraLat = 0, cameraRoll = 0, cameraKick = 0, loopEase = 0, loopSpot = null;
+let mapBase, mapView, weather, dotTexture, coinMesh, coinSpots = [], volcano = null, pack = null, starfield = null, padTexture = null, propMesh = null, propSpots = [], lastSmash = 0, launchTexture = null;
 let savedPrefs; try { savedPrefs = localStorage.getItem(STORAGE_KEY); } catch {}
 let prefs = normalizePrefs(savedPrefs);
 const starMeshes = [], lamps = [], floaters = [], fireRings = [], bouncerViews = [], shiny = [], mugs = {};
@@ -382,9 +382,9 @@ function buildRamps(track) {
 }
 // The loop is a rainbow ribbon swept through the same frames the cars follow.
 function buildLoop(track) {
-  const positions = [], colors = [], index = [], rails = [], railIndex = [], segments = 84;
+  const positions = [], colors = [], index = [], rails = [], railIndex = [], turns = track.loop.turns, segments = 84 * turns;
   for (let i = 0; i <= segments; i++) {
-    const t = clamp(i / segments, .0005, .9995), d = track.loop.s + LOOP.ground * t, lane = loopLane(t);
+    const t = clamp(i / segments, .0005, .9995), d = track.loop.s + track.loop.ground * t, lane = loopLane(t, turns);
     const a = trackFrame(track, d, lane - LOOP.half), b = trackFrame(track, d, lane + LOOP.half);
     tint.setHSL((t * 3) % 1, 1, .5);
     for (const f of [a, b]) { positions.push(f.x - f.ux * .03, f.y - f.uy * .03, f.z - f.uz * .03); colors.push(tint.r, tint.g, tint.b); rails.push(f.x, f.y, f.z, f.x + f.ux * .7, f.y + f.uy * .7, f.z + f.uz * .7); }
@@ -394,11 +394,21 @@ function buildLoop(track) {
   deck.geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   const rail = custom(rails, railIndex, mat('#fff9e9', { side: THREE.DoubleSide }));
   deck.castShadow = rail.castShadow = true; world.add(deck, rail);
+  // The launch strip: a long run of rushing arrows in the lane that leads into the loop.
+  const strip = [], uvs = [], stripIndex = [], rows = 12, from = track.loop.s - LOOP.lead + 3, length = LOOP.lead - 4;
+  for (let r = 0; r <= rows; r++) for (const u of [0, 1]) { const p = trackPose(track, from + length * r / rows, -LOOP.lane * Math.min(1, .35 + r / rows) + (u ? 2.7 : -2.7)); strip.push(p.x, p.y + .08, p.z); uvs.push(u, r / rows * 4); }
+  for (let r = 0; r < rows; r++) { const k = r * 2; stripIndex.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  world.add(custom(strip, stripIndex, new THREE.MeshBasicMaterial({ map: launchTexture }), uvs));
+  // The loop is filmed from beside the road, on the open verge between the kerb and the things
+  // standing further out, from whichever side has the lower ground.
+  const mid = trackPose(track, track.loop.s + track.loop.ground / 2, 0), reach = THEMES[track.id].space ? 12 : 15.5;
+  const ground = [1, -1].map(side => heightAt(mid.x + Math.cos(mid.heading) * side * reach, mid.z + Math.sin(mid.heading) * side * reach));
+  loopSpot = { side: ground[1] < ground[0] - 1 ? -1 : 1, reach, up: Math.max(6.5, Math.min(...ground) - mid.y + 3) };
 }
 const inFeature = (track, d, margin) => {
   const s = ((d % track.length) + track.length) % track.length;
   return (s > track.tunnel.s - margin && s < track.tunnel.s + track.tunnel.length + margin) || track.ramps.some(r => s > r - margin && s < r + margin + (r === track.mega ? 62 : 0))
-    || (s > track.loop.s - LOOP.lead - margin && s < track.loop.s + LOOP.ground + margin);
+    || (s > track.loop.s - LOOP.lead - margin && s < track.loop.s + track.loop.ground + margin);
 };
 // Each place has one landmark in its biggest clearing and one on the horizon.
 function buildLandmarks(track, trackId, s, shapes, m, cx, cz, reach) {
@@ -495,6 +505,13 @@ function buildWorld(trackId) {
   for (const lat of [-2.4, 0, 2.4]) {
     const p = trackPose(track, 0, lat), lamp = new THREE.Mesh(new THREE.SphereGeometry(.55, 16, 12), new THREE.MeshBasicMaterial({ color: '#3a2626' }));
     lamp.position.set(p.x, 5.75, p.z); world.add(lamp); lamps.push(lamp);
+  }
+  if (!launchTexture) {
+    launchTexture = canvasTexture(128, 128, g => {
+      g.fillStyle = '#ff7a1a'; g.fillRect(0, 0, 128, 128); g.fillStyle = '#ffe14d'; g.fillRect(0, 0, 9, 128); g.fillRect(119, 0, 9, 128); g.strokeStyle = '#ffffff'; g.lineWidth = 15; g.lineJoin = 'round'; g.lineCap = 'round';
+      for (let i = 0; i < 2; i++) { const y = 56 + i * 64; g.beginPath(); g.moveTo(24, y); g.lineTo(64, y - 38); g.lineTo(104, y); g.stroke(); }
+    });
+    launchTexture.wrapT = THREE.RepeatWrapping; launchTexture.userData.keep = true;
   }
   buildTunnel(track, theme); buildRamps(track); buildLoop(track);
 
@@ -766,6 +783,7 @@ function updateWorld(dt) {
     return gap > 150 ? -1 : phase === 'garage' ? 0 : clamp(1.7 - gap / 34, 0, 1);
   }, reducedMotion);
   if (!reducedMotion && padTexture) padTexture.offset.y = -(clock * 1.7 % 1);
+  if (!reducedMotion && launchTexture) launchTexture.offset.y = -(clock * 3.2 % 1);
   for (const thing of floaters) if (!reducedMotion) thing.position.y = thing.userData.base + Math.sin(clock * .6 + thing.userData.beat) * thing.userData.rise;
   race.stars.forEach((star, i) => {
     const mesh = starMeshes[i]; if (!mesh) return;
@@ -895,6 +913,7 @@ function updateCars(dt) {
     view.blob.visible = !sun.castShadow && !looping; view.blob.scale.set(view.spec.blob[0] / (1 + rise * .25), view.spec.blob[1] / (1 + rise * .25), 1);
     for (const flame of view.flames) { flame.visible = car.boost > 0; flame.scale.y = .8 + Math.sin(clock * 40 + i) * .3; }
     if (view.dog) poseDriver(view.dog, clock, phase === 'garage' ? 0 : car.speed, car.steer, car.boost > 0, flying, reducedMotion);
+    if (looping && car.player && !paused && phase === 'racing' && rand() < 50 * dt) spawn(f.x + f.ux * .5 - f.fx * 2, f.y + f.uy * .5 - f.fy * 2, f.z + f.uz * .5 - f.fz * 2, (rand() - .5) * 3, (rand() - .5) * 3, (rand() - .5) * 3, .16 + rand() * .12, .8, PARTY[Math.floor(rand() * PARTY.length)]);
     if (paused || phase === 'garage' || looping) return;
     // Effects trail from the back wheels.
     const backX = f.x - fx * 2, backZ = f.z - fz * 2, ground = f.y + rise, off = Math.abs(car.lat) > HALF_ROAD && !flying, wheel = () => (rand() < .5 ? -1 : 1) * .95;
@@ -928,21 +947,7 @@ function updateCamera(dt) {
   applyFrame();
   const player = playerOf(race), track = race.track, pose = trackPose(track, player.d, player.lat), f = trackFrame(track, player.d, player.lat), tall = camera.aspect < .8;
   camera.up.set(0, 1, 0);
-  if (racing() && f.loop >= 0) {
-    if (reducedMotion) {
-      // A calm side view for the trip round the loop.
-      const mid = trackPose(track, track.loop.s + LOOP.ground / 2, 0);
-      camera.position.set(mid.x + Math.cos(mid.heading) * 40, mid.y + 12, mid.z + Math.sin(mid.heading) * 40); camera.lookAt(mid.x, mid.y + LOOP.radius, mid.z);
-    } else {
-      // The camera rides round the loop behind the car, upside down at the top.
-      // It sits on the ribbon a little way behind, lifted toward the middle of the loop, so it never leaves the inside.
-      const b = trackFrame(track, player.d - (tall ? 2.7 : 2.4), player.lat), high = tall ? 2 : 1.6;
-      camera.up.set(f.ux, f.uy, f.uz);
-      camera.position.set(b.x + b.ux * high, b.y + b.uy * high, b.z + b.uz * high);
-      camera.lookAt(f.x + f.fx + f.ux * 1.4, f.y + f.fy + f.uy * 1.4, f.z + f.fz + f.uz * 1.4);
-    }
-    cameraHeading = trackPose(track, track.loop.s + LOOP.ground + 9, 0).heading; cameraLat = player.lat * .7; cameraRoll = 0;
-  } else if (racing()) {
+  if (racing()) {
     const far = trackPose(track, player.d + 9, 0), boosting = player.boost > 0 && !reducedMotion;
     cameraHeading += angleDelta(far.heading, cameraHeading) * (1 - Math.exp(-5 * dt));
     // The camera trails the car sideways, so steering visibly swings the car across the picture.
@@ -961,6 +966,21 @@ function updateCamera(dt) {
       camera.position.set(pose.x - Math.sin(a) * 30, pose.y + 20, pose.z + Math.cos(a) * 30).lerp(va, t);
       vb.lerp(va.set(pose.x, pose.y + 1, pose.z), 1 - t);
     } else camera.position.copy(va);
+    // For the loop the camera swings out beside the road and glides along level with the middle
+    // of the ring, so the car is seen going right round; then it swings back in behind.
+    const length = track.length, s = ((player.d % length) + length) % length, watching = s > track.loop.s - 10 && s < track.loop.s + track.loop.ground;
+    loopEase = reducedMotion ? (watching ? 1 : 0) : clamp(loopEase + (watching ? dt * 2.4 : -dt * 2.2), 0, 1);
+    if (loopEase > 0 && loopSpot) {
+      const k = smooth(0, 1, loopEase), out = loopSpot.side * loopSpot.reach * (tall ? 1.25 : 1), turns = track.loop.turns;
+      // It stays square on to whichever ring the car is in, so the way up and the way down never hide each other,
+      // and slides across to the next ring as the car comes down to it.
+      const u = clamp((s - track.loop.s) / track.loop.ground, 0, 1) * turns, ring = Math.min(Math.floor(u), turns - 1), next = ring < turns - 1 ? smooth(.72, 1, u - ring) : 0;
+      const c = trackPose(track, player.d - s + track.loop.s + LOOP.ground * (ring + .5 + next), 0);
+      va.set(c.x + Math.cos(c.heading) * out, c.y + loopSpot.up, c.z + Math.sin(c.heading) * out);
+      camera.position.lerp(va, k);
+      // It looks mostly at the car, leaning a little toward the middle of the ring.
+      vb.lerp(va.set(c.x + (f.x - c.x) * .8, c.y + LOOP.radius + (f.y - c.y - LOOP.radius) * .8, c.z + (f.z - c.z) * .8), k);
+    }
     camera.lookAt(vb);
     if (!reducedMotion) { cameraRoll += (player.steer * -.028 - cameraRoll) * (1 - Math.exp(-4 * dt)); camera.rotateZ(cameraRoll); }
   } else {
@@ -970,7 +990,7 @@ function updateCamera(dt) {
     camera.lookAt(pose.x, pose.y + (prefs.car === 'truck' ? 1.4 : .7), pose.z);
     cameraHeading = pose.heading; cameraLat = player.lat * .7; cameraRoll = 0;
   }
-  const fov = (tall ? 74 : 58) + (racing() && player.boost > 0 && !reducedMotion ? 9 : 0);
+  const fov = (tall ? 74 : 58) + (racing() && (player.boost > 0 || f.loop >= 0) && !reducedMotion ? 9 : 0);
   if (Math.abs(camera.fov - fov) > .05) { camera.fov += (fov - camera.fov) * (1 - Math.exp(-4 * dt)); camera.updateProjectionMatrix(); }
   sky.position.copy(camera.position); if (starfield) starfield.position.copy(camera.position);
   // The sun's shadow box follows the player.
@@ -1029,8 +1049,8 @@ function renderGarage() {
   $('bank').textContent = prefs.coins;
   const won = Object.keys(prefs.cups).length;
   $('cars').innerHTML = CARS.map(c => carUnlocked(prefs, c)
-    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${c.id}.png?v=10" alt=""><small>${c.name}</small></button>`
-    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${c.id}.png?v=10" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
+    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${c.id}.png?v=11" alt=""><small>${c.name}</small></button>`
+    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${c.id}.png?v=11" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
   $('swatches').innerHTML = PAINTS.map(p => owns(p)
     ? `<button data-paint="${p.id}" style="background:${swatch(p)}" aria-label="${p.name}" aria-pressed="${p.id === prefs.paint}"></button>`
     : prefs.coins >= p.cost
@@ -1064,7 +1084,7 @@ function resetRace() {
   race = createRace(prefs.track, { boss: bossMode }); buildWorld(prefs.track); seatViews();
   orderKey = ''; $('trackName').textContent = (race.boss ? `BOSS · ${BOSSES[race.trackId].name}` : race.track.name).toUpperCase();
   $('countdown').textContent = ''; $('toast').classList.remove('show'); $('rush').classList.remove('on'); document.body.removeAttribute('data-double');
-  cameraHeading = trackPose(race.track, playerOf(race).d, 0).heading; cameraKick = 0; $('placeText').dataset.place = '';
+  cameraHeading = trackPose(race.track, playerOf(race).d, 0).heading; cameraKick = 0; loopEase = 0; $('placeText').dataset.place = '';
   sound.music(prefs.track); sound.squeal(false); sound.hurry(race.boss);
   releaseAll();
 }
@@ -1133,7 +1153,10 @@ function handle(event) {
   else if (event === 'landed') { toast('Super spin! ⭐', 1.2); sound.whoosh(); burst(pose.x, pose.y + .8, pose.z, 20, 7, .15, .7, PARTY, 5); }
   else if (event === 'jump') { toast('Wheee!', 1); sound.tone(260, 0, .5, 'sine', .08, 880); }
   else if (event === 'megajump') { toast('MEGA JUMP! 🚀', 1.8); sound.tone(200, 0, 1.1, 'sine', .09, 1200); sound.whoosh(); }
-  else if (event === 'loop') { toast('Loop the loop! 🎢', 2); sound.chime([523, 659, 784, 1047, 784, 1047], .11); }
+  else if (event === 'launch') { toast(race.track.loop.turns > 1 ? 'Double loop! 🎢' : 'Loop the loop! 🎢', 1.6); sound.whoosh(); sound.tone(160, 0, .9, 'sawtooth', .05, 640); cameraKick = -.8; }
+  else if (event === 'loop') sound.tone(330, 0, 1.3, 'sine', .08, 990);
+  else if (event === 'looptop') { toast('Upside down! 🙃', 1.1); sound.chime([784, 1047, 1319], .07); }
+  else if (event === 'looped') { toast('Wheee! 💨', 1.2); sound.whoosh(); sound.chime([523, 659, 784, 1047], .06); cameraKick = 1.4; burst(pose.x, pose.y + 1, pose.z, 30, 9, .2, .9, PARTY, 5); }
   else if (event === 'nitro') { toast('NITRO! 🔥', 1); sound.whoosh(); sound.tone(180, 0, .5, 'sawtooth', .05, 720); cameraKick = -.8; }
   else if (event === 'empty') { sound.tone(200, 0, .12, 'triangle', .06); toast('Collect coins and stars for nitro', 1.6); }
   else if (event === 'land') { sound.thud(); cameraKick = player.leap === 'mega' ? 2 : player.leap === 'jump' ? 1 : .5; burst(pose.x, pose.y + .3, pose.z, 14, 4, .28, .6, [THEMES[race.trackId].dust], 0); }
@@ -1251,7 +1274,7 @@ async function init() {
     makeSky(); makeParticles();
     canvas.tabIndex = -1;
     const loader = new GLTFLoader();
-    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=10`)]))) {
+    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=11`)]))) {
       templates[id] = asset.scene;
       asset.scene.traverse(o => {
         if (!o.isMesh || shiny.includes(o.material)) return;

@@ -26,8 +26,11 @@ export const SMASH_BACK = 4;       // seconds until something knocked over stand
 export const SPIN_HOLD = .2;       // seconds of steering in the air that start a spin
 export const SPIN_BOOST = 1.1;     // seconds of boost for landing a spin
 // A vertical loop: cars enter on the left lane, go right round and leave on the right.
-// Distance counts slowly inside it so the trip round takes a few seconds.
-export const LOOP = { ground: 22, radius: 11, lead: 24, lane: 4.5, half: 3, pace: 22 / (22 + Math.PI * 22) };
+// A track with two `loops` has a corkscrew: the second turn carries the car back to the left.
+// `ground` is the road each turn stands over; distance counts slowly inside so the trip takes a few seconds.
+// The launch strip in the lead-in fires every car in at `launch` m/s. Going up it slows
+// under `gravity` (never below `slow`), rushes back down, and leaves with `kick` seconds of boost.
+export const LOOP = { ground: 22, radius: 11, lead: 24, lane: 4.5, half: 3, pace: 22 / (22 + Math.PI * 22), launch: 34, gravity: 16, slow: 16, kick: 1 };
 export const STORAGE_KEY = 'viaan-racer-v1';
 
 // Paints with a cost are unlocked with coins collected in races.
@@ -83,9 +86,9 @@ export const TRACKS = [
     points: [[0, 0], [60, -8], [112, -45], [122, -105], [85, -150], [25, -142], [-12, -100], [-55, -82], [-102, -102], [-134, -62], [-112, -12], [-60, 4]] },
   { id: 'snow', name: 'Snowy Mountain', blurb: 'Twisty turns in the snow', toy: 'snowman', toys: 'sbs', scale: 1.3, hills: [[10, 2, 1.2], [3.5, 4, 0]],
     points: [[0, 0], [68, 0], [120, -28], [128, -84], [88, -118], [42, -98], [14, -62], [-22, -78], [-48, -124], [-108, -130], [-142, -84], [-116, -34], [-60, -8]] },
-  { id: 'jungle', name: 'Jungle Loop', blurb: 'Wiggly roads through the trees', toy: 'barrel', toys: 'sb', scale: 1.22, hills: [[7, 3, .4], [3.5, 5, 1.7]],
+  { id: 'jungle', name: 'Jungle Loop', blurb: 'Wiggly roads through the trees', toy: 'barrel', toys: 'sb', loops: 2, scale: 1.22, hills: [[7, 3, .4], [3.5, 5, 1.7]],
     points: [[0, 0], [56, 4], [102, -20], [108, -72], [74, -104], [78, -154], [32, -184], [-24, -164], [-36, -112], [-82, -92], [-122, -122], [-154, -82], [-128, -30], [-66, -6]] },
-  { id: 'galaxy', name: 'Rainbow Galaxy', blurb: 'A rainbow road among the stars', toy: 'bubble', toys: 'bs', float: 1.25, scale: 1.2, hills: [[11, 3, 2.2], [3, 7, .5]],
+  { id: 'galaxy', name: 'Rainbow Galaxy', blurb: 'A rainbow road among the stars', toy: 'bubble', toys: 'bs', float: 1.25, loops: 2, scale: 1.2, hills: [[11, 3, 2.2], [3, 7, .5]],
     points: [[0, 0], [64, -2], [116, -30], [112, -86], [62, -100], [36, -142], [66, -186], [22, -214], [-40, -196], [-58, -144], [-104, -122], [-146, -148], [-176, -102], [-142, -48], [-80, -10]] }
 ];
 
@@ -151,9 +154,14 @@ export function buildTrack(definition) {
       if (chosen.length === 4) break;
     }
   }
-  const ramps = chosen.slice(1, 3).sort((a, b) => a - b);
+  // A corkscrew is long, so it takes whichever stretch stays straightest for its whole length;
+  // the ramps then take the next straightest and the tunnel follows whatever bend is left.
+  const turns = definition.loops || 1, ground = LOOP.ground * turns;
+  const long = s => { let worst = 0; for (let i = -10; i <= LOOP.lead + ground + 10; i++) worst = Math.max(worst, Math.abs(ks[((Math.round(s / step) + i) % n + n) % n])); return worst; };
+  const looped = turns > 1 ? [...chosen].sort((a, b) => long(a) - long(b))[0] : chosen[3], rest = chosen.filter(c => c !== looped);
+  const ramps = (turns > 1 ? rest.slice(0, 2) : rest.slice(1, 3)).sort((a, b) => a - b);
   return { id: definition.id, name: definition.name, toy: definition.toy, toys: definition.toys, float: definition.float || 1, length: total, n, step, xs, zs, ys, hs, ks, slopes,
-    tunnel: { s: chosen[0], length: TUNNEL_LENGTH }, ramps, mega: ramps[1], loop: { s: chosen[3] + LOOP.lead } };
+    tunnel: { s: turns > 1 ? rest[2] : rest[0], length: TUNNEL_LENGTH }, ramps, mega: ramps[1], loop: { s: looped + LOOP.lead, turns, ground } };
 }
 const cache = new Map();
 export function getTrack(id) {
@@ -170,10 +178,16 @@ export function trackPose(track, d, lat = 0) {
 }
 // How far round the loop a car is (0 to 1), or -1 when it is on ordinary road.
 export function loopPhase(track, d) {
-  const s = ((d % track.length) + track.length) % track.length, t = (s - track.loop.s) / LOOP.ground;
+  const s = ((d % track.length) + track.length) % track.length, t = (s - track.loop.s) / track.loop.ground;
   return t > 0 && t < 1 ? t : -1;
 }
-export const loopLane = t => (t * 2 - 1) * LOOP.lane;
+// The lane a car holds at each point of the loop: left to right on the first turn, back again on the second.
+export function loopLane(t, turns = 1) {
+  const u = clamp(t, 0, 1) * turns, k = Math.min(Math.floor(u), turns - 1), across = (u - k) * 2 - 1;
+  return (k % 2 ? -across : across) * LOOP.lane;
+}
+// How high above the road a car is at each point of the loop.
+export const loopHeight = (t, turns = 1) => LOOP.radius * (1 - Math.cos(t * turns * Math.PI * 2));
 // Where a car is in the world, with the way it faces and which way is up for it.
 // On the road that follows the slope; in the loop it goes right over the top.
 export function trackFrame(track, d, lat = 0) {
@@ -182,8 +196,8 @@ export function trackFrame(track, d, lat = 0) {
     const n = Math.hypot(1, pose.slope);
     return { ...pose, fx: fx / n, fy: pose.slope / n, fz: fz / n, ux: -fx * pose.slope / n, uy: 1 / n, uz: -fz * pose.slope / n, loop: -1 };
   }
-  const start = trackPose(track, track.loop.s, 0), sx = Math.sin(start.heading), sz = -Math.cos(start.heading), a = t * Math.PI * 2, R = LOOP.radius, turn = R * Math.PI * 2;
-  let tx = fx * LOOP.ground + sx * turn * Math.cos(a), ty = pose.slope * LOOP.ground + turn * Math.sin(a), tz = fz * LOOP.ground + sz * turn * Math.cos(a);
+  const start = trackPose(track, track.loop.s, 0), sx = Math.sin(start.heading), sz = -Math.cos(start.heading), a = t * track.loop.turns * Math.PI * 2, R = LOOP.radius, turn = R * Math.PI * 2 * track.loop.turns, G = track.loop.ground;
+  let tx = fx * G + sx * turn * Math.cos(a), ty = pose.slope * G + turn * Math.sin(a), tz = fz * G + sz * turn * Math.cos(a);
   const length = Math.hypot(tx, ty, tz); tx /= length; ty /= length; tz /= length;
   let ux = -sx * Math.sin(a), uy = Math.cos(a), uz = -sz * Math.sin(a);
   const lean = ux * tx + uy * ty + uz * tz; ux -= tx * lean; uy -= ty * lean; uz -= tz * lean;
@@ -231,7 +245,7 @@ export function award(prefs, trackId, place, coins, boss = false) {
 export const nextUnlock = prefs => SHOP.filter(item => !prefs.owned.includes(item.id)).sort((a, b) => a.cost - b.cost)[0] || null;
 
 /* ---------- things on the road ---------- */
-const clearOf = (track, s) => track.ramps.every(ramp => s < ramp - 8 || s > ramp + (ramp === track.mega ? 76 : 40) * track.float) && (s < track.loop.s - LOOP.lead - 4 || s > track.loop.s + LOOP.ground + 8);
+const clearOf = (track, s) => track.ramps.every(ramp => s < ramp - 8 || s > ramp + (ramp === track.mega ? 76 : 40) * track.float) && (s < track.loop.s - LOOP.lead - 4 || s > track.loop.s + track.loop.ground + 8);
 export function starsFor(track) {
   const lanes = [0, 3.6, -3.6, 0, -3.6, 3.6], count = Math.floor((track.length - 60) / 62);
   return Array.from({ length: count }, (_, i) => ({ s: 50 + i * 62, lat: lanes[i % lanes.length], taken: false }))
@@ -284,8 +298,9 @@ export function coinsFor(track) {
   }
   // ... and three over every bouncer.
   for (const bouncer of bouncersFor(track)) for (let i = 0; i < 3; i++) coins.push({ s: bouncer.s + (5 + i * 4) * track.float, lat: bouncer.lat, air: true, hop: bouncer.s, taken: false });
-  // ... and a ring of eight all the way round the loop.
-  for (let i = 1; i <= 8; i++) coins.push({ s: track.loop.s + LOOP.ground * i / 9, lat: loopLane(i / 9), air: false, loop: true, taken: false });
+  // ... and a ring of eight all the way round each turn of the loop.
+  const ring = 8 * track.loop.turns + 1;
+  for (let i = 1; i < ring; i++) coins.push({ s: track.loop.s + track.loop.ground * i / ring, lat: loopLane(i / ring, track.loop.turns), air: false, loop: true, taken: false });
   return coins;
 }
 export function createRace(trackId, options = {}) {
@@ -339,13 +354,35 @@ function hop(race, car, events) {
   bouncer.last = race.time; car.leap = 'hop'; car.airTime = car.air = HOP_SECONDS * race.track.float;
   if (car.player) events.push('bounce');
 }
-// The loop and its lead-in steer every car into the loop's lane. Returns the loop phase.
+// The loop and its lead-in steer every car into the loop's lane. Returns the loop phase,
+// -2 on the launch strip that leads in, or -1 on ordinary road.
 function loopGuide(race, car, dt) {
   const length = race.track.length, s = ((car.d % length) + length) % length, t = loopPhase(race.track, car.d);
   const leading = s > race.track.loop.s - LOOP.lead && s <= race.track.loop.s;
-  if (t >= 0 || leading) car.lat += ((t >= 0 ? loopLane(t) : -LOOP.lane) - car.lat) * ease(t >= 0 ? 9 : 3, dt);
-  if (t >= 0) car.speed = Math.max(car.speed, 20);
+  if (t >= 0 || leading) car.lat += ((t >= 0 ? loopLane(t, race.track.loop.turns) : -LOOP.lane) - car.lat) * ease(t >= 0 ? 9 : 3, dt);
   return t >= 0 ? t : leading ? -2 : -1;
+}
+// Speed on the launch strip and round the loop. The strip fires every car up to launch
+// speed whatever is pressed. Inside, the car trades speed for height: slowest over the
+// top, back to full speed at the bottom. A boost burning inside makes the whole trip
+// faster. Returns what just happened: 'launch', 'looptop' or 'looped'.
+function loopRide(race, car, guided, dt) {
+  const loop = race.track.loop, notes = [], was = car.loopAt ?? -1;
+  if (guided === -2) {
+    if (was !== -2) notes.push('launch');
+    if (car.speed < LOOP.launch) car.speed += (LOOP.launch - car.speed) * ease(5, dt);
+    car.boost = Math.max(car.boost, .25);
+  } else if (guided >= 0) {
+    if (was < 0) car.loopIn = Math.max(car.speed, LOOP.launch);
+    if (car.boost > .3) car.loopIn = Math.max(car.loopIn, CRUISE + BOOST + 2);
+    car.speed = Math.sqrt(Math.max(car.loopIn * car.loopIn - 2 * LOOP.gravity * loopHeight(guided, loop.turns), LOOP.slow * LOOP.slow));
+    // Each time the car goes over the top.
+    if (was >= 0 && Math.floor(guided * loop.turns + .5) > Math.floor(was * loop.turns + .5)) notes.push('looptop');
+  } else if (was >= 0) {
+    car.speed = Math.max(car.speed, car.loopIn); car.boost = Math.max(car.boost, LOOP.kick); notes.push('looped');
+  }
+  car.loopAt = guided;
+  return notes;
 }
 // A boss keeps closer than the friends do and never gets far ahead.
 export function bossBand(gap) {
@@ -367,11 +404,16 @@ function stepPlayer(race, car, input, dt) {
     else notes.push('empty');
   }
   car.nitroHeld = !!pad.nitro;
-  const top = (offRoad ? GRASS : CRUISE) + (car.boost > 0 ? BOOST : 0), braking = !!pad.brake && !car.finished;
+  // The brake does nothing on the launch strip or in the loop.
+  const top = (offRoad ? GRASS : CRUISE) + (car.boost > 0 ? BOOST : 0), braking = !!pad.brake && !car.finished && guided === -1;
   const target = car.finished ? 9 : braking ? 0 : pad.gas || car.boost > 0 ? top : 0;
   if (!flying) car.speed += (target - car.speed) * ease(braking ? 3.2 : target > car.speed ? .9 : pad.gas || car.finished ? 2.6 : .45, dt);
-  if (looping) car.speed = Math.max(car.speed, 20);
   car.boost = Math.max(0, car.boost - dt);
+  for (const note of loopRide(race, car, guided, dt)) {
+    // Going over the top fills one burst of nitro.
+    if (note === 'looptop') car.nitro = Math.min(1, car.nitro + NITRO_COST);
+    if (!car.finished) notes.push(note);
+  }
   // Holding a turn through a corner charges a drift; letting go spends it as a boost.
   const dir = car.finished || Math.abs(steering) < .6 ? 0 : Math.sign(steering), grips = !offRoad && !flying && !looping && car.speed > 18;
   if (dir && dir === car.driftDir && grips) {
@@ -410,9 +452,9 @@ function stepRival(race, car, player, dt) {
   car.slide = guided >= 0 ? 0 : (car.lat - before) / (dt || 1); car.steer = clamp(car.slide / 4, -1, 1);
   const band = car.boss ? bossBand : rubberBand, target = car.finished ? 9 : CRUISE * car.pace * (player.finished ? 1 : band(car.d - player.d));
   if (!(car.air > 0)) car.speed += (target - car.speed) * ease(target > car.speed ? .9 : 1.6, dt);
-  if (guided >= 0) car.speed = Math.max(car.speed, 20);
   // A friend who is hurrying to catch up shows it with flames.
   car.boost = !car.finished && !player.finished && car.d - player.d < -45 ? .3 : Math.max(0, car.boost - dt);
+  loopRide(race, car, guided, dt);
   car.d += car.speed * dt * (guided >= 0 ? LOOP.pace : 1 / clamp(1 - pose.k * car.lat, .6, 1.6));
   fly(race, car, start, dt);
 }

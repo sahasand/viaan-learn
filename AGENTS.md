@@ -64,7 +64,7 @@ garage (four vehicles, paints, four tracks), three laps over hills against three
 cartoon dogs (Biscuit, Pepper, Waffle; Viaan's own car carries no dog),
 steer/boost/brake controls, drift boosts, boost stars, zoom strips, coins, rows of things to knock over
 (a different toy per track), bouncers, air spins, a double-coin last lap, low gravity on Rainbow Galaxy, a
-loop-the-loop, a jump and a mega jump, a tunnel, boss races, and a finish card. Read `little-racer/README.md` when
+loop-the-loop (a double one on two tracks) with a launch strip and real speed changes, a jump and a mega jump, a tunnel, boss races, and a finish card. Read `little-racer/README.md` when
 changing race rules, tracks, art, or sound. `race.js` holds all rules in track coordinates
 and runs in Node; `game.js` owns the scene, generated scenery, input and lifecycle;
 `dogs.js` builds every dog (drivers, the instanced crowd, the race-order faces) in code from `DOGS` in `race.js`;

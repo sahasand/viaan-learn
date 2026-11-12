@@ -49,8 +49,17 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 - Rainbow Galaxy has **low gravity** (`float` in `TRACKS`): every flight lasts a quarter
   longer and goes higher.
 - A dog that has fallen well behind shows boost flames while it catches up.
-- Every track has a **loop-the-loop**. Cars are steered into its lane and carried round
-  at a safe speed whatever is pressed, with a ring of coins on the way.
+- Every track has a **loop-the-loop**; Jungle Loop and Rainbow Galaxy have a **double
+  loop** (`loops: 2` in `TRACKS`), a corkscrew that carries the car across the road and
+  back. An orange **launch strip** steers every car into the loop's lane and fires it in at
+  full boost speed whatever is pressed, so the loop cannot be failed. Inside, the car
+  trades speed for height: it slows as it climbs, is slowest upside down at the top, and
+  rushes back down (`LOOP.gravity`, never below `LOOP.slow`). A boost burning inside makes
+  the whole trip quicker. Each trip over the top fills one burst of nitro, each turn has a
+  ring of eight coins, and the car leaves with a short boost. The dogs ride it the same way.
+- For the loop the camera swings out beside the road and stays square on to the ring, level
+  with its middle, so the car is seen going right round; it swings back behind on the way
+  out. With reduced motion it cuts instead of swinging.
 - The second ramp of each lap is a **mega jump** over a line of buses and through two
   rings of fire, with a long arc of coins.
 - **Vehicles** unlock with cups: the monster truck after finishing any race, the sports
@@ -152,13 +161,13 @@ node --test little-racer/*.test.mjs
 Tests cover closed, non-overlapping tracks and corner radius, hands-off and
 steering-held drivers finishing every track, a careful driver winning at 20–120 Hz,
 single lap announcements, star boosts and respawn, ramp and tunnel placement, jumps,
-hill limits, the loop's shape and lane, gas and brake, nitro, the mega jump, boss races,
+hill limits, the loop's shape and lane, the launch strip and the loop's speeds, double loops, gas and brake, nitro, the mega jump, boss races,
 vehicle unlocks, drift charging and release, coin rows and air coins, unlock buying, cups,
 overtake announcements, grass slowdown, rival pacing, soft
 bumps, zoom strips, knock-over rows, bouncers, air spins, the double-coin last lap, low gravity,
 bad input, fixed finishing order, saved choices, the trail refund, every dog's look, and
 every vehicle's model and page wiring.
-Browser checks should cover a full race to the finish card, the loop, the mega jump, a
+Browser checks should cover a full race to the finish card, a loop and a double loop, the mega jump, a
 nitro burst, a zoom strip, a knock-over row, a bouncer, a spin, the last lap, a boss race, a drift boost, an unlock in the garage, pause and
 resume, a colour and track change, all four tracks, saved choices after reload, and the
 garage and race display on a wide screen, a phone upright and a phone sideways.
