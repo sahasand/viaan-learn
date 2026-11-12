@@ -33,7 +33,22 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
   gives a short boost every time; they are never used up.
 - `index.html` and `game.js` load their files with a `?v=` number so phones do not keep an
   old copy. Raise that number in both files whenever the game's code or styles change.
-- **Nitro** holds three bursts. Coins, stars and drift boosts fill it; one tap spends one.
+- **Nitro** holds three bursts and every race starts with one. Coins, stars, drift boosts,
+  spins and knock-overs fill it; one tap spends one.
+- Every track has its own **thing to knock over**, standing in two rows right across the
+  road so no car can miss: beach balls, snowmen, barrels and space bubbles (`toy` in
+  `TRACKS`). Each one Viaan hits flies off and is worth a coin. Nothing slows the car, the
+  dogs knock them over too without scoring, and they pop back up after four seconds.
+- **Bouncers** are spotted domes in one lane. Driving over one hops the car over three
+  coins. `toys` in `TRACKS` sets each track's mix of rows (`s`) and bouncers (`b`); they
+  are placed wherever the road is free of stars, strips, ramps, the loop and the tunnel.
+- **Spins:** steering while the car is in the air (a ramp, the mega jump or a bouncer)
+  spins it once right round; landing gives a short boost and some nitro.
+- The **last lap counts double**: every coin and knock-over is worth two, the coins grow
+  and the coin chip shows ×2.
+- Rainbow Galaxy has **low gravity** (`float` in `TRACKS`): every flight lasts a quarter
+  longer and goes higher.
+- A dog that has fallen well behind shows boost flames while it catches up.
 - Every track has a **loop-the-loop**. Cars are steered into its lane and carried round
   at a safe speed whatever is pressed, with a ring of coins on the way.
 - The second ramp of each lap is a **mega jump** over a line of buses and through two
@@ -51,7 +66,8 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
   orange after two. Letting go spends it as a short or longer boost. Sliding onto the
   grass loses the charge. The bar under the speed shows the charge.
 - Coins sit in rows on the road and in an arc over each ramp, and return every lap.
-  They are banked when the race finishes, whatever the place.
+  They are banked when the race finishes, whatever the place. The finish card says how
+  many things were knocked over and how many spins were done.
 - Each track has two jump ramps across the whole road and one tunnel. A ramp sends
   every car flying for about a second; nothing needs to be pressed and landing is safe.
 - The dog drivers slow down when they are ahead and hurry when they are behind,
@@ -59,7 +75,8 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 - Every finish gets the same celebration, shows the finishing order, and earns that
   track's cup; winning turns the cup gold. Cups never downgrade. There is no timer or
   lap record, and nothing is ever taken away.
-- In the garage, locked paints (gold, rainbow, galaxy) show their price. Tapping one buys it when there are enough coins and otherwise
+- In the garage, locked paints (gold, rainbow, galaxy) show their price. One there are
+  enough coins for swaps its padlock for a coin and glows. Tapping one buys it when there are enough coins and otherwise
   says how many more are needed. Coins are only earned by playing; there is no shop.
 - Vehicle, colour, track, coins, unlocks and cups save locally under `viaan-racer-v1`;
   other games' progress is untouched. Saves from the first release still load.
@@ -138,9 +155,10 @@ single lap announcements, star boosts and respawn, ramp and tunnel placement, ju
 hill limits, the loop's shape and lane, gas and brake, nitro, the mega jump, boss races,
 vehicle unlocks, drift charging and release, coin rows and air coins, unlock buying, cups,
 overtake announcements, grass slowdown, rival pacing, soft
-bumps, zoom strips, bad input, fixed finishing order, saved choices, the trail refund, every dog's look, and
+bumps, zoom strips, knock-over rows, bouncers, air spins, the double-coin last lap, low gravity,
+bad input, fixed finishing order, saved choices, the trail refund, every dog's look, and
 every vehicle's model and page wiring.
 Browser checks should cover a full race to the finish card, the loop, the mega jump, a
-nitro burst, a zoom strip, a boss race, a drift boost, an unlock in the garage, pause and
+nitro burst, a zoom strip, a knock-over row, a bouncer, a spin, the last lap, a boss race, a drift boost, an unlock in the garage, pause and
 resume, a colour and track change, all four tracks, saved choices after reload, and the
 garage and race display on a wide screen, a phone upright and a phone sideways.

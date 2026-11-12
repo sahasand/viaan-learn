@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../sky-playground/vendor/GLTFLoader.js';
-import { createSound } from './audio.js?v=9';
-import { makeDog, poseDriver, portrait, makeCrowd } from './dogs.js?v=9';
-import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, LOOP, STORAGE_KEY, PAINTS, CARS, BOSSES, DOGS, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=9';
+import { createSound } from './audio.js?v=10';
+import { makeDog, poseDriver, portrait, makeCrowd } from './dogs.js?v=10';
+import { clamp, angleDelta, LAPS, HALF_ROAD, EDGE, BOOST_SECONDS, DRIFT_SMALL, DRIFT_BIG, NITRO_COST, CRUISE, HOP_SECONDS, SMASH_BACK, LOOP, STORAGE_KEY, PAINTS, CARS, BOSSES, DOGS, RIVALS, TRACKS, getTrack, trackPose, trackFrame, loopLane, normalizePrefs, buy, award, nextUnlock, carUnlocked, createRace, stepRace, playerOf, lapOf, standings, placeOf } from './race.js?v=10';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
@@ -20,6 +20,15 @@ const THEMES = {
 };
 const SWATCH = { gold: 'linear-gradient(135deg,#fff3b0,#ffc21a 45%,#c98a00)', rainbow: 'conic-gradient(#ff5f5f,#ffd24a,#58d68d,#4aa8ff,#b06bff,#ff5f5f)', galaxy: 'radial-gradient(circle at 30% 30%,#8f6bff,#2f1f7a 60%,#150c3d)' };
 const ORDINALS = ['1st', '2nd', '3rd', '4th'];
+// How each kind of flight looks: height left over from the ramp, height of the arc, and how far the nose tips.
+const LEAP = { hop: [0, 6.5, .3], jump: [.58, 9.6, .42], mega: [1.3, 30, .62] };
+// What stands in rows to be knocked over on each track, the bits it bursts into, and the colour of the bouncers.
+const TOYS = {
+  ball: { name: 'beach balls', bits: ['#ff5a4d', '#ffd23f', '#3aa0ff', '#ffffff'], bouncer: '#e8351f' },
+  snowman: { name: 'snowmen', bits: ['#ffffff', '#e3f1ff', '#ff8a3d'], bouncer: '#1668e0' },
+  barrel: { name: 'barrels', bits: ['#a8672f', '#ffd23f', '#7b4a22'], bouncer: '#d62828' },
+  bubble: { name: 'space bubbles', bits: ['#ffffff', '#ff9de6', '#8fe9ff', '#fff3a6'], bouncer: '#e0379f' }
+};
 // The crowd is a pack of dogs in every coat colour.
 const COATS = [['#f3c56d', '#fff4dc', '#d6953a'], ['#c9884a', '#fbe9cf', '#8a5527'], ['#fbfaf6', '#ffffff', '#c9884a'], ['#8d96aa', '#ffffff', '#5c6479'], ['#4a3f3a', '#d39a5c', '#2a2422'], ['#e9b98a', '#fff4dc', '#b9793f'], ['#fbfaf6', '#ffffff', '#2d2d36']];
 const PARTY = ['#eb6548', '#ffc44e', '#58c7b0', '#f2559c', '#5b8def', '#ffffff'];
@@ -28,10 +37,10 @@ let renderer, scene, camera, hemisphere, sun, sky, pmrem, envScene, envGround, e
 let phase = 'loading', paused = false, lastTime = 0, clock = 0, lowQuality = false, slowFor = 0, rewardText = '';
 let toastUntil = 0, countdownUntil = 0, finishAt = 0, nextFirework = 0, nextSmoke = 0, lastCoinSound = 0, lastHud = 0, orderKey = '', frameKey = '';
 let cameraHeading = 0, cameraLat = 0, cameraRoll = 0, cameraKick = 0;
-let mapBase, mapView, weather, dotTexture, coinMesh, coinSpots = [], volcano = null, pack = null, starfield = null, padTexture = null;
+let mapBase, mapView, weather, dotTexture, coinMesh, coinSpots = [], volcano = null, pack = null, starfield = null, padTexture = null, propMesh = null, propSpots = [], lastSmash = 0;
 let savedPrefs; try { savedPrefs = localStorage.getItem(STORAGE_KEY); } catch {}
 let prefs = normalizePrefs(savedPrefs);
-const starMeshes = [], lamps = [], floaters = [], fireRings = [], shiny = [], mugs = {};
+const starMeshes = [], lamps = [], floaters = [], fireRings = [], bouncerViews = [], shiny = [], mugs = {};
 const held = { left: new Set(), right: new Set(), brake: new Set(), nitro: new Set() };
 // Every vehicle model, where its flames and driver sit, and how big its wheels are.
 // `seat` is where the dog driver sits: height, distance back from the middle, and size.
@@ -223,13 +232,77 @@ function custom(positions, index, material, uvs) {
   geometry.setIndex(index); geometry.computeVertexNormals();
   return new THREE.Mesh(geometry, material);
 }
+// Joins simple shapes into one mesh with a colour per piece (or per face, when the colour is a function of where the face is).
+function solid(parts) {
+  const positions = [], normals = [], colors = [];
+  for (const [shape, color, x = 0, y = 0, z = 0, sx = 1, sy = sx, sz = sx] of parts) {
+    const moved = shape.clone().scale(sx, sy, sz).translate(x, y, z), flat = moved.toNonIndexed(), at = flat.attributes.position, normal = flat.attributes.normal;
+    for (let i = 0; i < at.count; i += 3) {
+      tint.set(typeof color === 'function' ? color((at.getX(i) + at.getX(i + 1) + at.getX(i + 2)) / 3 - x, (at.getY(i) + at.getY(i + 1) + at.getY(i + 2)) / 3 - y, (at.getZ(i) + at.getZ(i + 1) + at.getZ(i + 2)) / 3 - z) : color);
+      for (let k = i; k < i + 3; k++) { positions.push(at.getX(k), at.getY(k), at.getZ(k)); normals.push(normal.getX(k), normal.getY(k), normal.getZ(k)); colors.push(tint.r, tint.g, tint.b); }
+    }
+    moved.dispose(); flat.dispose(); shape.dispose();
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  return geometry;
+}
+// The thing to knock over on each track. It stands at the origin facing +z, toward the cars coming at it.
+function toyGeometry(kind) {
+  const ball = (r, w = 16, h = 12) => new THREE.SphereGeometry(r, w, h), drum = (r, h) => new THREE.CylinderGeometry(r, r, h, 14);
+  if (kind === 'ball') {
+    const wedges = ['#ff5a4d', '#ffffff', '#ffd23f', '#ffffff', '#3aa0ff', '#ffffff'];
+    return solid([[ball(.9, 18, 12), (x, y, z) => Math.abs(y) > .8 ? '#ffffff' : wedges[Math.floor((Math.atan2(z, x) / (Math.PI * 2) + .5) * 6) % 6], 0, .9, 0]]);
+  }
+  if (kind === 'snowman') return solid([
+    [ball(.78), '#ffffff', 0, .72, 0], [ball(.52), '#ffffff', 0, 1.66, 0],
+    [new THREE.ConeGeometry(.11, .5, 8).rotateX(Math.PI / 2), '#ff8a3d', 0, 1.66, .68],
+    [ball(.07, 6, 5), '#28323a', -.19, 1.82, .44], [ball(.07, 6, 5), '#28323a', .19, 1.82, .44],
+    [ball(.08, 6, 5), '#28323a', 0, .98, .74], [ball(.08, 6, 5), '#28323a', 0, .66, .78],
+    [drum(.47, .2), '#e2453c', 0, 1.24, 0], [drum(.56, .07), '#28323a', 0, 2.1, 0], [drum(.36, .42), '#28323a', 0, 2.32, 0]]);
+  if (kind === 'barrel') return solid([
+    [drum(.62, 1.36), '#b9722f', 0, .68, 0], [drum(.67, .13), '#5e3b1c', 0, .3, 0], [drum(.67, .13), '#5e3b1c', 0, 1.06, 0],
+    [drum(.55, .06), '#d79a4c', 0, 1.37, 0], [ball(.2, 8, 6), '#ffd23f', 0, 1.5, 0]]);
+  return solid([[ball(.85, 18, 12), '#ffffff', 0, 1.3, 0], [ball(.2, 8, 6), '#ffffff', -.3, 1.62, .55]]);
+}
+function buildToys(track, sample) {
+  const toy = TOYS[track.toy], bubble = track.toy === 'bubble';
+  if (sample.props.length) {
+    const material = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: bubble ? .12 : .55, ...(bubble ? { transparent: true, opacity: .8, emissive: '#7a5fd0', emissiveIntensity: .45 } : {}) });
+    propMesh = new THREE.InstancedMesh(toyGeometry(track.toy), material, sample.props.length);
+    propMesh.frustumCulled = false; propMesh.castShadow = !bubble;
+    propSpots = sample.props.map((prop, i) => {
+      const p = trackPose(track, prop.s, prop.lat);
+      propMesh.setColorAt(i, tint.set(bubble ? toy.bits[1 + i % 3] : '#ffffff'));
+      // Snowmen all face the cars; everything else is turned a different way each.
+      return { x: p.x, y: p.y, z: p.z, heading: p.heading, face: track.toy === 'snowman' ? (rand() - .5) * .5 : rand() * 6.3, beat: rand() * 6, seen: prop.down };
+    });
+    world.add(propMesh);
+  }
+  // Bouncers: a spotted dome on a soft ring that squashes when a car lands on it.
+  const spots = canvasTexture(256, 128, g => {
+    g.fillStyle = toy.bouncer; g.fillRect(0, 0, 256, 128); g.fillStyle = '#ffffff';
+    for (let i = 0; i < 8; i++) { g.beginPath(); g.ellipse(16 + i * 32, i % 2 ? 24 : 46, i % 2 ? 9 : 12, i % 2 ? 7 : 11, 0, 0, Math.PI * 2); g.fill(); }
+    g.fillRect(0, 0, 256, 8);
+  });
+  const dome = new THREE.SphereGeometry(1, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), ring = new THREE.TorusGeometry(2.25, .3, 8, 28).rotateX(Math.PI / 2);
+  const cap = new THREE.MeshStandardMaterial({ map: spots, roughness: .45, emissive: toy.bouncer, emissiveIntensity: .25 }), rim = mat('#fff9e9', { roughness: .6 });
+  for (const bouncer of sample.bouncers) {
+    const p = trackPose(track, bouncer.s, bouncer.lat), group = new THREE.Group(), top = new THREE.Mesh(dome, cap);
+    top.scale.set(2.2, 1, 2.2); top.castShadow = true;
+    group.add(top, new THREE.Mesh(ring, rim)); group.position.set(p.x, p.y + .06, p.z);
+    world.add(group); bouncerViews.push(top);
+  }
+}
 function disposeWorld() {
   if (!world) return;
   world.traverse(o => {
     if (o.geometry) o.geometry.dispose();
     if (o.material && !o.material.userData.keep) { if (o.material.map && !o.material.map.userData.keep) o.material.map.dispose(); o.material.dispose(); }
   });
-  scene.remove(world); starMeshes.length = lamps.length = floaters.length = fireRings.length = 0; weather = coinMesh = volcano = pack = starfield = null;
+  scene.remove(world); starMeshes.length = lamps.length = floaters.length = fireRings.length = bouncerViews.length = 0; weather = coinMesh = volcano = pack = starfield = propMesh = null;
 }
 function buildTerrain(track, trackId, theme, cx, cz, reach) {
   const half = reach + 420, cells = 170, size = half * 2 / cells;
@@ -437,9 +510,12 @@ function buildWorld(trackId) {
   coinMesh.frustumCulled = false; coinMesh.castShadow = true; world.add(coinMesh);
   coinSpots = sample.coins.map(coin => {
     if (coin.loop) { const f = trackFrame(track, coin.s, coin.lat); return { x: f.x + f.ux * 1.05, y: f.y + f.uy * 1.05, z: f.z + f.uz * 1.05 }; }
-    const p = trackPose(track, coin.s, coin.lat), ramp = coin.air ? track.ramps.find(r => coin.s > r && coin.s < r + 62) : 0, mega = ramp === track.mega, t = coin.air ? (coin.s - ramp) / (mega ? 50 : 25) : 0;
-    return { x: p.x, y: p.y + (coin.air ? 1.5 + (mega ? 30 : 9.6) * t * (1 - t) : 1.05), z: p.z };
+    const p = trackPose(track, coin.s, coin.lat), float = track.float;
+    if (coin.hop !== undefined) { const t = (coin.s - coin.hop) / (CRUISE * HOP_SECONDS * float); return { x: p.x, y: p.y + 1.15 + LEAP.hop[1] * float * t * (1 - t), z: p.z }; }
+    const ramp = coin.air ? track.ramps.find(r => coin.s > r && coin.s < r + 80) : 0, mega = ramp === track.mega, t = coin.air ? (coin.s - ramp) / ((mega ? 50 : 25) * float) : 0;
+    return { x: p.x, y: p.y + (coin.air ? 1.5 + LEAP[mega ? 'mega' : 'jump'][1] * float * t * (1 - t) : 1.05), z: p.z };
   });
+  buildToys(track, sample);
 
   // Zoom strips: glowing arrows painted on the road that slide forward.
   if (!padTexture) {
@@ -680,7 +756,7 @@ function buildWorld(trackId) {
   drawMapBase(track);
 }
 function updateWorld(dt) {
-  const player = playerOf(race), length = race.track.length, s = ((player.d % length) + length) % length;
+  const player = playerOf(race), track = race.track, length = track.length, s = ((player.d % length) + length) % length, double = phase === 'racing' && lapOf(race, player) === LAPS;
   // Start lamps: red, red, red, then green for go.
   const lit = phase === 'countdown' ? 4 - Math.ceil(race.countdown) : 0, green = phase === 'racing' && race.time < 1.6;
   lamps.forEach((lamp, i) => lamp.material.color.set(green ? '#3df07a' : i < lit ? '#ff3b30' : '#3a2626'));
@@ -698,11 +774,37 @@ function updateWorld(dt) {
   });
   if (coinMesh) {
     race.coins.forEach((coin, i) => {
-      const spot = coinSpots[i]; dummy.position.set(spot.x, spot.y, spot.z); dummy.rotation.set(0, reducedMotion ? .6 : clock * 3 + i * .5, 0); dummy.scale.setScalar(coin.taken ? 0 : 1); dummy.updateMatrix();
+      const spot = coinSpots[i]; dummy.position.set(spot.x, spot.y, spot.z); dummy.rotation.set(0, reducedMotion ? .6 : clock * 3 + i * .5, 0); dummy.scale.setScalar(coin.taken ? 0 : double ? 1.4 : 1); dummy.updateMatrix();
       coinMesh.setMatrixAt(i, dummy.matrix);
     });
     coinMesh.instanceMatrix.needsUpdate = true;
   }
+  // Things knocked over fly off down the road, tumbling, and pop back up a few seconds later.
+  if (propMesh) {
+    const toy = TOYS[race.track.toy], floats = race.track.toy === 'bubble';
+    race.props.forEach((prop, i) => {
+      const spot = propSpots[i], t = race.time - prop.down, fx = Math.sin(spot.heading), fz = -Math.cos(spot.heading);
+      let x = spot.x, y = spot.y, z = spot.z, size = 1;
+      dummy.rotation.set(0, -spot.heading + spot.face, 0);
+      if (t < SMASH_BACK) {
+        if (spot.seen !== prop.down) { spot.seen = prop.down; burst(x, y + 1.1, z, floats ? 16 : 10, 7, floats ? .16 : .22, .6, toy.bits, 9); }
+        if (t < 1 && !reducedMotion && !floats) {
+          const along = (prop.speed * .7 + 5) * t, across = prop.dir * 6 * t;
+          x += fx * along + Math.cos(spot.heading) * across; z += fz * along + Math.sin(spot.heading) * across; y += Math.max(0, 10 * t - 13 * t * t);
+          dummy.rotation.set(-t * 11, -spot.heading + spot.face + prop.dir * t * 5, 0); size = clamp((1 - t) * 2.5, 0, 1);
+        } else size = 0;
+      } else {
+        size = reducedMotion ? 1 : clamp((t - SMASH_BACK) / .3, 0, 1) * (1 + .25 * Math.max(0, 1 - (t - SMASH_BACK) / .6));
+        if (!reducedMotion) y += floats ? Math.sin(clock * 2 + spot.beat) * .22 : track.toy === 'ball' ? Math.abs(Math.sin(clock * 2.4 + spot.beat)) * .12 : 0;
+      }
+      dummy.position.set(x, y, z); dummy.scale.setScalar(size); dummy.updateMatrix(); propMesh.setMatrixAt(i, dummy.matrix);
+    });
+    propMesh.instanceMatrix.needsUpdate = true;
+  }
+  race.bouncers.forEach((bouncer, i) => {
+    const t = race.time - bouncer.last;
+    if (bouncerViews[i]) bouncerViews[i].scale.y = (t < 1.2 && !reducedMotion ? 1 - .65 * Math.exp(-5 * t) * Math.cos(t * 17) : 1);
+  });
   if (weather) {
     const p = weather.geometry.attributes.position, fall = weather.userData.fall;
     for (let i = 0; i < p.count; i++) {
@@ -773,7 +875,7 @@ function updateCars(dt) {
     const heading = f.heading + Math.atan2(car.slide, Math.max(car.speed, 8)) * .8 + (drifting ? car.driftDir * Math.min(car.drift, 1) * .3 : 0);
     const s = ((car.d % length) + length) % length, fx = Math.sin(heading), fz = -Math.cos(heading), rx = Math.cos(heading), rz = Math.sin(heading);
     let rise = 0, pitch = looping ? 0 : Math.atan(f.slope);
-    if (flying) { const mega = car.airTime > 1.2, t = 1 - car.air / car.airTime; rise = (mega ? 1.3 : .58) * (1 - t) + (mega ? 30 : 9.6) * t * (1 - t); pitch += (.45 - t) * (mega ? .62 : .42); }
+    if (flying) { const [top, arc, tip] = LEAP[car.leap], t = 1 - car.air / car.airTime; rise = top * (1 - t) + arc * track.float * t * (1 - t); pitch += (.45 - t) * tip; }
     else if (!looping) for (const ramp of track.ramps) {
       const mega = ramp === track.mega, long = mega ? 9 : 5, top = mega ? 1.3 : .58;
       if (s > ramp - long && s <= ramp + .5 && car.d > 0) { rise = top * clamp((s - ramp + long) / long, 0, 1); pitch += Math.atan(top / long); }
@@ -785,7 +887,9 @@ function updateCars(dt) {
       vf.set(f.fx, f.fy, f.fz); vu.set(f.ux, f.uy, f.uz); vr.crossVectors(vf, vu);
       view.group.quaternion.setFromRotationMatrix(basis.makeBasis(vr, vu, vf.negate()));
     } else view.group.rotation.set(0, -heading, 0);
-    view.lift.position.y = rise; view.lift.rotation.set(pitch, 0, reducedMotion || looping ? 0 : car.steer * -.045 - (drifting ? car.driftDir * .05 : 0));
+    // A spin turns the car once right round before it lands.
+    const turn = car.trick && flying && !reducedMotion ? 1 - car.air / car.trickAir : 0, twirl = -car.trick * Math.PI * 2 * turn * turn * (3 - 2 * turn);
+    view.lift.position.y = rise; view.lift.rotation.set(pitch, twirl, reducedMotion || looping ? 0 : car.steer * -.045 - (drifting ? car.driftDir * .05 : 0));
     view.spin -= car.speed * dt / view.spec.wheel;
     view.wheels.forEach((wheel, w) => wheel.rotation.set(view.spin, w < 2 ? -car.steer * .32 : 0, 0));
     view.blob.visible = !sun.castShadow && !looping; view.blob.scale.set(view.spec.blob[0] / (1 + rise * .25), view.spec.blob[1] / (1 + rise * .25), 1);
@@ -844,11 +948,13 @@ function updateCamera(dt) {
     // The camera trails the car sideways, so steering visibly swings the car across the picture.
     cameraLat += (player.lat * .7 - cameraLat) * (1 - Math.exp(-3.5 * dt));
     cameraKick *= Math.exp(-7 * dt);
+    // Low gravity throws the car higher, so the camera climbs further with it.
+    const lift = track.float * track.float;
     const base = trackPose(track, player.d, cameraLat), back = (tall ? 12.5 : 10.5) + (boosting ? 1.2 : 0), sx = Math.sin(cameraHeading), cz = Math.cos(cameraHeading);
-    const hop = player.air > 0 ? Math.sin((1 - player.air / player.airTime) * Math.PI) * (player.airTime > 1.2 ? 3.4 : .9) : 0, shake = boosting ? .05 : 0;
+    const hop = player.air > 0 ? Math.sin((1 - player.air / player.airTime) * Math.PI) * (player.leap === 'mega' ? 3.4 : player.leap === 'jump' ? .9 : .45) * lift : 0, shake = boosting ? .05 : 0;
     const floor = Math.max(trackPose(track, player.d - back, 0).y, pose.y - 1.5);
     va.set(base.x - sx * back + (rand() - .5) * shake, floor + (tall ? 5.6 : 4.5) + hop - cameraKick * .4 + (rand() - .5) * shake, base.z + cz * back);
-    vb.set((pose.x + base.x) / 2 + sx * 9, far.y + 1.1 + hop * .8, (pose.z + base.z) / 2 - cz * 9);
+    vb.set((pose.x + base.x) / 2 + sx * 9, far.y + 1.1 + hop * (.8 + (lift - 1) * .35), (pose.z + base.z) / 2 - cz * 9);
     if (phase === 'countdown' && !reducedMotion) {
       // The race opens with a swoop down from above the grid.
       const t = smooth(0, 1, (3 - race.countdown) / 2.4), a = pose.heading + 2.4 - t * 2.4;
@@ -910,6 +1016,7 @@ function updateHud(force = false) {
   if ($('nitro').dataset.bursts !== String(bursts)) { $('nitro').dataset.bursts = bursts; $('nitro').classList.toggle('ready', bursts > 0); $('nitroPips').textContent = '●'.repeat(bursts) + '○'.repeat(3 - bursts); }
   const order = standings(race), key = order.map(c => c.id).join() + prefs.paint;
   $('lapText').textContent = `Lap ${lapOf(race, player)}/${LAPS}`;
+  document.body.toggleAttribute('data-double', phase === 'racing' && lapOf(race, player) === LAPS);
   const place = placeOf(race);
   if ($('placeText').dataset.place !== String(place)) { $('placeText').dataset.place = place; $('placeText').innerHTML = `${place}<sup>${ORDINALS[place - 1].slice(1)}</sup>`; }
   $('coinText').textContent = race.collected;
@@ -922,11 +1029,13 @@ function renderGarage() {
   $('bank').textContent = prefs.coins;
   const won = Object.keys(prefs.cups).length;
   $('cars').innerHTML = CARS.map(c => carUnlocked(prefs, c)
-    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${c.id}.png?v=9" alt=""><small>${c.name}</small></button>`
-    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${c.id}.png?v=9" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
+    ? `<button data-car="${c.id}" aria-label="${c.name}" aria-pressed="${c.id === prefs.car}"><img src="assets/${c.id}.png?v=10" alt=""><small>${c.name}</small></button>`
+    : `<button data-car="${c.id}" class="locked" aria-label="${c.name}, locked. Finish ${c.cups - won} more track${c.cups - won === 1 ? '' : 's'}" aria-pressed="false"><img src="assets/${c.id}.png?v=10" alt=""><small>🔒 ${c.cups === 1 ? 'Finish a race' : `${c.cups} cups`}</small></button>`).join('');
   $('swatches').innerHTML = PAINTS.map(p => owns(p)
     ? `<button data-paint="${p.id}" style="background:${swatch(p)}" aria-label="${p.name}" aria-pressed="${p.id === prefs.paint}"></button>`
-    : `<button data-paint="${p.id}" class="locked" style="background:${swatch(p)}" aria-label="${p.name}, locked, costs ${p.cost} coins" aria-pressed="false">🔒<br>${p.cost}</button>`).join('');
+    : prefs.coins >= p.cost
+      ? `<button data-paint="${p.id}" class="locked can" style="background:${swatch(p)}" aria-label="${p.name}, costs ${p.cost} coins. Tap to buy" aria-pressed="false"><i aria-hidden="true"></i>${p.cost}</button>`
+      : `<button data-paint="${p.id}" class="locked" style="background:${swatch(p)}" aria-label="${p.name}, locked, costs ${p.cost} coins" aria-pressed="false">🔒<br>${p.cost}</button>`).join('');
   const cupMark = id => prefs.cups[id] === 3 ? '<em class="cup gold" aria-hidden="true">👑</em>' : prefs.cups[id] ? `<em class="cup ${prefs.cups[id] === 2 ? 'gold' : ''}" aria-hidden="true">🏆</em>` : '';
   $('tracks').innerHTML = TRACKS.map(t => `<button data-track="${t.id}" aria-label="${t.name}${prefs.cups[t.id] === 3 ? ', boss beaten' : prefs.cups[t.id] === 2 ? ', gold cup won' : prefs.cups[t.id] ? ', cup won' : ''}" aria-pressed="${t.id === prefs.track}"><span aria-hidden="true">${THEMES[t.id].icon}</span><strong>${t.name}${cupMark(t.id)}</strong><small>${t.blurb}</small></button>`).join('');
   // A track's boss appears once its cup has been earned.
@@ -954,7 +1063,7 @@ function choose(kind, id) {
 function resetRace() {
   race = createRace(prefs.track, { boss: bossMode }); buildWorld(prefs.track); seatViews();
   orderKey = ''; $('trackName').textContent = (race.boss ? `BOSS · ${BOSSES[race.trackId].name}` : race.track.name).toUpperCase();
-  $('countdown').textContent = ''; $('toast').classList.remove('show'); $('rush').classList.remove('on');
+  $('countdown').textContent = ''; $('toast').classList.remove('show'); $('rush').classList.remove('on'); document.body.removeAttribute('data-double');
   cameraHeading = trackPose(race.track, playerOf(race).d, 0).heading; cameraKick = 0; $('placeText').dataset.place = '';
   sound.music(prefs.track); sound.squeal(false); sound.hurry(race.boss);
   releaseAll();
@@ -982,7 +1091,8 @@ function showFinish() {
   const titles = race.boss ? [`You beat ${boss.name}!`, `${boss.name} was quick! Try again?`] : ['You won the race!', 'You came second!', 'You came third!', 'You finished the race!'];
   $('finishKicker').textContent = `${race.track.name.toUpperCase()} · ${race.boss ? 'BOSS RACE' : LAPS + ' LAPS'}`;
   $('finishTitle').textContent = titles[place - 1];
-  $('finishText').textContent = race.boss && place === 1 ? `Super driving, Viaan. ${race.track.name} has a crown!` : 'Super driving, Viaan. What a great race with your friends.';
+  const feats = [race.smashed ? `knocked over ${race.smashed} ${TOYS[race.track.toy].name}` : '', race.tricks ? `did ${race.tricks} spin${race.tricks === 1 ? '' : 's'}` : ''].filter(Boolean);
+  $('finishText').textContent = race.boss && place === 1 ? `Super driving, Viaan. ${race.track.name} has a crown!` : feats.length ? `Super driving, Viaan. You ${feats.join(' and ')}!` : 'Super driving, Viaan. What a great race with your friends.';
   $('reward').textContent = rewardText;
   $('podium').innerHTML = order.map((c, i) => `<li class="${c.player ? 'me' : ''}"><b>${ORDINALS[i]}</b>${avatar(c)}<span>${c.name}</span></li>`).join('');
   $('finish').showModal(); $('again').focus({ preventScroll: true });
@@ -1011,13 +1121,22 @@ function handle(event) {
     const badge = $('coinText').parentElement; badge.classList.remove('pop'); void badge.offsetWidth; badge.classList.add('pop');
   }
   else if (event === 'lap') { toast(`Lap ${lapOf(race, player)}!`); sound.chime([659, 880]); }
-  else if (event === 'lastlap') { toast('Last lap! 🏁'); sound.chime([659, 880, 1047]); sound.hurry(true); }
+  else if (event === 'lastlap') { toast('Last lap! Double coins! 🏁', 2.6); sound.chime([659, 880, 1047, 1319]); sound.hurry(true); }
+  else if (event === 'smash') {
+    if (clock - lastSmash > 1.2) { toast('Smash! 💥', .9); cameraKick = Math.max(cameraKick, .6); }
+    if (clock - lastSmash > .06) sound.pop();
+    lastSmash = clock; $('coinText').textContent = race.collected;
+    const badge = $('coinText').parentElement; badge.classList.remove('pop'); void badge.offsetWidth; badge.classList.add('pop');
+  }
+  else if (event === 'bounce') { toast('Boing!', 1); sound.boing(); burst(pose.x, pose.y + .5, pose.z, 12, 5, .16, .5, ['#ffffff', TOYS[race.track.toy].bouncer], 6); }
+  else if (event === 'spin') { toast('Spin! 🌀', 1.1); sound.chime([659, 784, 988, 1319], .05); }
+  else if (event === 'landed') { toast('Super spin! ⭐', 1.2); sound.whoosh(); burst(pose.x, pose.y + .8, pose.z, 20, 7, .15, .7, PARTY, 5); }
   else if (event === 'jump') { toast('Wheee!', 1); sound.tone(260, 0, .5, 'sine', .08, 880); }
   else if (event === 'megajump') { toast('MEGA JUMP! 🚀', 1.8); sound.tone(200, 0, 1.1, 'sine', .09, 1200); sound.whoosh(); }
   else if (event === 'loop') { toast('Loop the loop! 🎢', 2); sound.chime([523, 659, 784, 1047, 784, 1047], .11); }
   else if (event === 'nitro') { toast('NITRO! 🔥', 1); sound.whoosh(); sound.tone(180, 0, .5, 'sawtooth', .05, 720); cameraKick = -.8; }
   else if (event === 'empty') { sound.tone(200, 0, .12, 'triangle', .06); toast('Collect coins and stars for nitro', 1.6); }
-  else if (event === 'land') { sound.thud(); cameraKick = player.airTime > 1.2 ? 2 : 1; burst(pose.x, pose.y + .3, pose.z, 14, 4, .28, .6, [THEMES[race.trackId].dust], 0); }
+  else if (event === 'land') { sound.thud(); cameraKick = player.leap === 'mega' ? 2 : player.leap === 'jump' ? 1 : .5; burst(pose.x, pose.y + .3, pose.z, 14, 4, .28, .6, [THEMES[race.trackId].dust], 0); }
   else if (event === 'drift') sound.tone(660, 0, .12, 'sine', .06, 990);
   else if (event === 'drift2') sound.tone(880, 0, .14, 'sine', .07, 1320);
   else if (event === 'turbo') { toast('Drift boost!', 1.1); sound.whoosh(); }
@@ -1132,7 +1251,7 @@ async function init() {
     makeSky(); makeParticles();
     canvas.tabIndex = -1;
     const loader = new GLTFLoader();
-    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=9`)]))) {
+    for (const [id, asset] of await Promise.all(CARS.map(async c => [c.id, await loader.loadAsync(`./assets/${c.id}.glb?v=10`)]))) {
       templates[id] = asset.scene;
       asset.scene.traverse(o => {
         if (!o.isMesh || shiny.includes(o.material)) return;

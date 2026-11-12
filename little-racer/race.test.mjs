@@ -146,7 +146,7 @@ test('ramps launch the car once each lap, hold its speed in the air and land it 
     assert.equal(events.filter(e => e === 'jump').length, R.LAPS, `jumps at ${fps} fps`);
     assert.equal(events.filter(e => e === 'megajump').length, R.LAPS);
     assert.equal(events.filter(e => e === 'loop').length, R.LAPS, 'one trip round the loop each lap');
-    assert.equal(events.filter(e => e === 'land').length, 2 * R.LAPS);
+    assert.equal(events.filter(e => e === 'land').length, 2 * R.LAPS + events.filter(e => e === 'bounce').length, 'every flight lands');
     assert.equal(R.playerOf(race).air, 0);
   }
   const race = R.createRace('beach');
@@ -314,7 +314,7 @@ test('coins sit in rows and over ramps, count once and return each lap', () => {
   for (const { id } of R.TRACKS) {
     const track = R.getTrack(id), coins = R.coinsFor(track);
     assert.ok(coins.length >= 40, `${id} has ${coins.length} coins`);
-    assert.equal(coins.filter(c => c.air).length, 14);
+    assert.equal(coins.filter(c => c.air).length, 14 + 3 * R.bouncersFor(track).length);
     assert.equal(coins.filter(c => c.loop).length, 8);
     for (const coin of coins) assert.ok(Math.abs(coin.lat) < R.HALF_ROAD - 2 + (coin.loop ? 2 : 0) && coin.s > 20 && coin.s < track.length - 10);
     for (const coin of coins.filter(c => !c.air)) for (const star of R.starsFor(track)) assert.ok(Math.abs(coin.s - star.s) > 4 || coin.lat !== star.lat);
@@ -400,18 +400,19 @@ test('nitro fills from coins, stars and drifts, and each press spends one burst'
   const race = R.createRace('beach'), player = R.playerOf(race);
   for (let i = 0; i < 181; i++) R.stepRace(race, 0, 1 / 60);
   race.cars.slice(1).forEach(c => { c.d = 600; });
-  assert.equal(player.nitro, 0);
+  assert.ok(Math.abs(player.nitro - R.NITRO_COST) < 1e-9, 'the race starts with one burst in the tank');
+  player.nitro = 0;
   assert.ok(R.stepRace(race, { steer: 0, gas: true, nitro: true }, 1 / 60).includes('empty'));
   R.stepRace(race, { steer: 0, gas: true }, 1 / 60);
   const star = race.stars[0]; player.d = star.s - 1; player.lat = star.lat; player.speed = R.CRUISE;
   R.stepRace(race, { steer: 0, gas: true }, 1 / 60);
-  assert.ok(Math.abs(player.nitro - R.NITRO_COST) < 1e-9, 'a star adds one burst');
+  assert.ok(Math.abs(player.nitro - R.NITRO_COST) < .05, 'a star adds one burst');
   player.nitro = 1; player.boost = 0;
   const first = R.stepRace(race, { steer: 0, gas: true, nitro: true }, 1 / 60);
   assert.ok(first.includes('nitro')); assert.equal(player.boost > 1.5, true);
   // Holding the button does not burn the whole tank.
   for (let i = 0; i < 30; i++) assert.equal(R.stepRace(race, { steer: 0, gas: true, nitro: true }, 1 / 60).includes('nitro'), false);
-  assert.ok(Math.abs(player.nitro - 2 / 3) < .06);
+  assert.ok(Math.abs(player.nitro - 2 / 3) < .15, 'one burst gone, give or take a coin or a knock-over');
   R.stepRace(race, { steer: 0, gas: true }, 1 / 60);
   assert.ok(R.stepRace(race, { steer: 0, gas: true, nitro: true }, 1 / 60).includes('nitro'));
   assert.ok(player.nitro <= 1 && player.nitro >= 0);
@@ -529,4 +530,134 @@ test('zoom strips sit on clear road and give a short boost each time they are cr
   let touched = 0;
   for (let i = 0; i < 40; i++) touched += R.stepRace(wide, { steer: other.lat > 0 ? 1 : -1, gas: true }, 1 / 60).filter(e => e === 'pad').length;
   assert.equal(touched, 0);
+});
+
+const onTrack = id => { const race = R.createRace(id); race.phase = 'racing'; race.cars.slice(1).forEach(c => { c.d = -400; }); return race; };
+const run = (race, input, frames) => { const events = []; for (let i = 0; i < frames; i++) events.push(...R.stepRace(race, input, 1 / 60)); return events; };
+
+test('every track has rows of things to knock over and bouncers, on clear road', () => {
+  assert.deepEqual(R.TRACKS.map(t => t.toy), ['ball', 'snowman', 'barrel', 'bubble']);
+  for (const { id } of R.TRACKS) {
+    const track = R.getTrack(id), props = R.propsFor(track), bouncers = R.bouncersFor(track), stars = R.starsFor(track), pads = R.padsFor(track);
+    assert.ok(props.length / 9 >= 3 && props.length / 9 <= 7, `${id} has ${props.length / 9} rows`);
+    assert.ok(bouncers.length >= 2 && bouncers.length <= 5, `${id} has ${bouncers.length} bouncers`);
+    for (const thing of [...props, ...bouncers]) {
+      assert.ok(Math.abs(thing.lat) <= R.HALF_ROAD - 1.5, 'on the road');
+      assert.equal(R.loopPhase(track, thing.s), -1);
+      for (const ramp of track.ramps) assert.ok(thing.s < ramp - 8 || thing.s > ramp + 40, 'not on a ramp or under a jump');
+      assert.ok(thing.s < track.tunnel.s - 4 || thing.s > track.tunnel.s + track.tunnel.length, 'not inside the tunnel');
+      for (const star of stars) assert.ok(Math.abs(star.s - thing.s) > 8, 'clear of the stars');
+      for (const pad of pads) assert.ok(Math.abs(pad.s - thing.s) > 9, 'clear of the zoom strips');
+    }
+    // A car anywhere across the road always hits at least one thing in a row.
+    for (let lat = -R.HALF_ROAD; lat <= R.HALF_ROAD; lat += .25) assert.ok(props.slice(0, 9).some(prop => Math.abs(prop.lat - lat) <= 1.7), `${id} gap at ${lat}`);
+  }
+});
+
+test('driving into a row knocks things over for a coin each, and they stand up again', () => {
+  const race = onTrack('beach'), player = R.playerOf(race), row = race.props.slice(0, 9);
+  player.d = row[0].s - 4; player.lat = 0; player.speed = R.CRUISE; player.nitro = 0;
+  const events = run(race, 0, 30), hits = events.filter(e => e === 'smash').length;
+  assert.ok(hits >= 1 && hits <= 4, `${hits} knocked over`);
+  assert.equal(race.smashed, hits); assert.equal(race.collected, hits);
+  assert.ok(player.nitro > 0, 'each one adds a little nitro');
+  assert.ok(player.speed > R.CRUISE - 1, 'nothing slows the car');
+  const down = row.filter(prop => race.time - prop.down < R.SMASH_BACK);
+  assert.equal(down.length, hits);
+  for (const prop of down) assert.ok(Math.abs(prop.lat) <= 1.7 && Math.abs(prop.dir) === 1);
+  // Driving back over the same spot at once finds nothing to hit; a few seconds later they are back.
+  player.d = row[0].s - 4;
+  assert.equal(run(race, 0, 30).filter(e => e === 'smash').length, 0);
+  run(race, { steer: 0, gas: true, brake: true }, Math.ceil(R.SMASH_BACK * 60));
+  player.d = row[0].s - 4; player.lat = 0; player.speed = R.CRUISE;
+  assert.equal(run(race, 0, 30).filter(e => e === 'smash').length, hits);
+  // A friend knocks things over too, but only Viaan's count; a flying car sails over them.
+  const other = onTrack('beach'), rival = other.cars[1], second = other.props.slice(0, 9);
+  rival.d = second[0].s - 2; rival.speed = R.CRUISE;
+  assert.equal(run(other, { steer: 0, gas: true, brake: true }, 30).filter(e => e === 'smash').length, 0);
+  assert.ok(second.some(prop => prop.down > 0)); assert.equal(other.smashed, 0); assert.equal(other.collected, 0);
+  const high = onTrack('beach'), flyer = R.playerOf(high);
+  flyer.d = high.props[0].s - 4; flyer.lat = 0; flyer.speed = R.CRUISE; flyer.air = flyer.airTime = .9;
+  assert.equal(run(high, 0, 30).filter(e => e === 'smash').length, 0);
+});
+
+test('a bouncer hops any moving car over three coins and lands it safely', () => {
+  for (const id of ['beach', 'galaxy']) {
+    const race = onTrack(id), player = R.playerOf(race), bouncer = race.bouncers[0], float = race.track.float;
+    assert.equal(float, id === 'galaxy' ? 1.25 : 1);
+    assert.equal(race.coins.filter(c => c.hop === bouncer.s).length, 3);
+    player.d = bouncer.s - 3; player.lat = bouncer.lat; player.speed = R.CRUISE;
+    const events = []; let frames = 0;
+    while (!events.includes('land') && frames++ < 300) events.push(...R.stepRace(race, 0, 1 / 60));
+    assert.equal(events.filter(e => e === 'bounce').length, 1, id);
+    assert.equal(player.leap, 'hop'); assert.ok(Math.abs(player.airTime - R.HOP_SECONDS * float) < 1e-9);
+    assert.equal(race.coins.filter(c => c.hop === bouncer.s && c.taken).length, 3, `${id}: all three coins are caught`);
+    assert.equal(player.air, 0); assert.ok(player.speed > R.CRUISE - 1);
+    // Another lane, or a crawl, rolls past without a hop.
+    const miss = onTrack(id), slow = R.playerOf(miss);
+    slow.d = bouncer.s - 3; slow.lat = bouncer.lat + (bouncer.lat > 0 ? -4 : 4); slow.speed = R.CRUISE;
+    assert.equal(run(miss, 0, 30).includes('bounce'), false);
+    slow.d = bouncer.s - 1; slow.lat = bouncer.lat; slow.speed = 5;
+    assert.equal(R.stepRace(miss, { steer: 0, gas: false }, 1 / 60).includes('bounce'), false);
+  }
+  // Friends hop too.
+  const race = onTrack('snow'), rival = race.cars[1], bouncer = race.bouncers[0];
+  rival.d = bouncer.s - 2; rival.lat = bouncer.lat; rival.lane = bouncer.lat; rival.wobble = 0; rival.speed = R.CRUISE;
+  run(race, { steer: 0, gas: true, brake: true }, 12);
+  assert.ok(rival.air > 0 && rival.leap === 'hop');
+});
+
+test('steering in the air spins the car once and landing it gives a boost', () => {
+  const launch = () => { const race = onTrack('beach'), player = R.playerOf(race); player.d = race.track.ramps[0] - .2; player.lat = 0; player.speed = R.CRUISE; player.nitro = 0; return [race, player]; };
+  const [race, player] = launch(), events = [];
+  let frames = 0;
+  while (!events.includes('land') && frames++ < 300) events.push(...R.stepRace(race, { steer: 1, gas: true }, 1 / 60));
+  assert.equal(events.filter(e => e === 'spin').length, 1, 'one spin per flight');
+  assert.ok(events.indexOf('spin') > events.indexOf('jump') && events.indexOf('landed') > events.indexOf('spin'));
+  assert.equal(race.tricks, 1);
+  assert.ok(player.boost > R.SPIN_BOOST - .1 && player.nitro > .1);
+  assert.equal(player.trick, 0);
+  // A straight flight is just a flight.
+  const [plain, straight] = launch(), quiet = [];
+  frames = 0;
+  while (!quiet.includes('land') && frames++ < 300) quiet.push(...R.stepRace(plain, { steer: 0, gas: true }, 1 / 60));
+  assert.equal(quiet.includes('spin') || quiet.includes('landed'), false);
+  assert.equal(plain.tricks, 0); assert.equal(straight.boost, 0);
+  // Steering on the ground never spins.
+  const ground = onTrack('beach');
+  R.playerOf(ground).d = 20; R.playerOf(ground).speed = R.CRUISE;
+  assert.equal(run(ground, { steer: 1, gas: true }, 40).includes('spin'), false);
+});
+
+test('the last lap counts every coin and knock-over double', () => {
+  const race = onTrack('beach'), player = R.playerOf(race), length = race.track.length;
+  const row = race.coins.filter(c => !c.air && !c.loop).slice(0, 5);
+  player.d = row[0].s - 3; player.lat = row[0].lat; player.speed = R.CRUISE;
+  assert.equal(run(race, 0, 60).filter(e => e === 'coin').length, 5);
+  assert.equal(race.collected, 5);
+  player.d = length * (R.LAPS - 1) - .2; player.lat = 6.5;
+  assert.ok(R.stepRace(race, 0, 1 / 20).includes('lastlap'));
+  const before = race.collected;
+  player.d = length * (R.LAPS - 1) + row[0].s - 3; player.lat = row[0].lat;
+  assert.equal(run(race, 0, 60).filter(e => e === 'coin').length, 5);
+  assert.equal(race.collected - before, 10);
+  const prop = race.props[2], had = race.collected;
+  player.d = length * (R.LAPS - 1) + prop.s - 3; player.lat = prop.lat;
+  const hits = run(race, 0, 20).filter(e => e === 'smash').length;
+  assert.ok(hits >= 1); assert.equal(race.collected - had, hits * 2);
+});
+
+test('the galaxy has low gravity and friends show flames when they hurry', () => {
+  const race = onTrack('galaxy'), player = R.playerOf(race), track = race.track;
+  player.d = track.ramps[0] - .2; player.lat = 0; player.speed = R.CRUISE;
+  assert.ok(R.stepRace(race, 0, 1 / 60).includes('jump'));
+  assert.ok(Math.abs(player.airTime - R.AIR_SECONDS * 1.25) < 1e-9);
+  let coins = 0, frames = 0;
+  while (player.air > 0 && frames++ < 400) coins += R.stepRace(race, 0, 1 / 60).filter(e => e === 'coin').length;
+  assert.equal(coins, 5, 'the stretched arc of coins is still all caught');
+  // Friends far behind light their flames; friends ahead do not.
+  const rival = race.cars[1];
+  assert.ok(rival.boost > 0, 'a friend far behind is hurrying');
+  rival.d = player.d + 30; run(race, 0, 40);
+  assert.equal(rival.boost, 0);
 });

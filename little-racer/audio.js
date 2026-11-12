@@ -92,6 +92,10 @@ export function createSound() {
     chime(notes, gap = .09) { if (ready()) notes.forEach((f, i) => note(f, ctx.currentTime + i * gap, .35, 'sine', .09)); },
     horn() { if (ready()) { note(392, ctx.currentTime, .42, 'square', .035); note(494, ctx.currentTime, .42, 'square', .035); } },
     // Two happy barks: a quick falling yelp with a little breath of noise, twice.
+    // Something knocked over: a short hollow pop.
+    pop() { this.tone(420, 0, .09, 'triangle', .1, 140); this.tone(900, .02, .05, 'sine', .04, 500); },
+    // A bouncer: a springy rise.
+    boing() { this.tone(170, 0, .16, 'sine', .11, 420); this.tone(300, .1, .3, 'sine', .08, 760); },
     woof(volume = .3) {
       if (!ready()) return;
       for (const delay of [0, .17]) { note(520, ctx.currentTime + delay, .11, 'sawtooth', volume * .22, master, 250); note(260, ctx.currentTime + delay, .12, 'square', volume * .1, master, 150); puff(ctx.currentTime + delay, .08, 'bandpass', 1100, volume * .3); }

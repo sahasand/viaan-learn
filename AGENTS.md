@@ -62,7 +62,8 @@ obstacle data and the runtime terrain formula aligned with island edits.
 The home Little Racer link opens `little-racer/`, a static Three.js supercar race:
 garage (four vehicles, paints, four tracks), three laps over hills against three
 cartoon dogs (Biscuit, Pepper, Waffle; Viaan's own car carries no dog),
-steer/boost/brake controls, drift boosts, boost stars, zoom strips, coins, a
+steer/boost/brake controls, drift boosts, boost stars, zoom strips, coins, rows of things to knock over
+(a different toy per track), bouncers, air spins, a double-coin last lap, low gravity on Rainbow Galaxy, a
 loop-the-loop, a jump and a mega jump, a tunnel, boss races, and a finish card. Read `little-racer/README.md` when
 changing race rules, tracks, art, or sound. `race.js` holds all rules in track coordinates
 and runs in Node; `game.js` owns the scene, generated scenery, input and lifecycle;

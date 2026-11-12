@@ -151,6 +151,13 @@ body[data-phase="garage"] #pause,body[data-phase="loading"] #pause,body[data-pha
 .swatches{display:flex;gap:8px;overflow-x:auto;padding:5px 4px 8px;scrollbar-width:none}
 .swatches button{position:relative;flex:0 0 48px;height:48px;border-radius:50%;border:4px solid #fff;box-shadow:0 3px 0 #0002,var(--shadow);display:grid;place-items:center;font-size:11px;line-height:1.05;color:#fff;text-shadow:0 1px 2px #000b}
 .swatches button.locked{filter:saturate(.75) brightness(.88)}
+/* A special colour there are enough coins for shows a coin and its price, and glows to say "tap me". */
+.swatches button.can{filter:none;font-size:12px;font-weight:800;gap:0;animation:buy 1.4s ease-in-out infinite}
+.swatches button.can i{width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff2a8,#ffc21a 55%,#d99a00);box-shadow:inset 0 0 0 1.5px #e0a800;margin-bottom:-2px}
+@keyframes buy{0%,100%{box-shadow:0 3px 0 #0002,0 0 0 0 #ffc21a00}50%{box-shadow:0 3px 0 #0002,0 0 0 5px #ffc21acc}}
+/* The last lap counts double. */
+body[data-double] .coins{background:#b97700e6}
+body[data-double] .coins b::after{content:"×2";font-size:.62em;margin-left:5px;color:#ffe680}
 .swatches button[aria-pressed="true"]{outline:4px solid var(--ink);outline-offset:1px}
 .tracks{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .tracks button{display:grid;justify-items:center;align-content:center;gap:1px;padding:5px 3px;min-height:62px;text-align:center}
