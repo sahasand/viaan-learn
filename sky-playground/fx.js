@@ -1,18 +1,19 @@
 // The playful layer of Little Pilot: things to collect, sparkles, sea friends,
 // runway fans, plane paint and trails. Rules live in sky.js; this file only draws.
 import * as THREE from 'three';
-import { PLANE_PAINTS } from './sky.js';
+import { PLANE_PAINTS, inSky, reachOf } from './sky.js?v=3';
 
 const PARTY = ['#eb6548', '#ffc44e', '#58c7b0', '#f2559c', '#5b8def', '#ffffff'];
 const BALLOONS = ['#f2559c', '#ffc44e', '#5b8def', '#58c7b0', '#eb6548', '#8a55e0'];
 const FANS = ['bear', 'cat', 'dog', 'duck', 'elephant', 'giraffe', 'lion', 'owl', 'turtle'];
-const PMAX = 520;
+const PMAX = 520, HOP = .28;      // seconds a caught star takes to fly to the plane
 
-export function createFun({ scene, camera, plane, items, airports, runwayOf, water, reducedMotion }) {
+export function createFun({ scene, camera, plane, items, airports, runwayOf, groundAt = () => 0, water, reducedMotion }) {
   const dummy = new THREE.Object3D(), tint = new THREE.Color(), rand = Math.random;
   const mat = (color, options = {}) => new THREE.MeshStandardMaterial({ color, roughness: .6, ...options });
   let clock = 0, roll = 0, rollLeft = 0, rollSide = 1, route = '', trail = 'clouds', paint = 'red', partyUntil = 0, nextSpout = 3, nextFirework = 0, partyAt = null;
-  const seen = new Set();
+  const seen = new Set(), hops = new Map(), rockets = [], noticed = [];
+  let pull = 1;
 
   /* ---------- a bright sky ---------- */
   const horizon = new THREE.Color('#d3f1f6');
@@ -83,16 +84,27 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, wat
   function drawItems() {
     const spin = reducedMotion ? .5 : clock * 2.2;
     stars.forEach((star, i) => {
-      const lead = route && star.route === route, size = star.taken ? 0 : lead ? 1.35 + (reducedMotion ? 0 : Math.sin(clock * 5 + i) * .12) : star.route ? .8 : 1;
-      dummy.position.set(star.x, star.y + (reducedMotion ? 0 : Math.sin(clock * 2 + i) * .25), star.z); dummy.rotation.set(0, spin + i, 0); dummy.scale.setScalar(size); dummy.updateMatrix();
+      const hop = hops.get(star), pulse = reducedMotion ? 0 : Math.sin(clock * 5 + i) * .12;
+      let size = (star.big ? 2.7 : star.route ? 1.3 : 1.1) + pulse * (star.big ? 2 : 1);
+      dummy.position.set(star.x, star.y + (reducedMotion ? 0 : Math.sin(clock * 2 + i) * .25), star.z);
+      if (hop !== undefined) {
+        // A caught star flies to the plane, spinning and shrinking as it goes.
+        const t = 1 - hop / HOP; dummy.position.lerp(plane.position, t * t); size *= 1 - t * .75;
+      } else if (star.taken || !inSky(star, route)) size = 0;
+      else {
+        // A star about to be caught leans toward the plane, so the pull can be seen.
+        const far = dummy.position.distanceTo(plane.position), reach = reachOf(star, pull);
+        if (far < reach * 2.2) dummy.position.lerp(plane.position, Math.min(.3, (1 - far / (reach * 2.2)) * .6));
+      }
+      dummy.rotation.set(0, hop === undefined ? spin + i : clock * 18, 0); dummy.scale.setScalar(size); dummy.updateMatrix();
       starMesh.setMatrixAt(i, dummy.matrix);
     });
     balloons.forEach((b, i) => {
-      const bob = reducedMotion ? 0 : Math.sin(clock * 1.3 + i) * .5, show = b.taken ? 0 : 1;
+      const bob = reducedMotion ? 0 : Math.sin(clock * 1.3 + i) * .5, show = b.taken || !inSky(b, route) ? 0 : 1;
       dummy.rotation.set(0, 0, 0); dummy.position.set(b.x, b.y + bob, b.z); dummy.scale.set(2.3 * show, 2.8 * show, 2.3 * show); dummy.updateMatrix(); balloonMesh.setMatrixAt(i, dummy.matrix);
       dummy.position.set(b.x, b.y + bob - 4.6, b.z); dummy.scale.set(show, 3.8 * show, show); dummy.updateMatrix(); stringMesh.setMatrixAt(i, dummy.matrix);
     });
-    hoops.forEach((hoop, i) => { hoopMeshes[i].visible = !hoop.taken; if (!reducedMotion) hoopMeshes[i].rotation.z = clock * .6; });
+    hoops.forEach((hoop, i) => { hoopMeshes[i].visible = !hoop.taken && inSky(hoop, route); if (!reducedMotion) hoopMeshes[i].rotation.z = clock * .6; });
     starMesh.instanceMatrix.needsUpdate = balloonMesh.instanceMatrix.needsUpdate = stringMesh.instanceMatrix.needsUpdate = true;
     if (balloonMesh.instanceColor) balloonMesh.instanceColor.needsUpdate = true;
   }
@@ -146,6 +158,38 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, wat
     }
   });
 
+  /* ---------- toys: fireworks and presents on parachutes ---------- */
+  const box = new THREE.BoxGeometry(1, 1, 1), canopy = new THREE.SphereGeometry(1.5, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2);
+  const presents = [0, 1, 2, 3].map(i => {
+    const group = new THREE.Group(), colour = PARTY[i % 5];
+    part(box, mat(colour), group, 0, 0, 0, 1.2, 1.2, 1.2); part(box, mat('#ffffff'), group, 0, 0, 0, 1.26, 1.26, .3); part(box, mat('#ffffff'), group, 0, 0, 0, .3, 1.26, 1.26);
+    part(canopy, mat(BALLOONS[i], { side: THREE.DoubleSide }), group, 0, 2.2, 0, 1, 1, 1);
+    for (const side of [-1, 1]) part(box, cream, group, side * .7, 1.5, 0, .05, 1.7, .05).rotation.z = side * .55;
+    group.visible = false; group.userData = { colour, fall: 0 }; scene.add(group); return group;
+  });
+  let nextPresent = 0;
+  function updateToys(dt) {
+    for (let i = rockets.length - 1; i >= 0; i--) {
+      const r = rockets[i];
+      if ((r.wait -= dt) > 0) continue;
+      r.fuse -= dt; r.vy -= 5 * dt; r.x += r.vx * dt; r.y += r.vy * dt; r.z += r.vz * dt;
+      spawn(r.x, r.y, r.z, (rand() - .5) * 2, -2, (rand() - .5) * 2, .2, .35, '#ffe9a8');
+      if (r.fuse > 0) continue;
+      burst(r.x, r.y, r.z, 60, 13, .42, 1.6, [r.colour, r.colour, '#ffffff'], 6); noticed.push('boom'); rockets.splice(i, 1);
+    }
+    for (const gift of presents) {
+      if (!gift.visible) continue;
+      const u = gift.userData; u.fall = Math.min(11, u.fall + 14 * dt);
+      gift.position.x += u.vx * dt; gift.position.z += u.vz * dt; gift.position.y -= u.fall * dt;
+      gift.rotation.z = reducedMotion ? 0 : Math.sin(clock * 3 + u.vx) * .16;
+      const floor = groundAt(gift.position.x, gift.position.z);
+      if (gift.position.y > floor + .6) continue;
+      gift.visible = false; noticed.push(floor > .3 ? 'gift' : 'splash');
+      if (floor > .3) burst(gift.position.x, floor + 1, gift.position.z, 34, 8, .3, 1.2, [u.colour, '#ffd84a', '#ffffff'], 7);
+      else for (let i = 0; i < 20; i++) spawn(gift.position.x, .3, gift.position.z, (rand() - .5) * 5, 5 + rand() * 5, (rand() - .5) * 5, .35 + rand() * .3, .9, i % 2 ? '#e9f8ff' : '#ffffff', 14);
+    }
+  }
+
   /* ---------- the plane's paint ---------- */
   const coats = new Set();
   plane.traverse(o => { if (o.isMesh && o.material.name === 'Coral enamel') coats.add(o.material); });
@@ -158,8 +202,8 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, wat
     get roll() { return roll; },
     setPaint, burst,
     setTrail(id) { trail = id; },
-    // Stars on the route of the current trip glow bigger so they are easy to follow.
-    setRoute(id) { route = id; seen.clear(); },
+    // Which star trail is in the sky: see inSky in sky.js.
+    setRoute(id) { route = id; seen.clear(); hops.clear(); },
     trick() {
       if (rollLeft > 0) return false;
       rollLeft = 1; rollSide = rand() < .5 ? -1 : 1;
@@ -167,14 +211,37 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, wat
       return true;
     },
     collected(thing) {
-      if (thing.kind === 'star') burst(thing.x, thing.y, thing.z, 10, 6, .22, .6, ['#ffd84a', '#fff6c9'], 4);
+      if (thing.kind === 'star') {
+        if (!reducedMotion) hops.set(thing, HOP);
+        if (thing.big) burst(thing.x, thing.y, thing.z, 46, 11, .34, 1.1, [...PARTY, '#ffd84a'], 5);
+        else burst(thing.x, thing.y, thing.z, 8, 5, .2, .5, ['#ffd84a', '#fff6c9'], 4);
+      }
       else if (thing.kind === 'balloon') burst(thing.x, thing.y, thing.z, 26, 9, .3, .9, [thing.color || '#f2559c', '#ffffff'], 9);
       else for (let i = 0; i < 36; i++) { const a = i / 36 * Math.PI * 2; spawn(thing.x + Math.cos(a) * 6 * Math.cos(thing.heading), thing.y + Math.sin(a) * 6, thing.z + Math.cos(a) * 6 * Math.sin(thing.heading), Math.cos(a) * 4, Math.sin(a) * 4, 0, .34, .9, PARTY[i % 5], 0); }
     },
+    // The toy button: a honk, confetti, three fireworks ahead of the plane, or a present on a parachute.
+    // Everything is thrown ahead of the plane, faster than it flies, so it stays in view.
+    toy(id, speed = 13) {
+      const where = plane.position, heading = -plane.rotation.y, fx = Math.sin(heading), fz = -Math.cos(heading), out = speed + 16;
+      if (id === 'confetti') burst(where.x + fx * 3, where.y + 1, where.z + fz * 3, 70, 10, .28, 1.7, PARTY, 7);
+      else if (id === 'fireworks') for (let i = 0; i < 3; i++) {
+        const side = (i - 1) * 7;
+        rockets.push({ x: where.x + fx * 3, y: where.y + 1, z: where.z + fz * 3, vx: fx * out - fz * side, vy: 9 + i * 2, vz: fz * out + fx * side, wait: i * .22, fuse: .75, colour: PARTY[Math.floor(rand() * 5)] });
+      } else if (id === 'presents') {
+        const gift = presents[nextPresent]; nextPresent = (nextPresent + 1) % presents.length;
+        // Presents pop out to one side then the other, up and over, so the plane never hides them.
+        const side = nextPresent % 2 ? 7 : -7;
+        gift.position.set(where.x - fz * side * .4, where.y, where.z + fx * side * .4); gift.userData.vx = fx * out - fz * side; gift.userData.vz = fz * out + fx * side; gift.userData.fall = -6; gift.rotation.set(0, heading, 0); gift.scale.setScalar(1.5); gift.visible = true;
+      } else for (let i = 0; i < 9; i++) spawn(where.x + fx * 2.5, where.y + .4, where.z + fz * 2.5, fx * (speed + 9) + (rand() - .5) * 5, (rand() - .3) * 4, fz * (speed + 9) + (rand() - .5) * 5, .2 + rand() * .14, .5, i % 2 ? '#ffd84a' : '#ffffff');
+    },
+    // A long run of stars rains gold around the plane.
+    shower() { for (let i = 0; i < 44; i++) spawn(plane.position.x + (rand() - .5) * 12, plane.position.y + 3 + rand() * 5, plane.position.z + (rand() - .5) * 12, (rand() - .5) * 3, -2 - rand() * 3, (rand() - .5) * 3, .16 + rand() * .16, 1.1 + rand() * .5, rand() < .7 ? '#ffd84a' : '#fff6c9', 5); },
+    // Wheels on the runway: two puffs of dust.
+    touchdown() { for (let i = 0; i < 16; i++) spawn(plane.position.x + (i % 2 ? 1 : -1) * 1.1, plane.position.y - .9, plane.position.z, (rand() - .5) * 3, .6 + rand() * 1.4, 1 + rand() * 3, .4 + rand() * .3, .8, '#fff7e3', 0, 1); },
     celebrate(seconds = 6) { partyUntil = clock + seconds; nextFirework = 0; partyAt = plane.position.clone(); burst(partyAt.x, partyAt.y + 2, partyAt.z, 70, 9, .3, 2, PARTY, 6); },
     // Called every frame, also while parked, so the world keeps moving behind the menus.
-    update(dt, flying, boosting) {
-      clock += dt;
+    update(dt, flying, boosting, reach = 1) {
+      clock += dt; pull = reach;
       sky.position.copy(camera.position);
       if (rollLeft > 0) { rollLeft = Math.max(0, rollLeft - dt / .9); const t = 1 - rollLeft; roll = reducedMotion ? 0 : rollSide * Math.PI * 2 * (t * t * (3 - 2 * t)); } else roll = 0;
       if (paint === 'rainbow') for (const coat of coats) coat.color.setHSL((clock * .15) % 1, .85, .55);
@@ -187,7 +254,17 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, wat
         if (trail === 'hearts' && rand() < 18 * dt) spawn(bx + wide(), where.y + wide(), bz + wide(), -fx + wide(), .8 + rand(), -fz + wide(), .26 + rand() * .14, 1.3, rand() < .6 ? '#ff5f8f' : '#ffc2d6', -.3, 1);
         if (boosting && rand() < 60 * dt) spawn(bx + wide(), where.y + wide(), bz + wide(), -fx * 6, wide(), -fz * 6, .16, .5, PARTY[Math.floor(rand() * 5)]);
       }
-      const sights = updateSea(dt, where);
+      for (const [star, left] of hops) {
+        if (left - dt > 0) { hops.set(star, left - dt); continue; }
+        hops.delete(star); burst(where.x, where.y, where.z, star.big ? 14 : 5, 4, .16, .4, ['#ffd84a', '#fff6c9'], 2);
+      }
+      // Big stars twinkle so they can be spotted from far away.
+      for (const star of stars) if (star.big && !star.taken && inSky(star, route) && rand() < 9 * dt && Math.abs(star.x - where.x) + Math.abs(star.z - where.z) < 260) {
+        const a = rand() * Math.PI * 2, r = 3.4 + rand() * 1.6;
+        spawn(star.x + Math.cos(a) * r, star.y + (rand() - .5) * 6, star.z + Math.sin(a) * r, 0, .6, 0, .22 + rand() * .16, .7, rand() < .5 ? '#fff6c9' : '#ffd84a');
+      }
+      updateToys(dt);
+      const sights = [...updateSea(dt, where), ...noticed.splice(0)];
       for (const cloud of puffs) {
         if (flying && clock > cloud.userData.ready && where.distanceTo(cloud.position) < 6.5) {
           cloud.userData.ready = clock + 6; sights.push('cloud');

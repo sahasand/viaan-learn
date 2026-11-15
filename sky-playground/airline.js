@@ -1,5 +1,5 @@
 // Airline journeys and world coordinates, independent of rendering and storage.
-import { clamp, groundHeight, RUNWAY, AIRPORT_APPROACH, runwayLanding } from './flight.js';
+import { clamp, groundHeight, RUNWAY, AIRPORT_APPROACH, runwayLanding } from './flight.js?v=3';
 export const AIRPORTS = [
   { id:'sunny', name:'Sunny Island', airport:'Sunny Airport', x:0, z:0, icon:'☀', color:'#edd28b', animal:'panda', passenger:'Panda', wish:'a day at the beach', asset:'sunny-island' },
   { id:'snowy', name:'Snowy Mountain', airport:'Snowflake Airport', x:-235, z:-190, icon:'❄', color:'#c5deeb', animal:'penguin', passenger:'Penguin', wish:'a snowy holiday', asset:'snowy-island' },

@@ -1,6 +1,6 @@
 // Things to find in the sky and the pilot's star bank, independent of rendering and storage.
-import { touchesTarget } from './flight.js';
-import { AIRPORTS, airportRunway, approachFor, worldGroundHeight } from './airline.js';
+import { touchesTarget } from './flight.js?v=3';
+import { AIRPORTS, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=3';
 
 export const PILOT_KEY = 'viaan-pilot-v1';
 export const BOOST_SECONDS = 3;
@@ -21,11 +21,31 @@ export const PLANE_TRAILS = [
   { id: 'ribbon', name: 'Rainbow ribbon', cost: 120 },
   { id: 'hearts', name: 'Hearts', cost: 220 }
 ];
-const SHOP = [...PLANE_PAINTS, ...PLANE_TRAILS].filter(item => item.cost);
-const REACH = { star: 5.5, balloon: 5.2, hoop: 7.5 };
+// Toys are set off with the toy button while flying.
+export const PLANE_TOYS = [
+  { id: 'horn', name: 'Honk', icon: '📯' },
+  { id: 'confetti', name: 'Confetti', icon: '🎉', cost: 25 },
+  { id: 'fireworks', name: 'Fireworks', icon: '🎆', cost: 60 },
+  { id: 'presents', name: 'Presents', icon: '🎁', cost: 120 }
+];
+const SHOP = [...PLANE_PAINTS, ...PLANE_TRAILS, ...PLANE_TOYS].filter(item => item.cost);
+// Height is the hardest thing for a small pilot to judge, so reach is taller than it is wide.
+const REACH = { star: 11, balloon: 9.5, hoop: 10.5 }, TALL = .6;
 const VALUE = { star: 1, balloon: 3, hoop: 2 };
+export const BIG_STAR = 5, CLOUD_STARS = 2;
+// Stars also come from landing, from a passenger's thank-you and from spotting a sea friend.
+export const LANDING_STARS = 10, GIFT_STARS = 10, SIGHT_STARS = 5;
+export const ZOOM_PULL = 2;             // a zooming plane pulls stars in from twice as far
+export const ZOOM_STARS = 6, ZOOM_MAX = 3;  // stars that fill one zoom, and how many zooms the plane holds
+const TURN = 36;                        // radius of the bend that starts every star trail
+// Free flying shows one trail leaving each island, a round trip of all three.
+const TOUR = ['sunny>snowy', 'snowy>jungle', 'jungle>sunny'];
+// What is in the sky right now: island things always, and one star trail. On a passenger
+// trip that is the trail to the destination; any other route name shows no trail at all.
+export const inSky = (thing, route = '') => !thing.route || (route ? thing.route === route : TOUR.includes(thing.route));
 
 const item = (kind, x, y, z, extra = {}) => ({ kind, x, y, z, value: VALUE[kind], taken: false, route: '', ...extra });
+const bigStar = (x, y, z, extra = {}) => item('star', x, y, z, { big: true, value: BIG_STAR, ...extra });
 // Everything floats clear of the ground and of mapped trees and buildings.
 const lift = (x, z, y, clearance, obstacles) => {
   let floor = Math.max(y, worldGroundHeight(x, z) + clearance);
@@ -33,34 +53,51 @@ const lift = (x, z, y, clearance, obstacles) => {
   return floor;
 };
 
-// A line of stars leads from the end of the takeoff run to where the landing begins,
-// weaving a little so following it feels like play. Two rainbow hoops and three
-// balloons sit along the way.
+// The line a star trail follows: straight ahead off the runway, round a wide bend toward
+// the destination, then straight to where its landing begins. Headings are flight headings.
+export function trailPath(fromId, toId) {
+  const runway = airportRunway(fromId), end = approachFor(toId)[0], full = Math.PI * 2;
+  const start = { x: runway.x, z: runway.stopZ - 54 }, side = end.x >= start.x ? 1 : -1;
+  const cx = start.x + side * TURN, cz = start.z;
+  const bearing = Math.atan2(end.z - cz, end.x - cx), spread = Math.acos(Math.min(1, TURN / Math.hypot(end.x - cx, end.z - cz)));
+  const turned = (((side > 0 ? bearing - spread - Math.PI : -bearing - spread) % full) + full) % full;
+  const on = h => ({ x: cx - side * TURN * Math.cos(h), z: cz - side * TURN * Math.sin(h), heading: h });
+  const leave = on(side * turned), arc = TURN * turned, length = arc + Math.hypot(end.x - leave.x, end.z - leave.z);
+  return { length, at(distance) {
+    if (distance < arc) return on(side * distance / TURN);
+    return { x: leave.x + Math.sin(leave.heading) * (distance - arc), z: leave.z - Math.cos(leave.heading) * (distance - arc), heading: leave.heading };
+  } };
+}
+// A line of stars follows that path, weaving a little so following it feels like play.
+// Two rainbow hoops and three balloons sit along the way; the middle and last stars are big ones.
 export function routeItems(fromId, toId, obstacles = []) {
-  const runway = airportRunway(fromId), end = approachFor(toId)[0], route = `${fromId}>${toId}`;
-  const start = { x: runway.x, z: runway.stopZ - 62 }, dx = end.x - start.x, dz = end.z - start.z, length = Math.hypot(dx, dz);
-  const nx = -dz / length, nz = dx / length, count = Math.floor(length / 13), items = [];
+  const path = trailPath(fromId, toId), route = `${fromId}>${toId}`, count = Math.floor(path.length / 13), items = [];
   const at = (t, side = 0) => {
-    const weave = Math.sin(t * Math.PI * 4) * 3.2 * Math.min(1, t * 5, (1 - t) * 5) + side;
-    const x = start.x + dx * t + nx * weave, z = start.z + dz * t + nz * weave;
-    return { x, z, y: lift(x, z, 18 + Math.sin(t * Math.PI * 2) * 1.5, 6.5, obstacles) };
+    const p = path.at(t * path.length), weave = Math.sin(t * Math.PI * 4) * 3.2 * Math.min(1, t * 5, (1 - t) * 5) + side;
+    const x = p.x + Math.cos(p.heading) * weave, z = p.z + Math.sin(p.heading) * weave;
+    return { x, z, heading: p.heading, y: lift(x, z, 18 + Math.sin(t * Math.PI * 2) * 1.5, 6.5, obstacles) };
   };
-  for (let i = 1; i < count; i++) { const p = at(i / count); items.push(item('star', p.x, p.y, p.z, { route })); }
-  for (const t of [.25, .75]) { const p = at(t); items.push(item('hoop', p.x, p.y, p.z, { route, heading: Math.atan2(dx, -dz) })); }
+  for (let i = 1; i < count; i++) {
+    const p = at(i / count), big = i === count - 1 || i === Math.floor(count / 2);
+    items.push(big ? bigStar(p.x, p.y, p.z, { route }) : item('star', p.x, p.y, p.z, { route }));
+  }
+  for (const t of [.25, .75]) { const p = at(t); items.push(item('hoop', p.x, p.y, p.z, { route, heading: p.heading })); }
   [.2, .5, .86].forEach((t, i) => { const p = at(t, i % 2 ? 13 : -13); items.push(item('balloon', p.x, p.y + 3, p.z, { route })); });
   return items;
 }
-// Every island also wears a ring of stars and a few balloons for free flying.
+// Every island also wears a ring of stars, a few balloons and a big star above its tallest hill.
 export function islandItems(airport, obstacles = []) {
   const items = [];
   for (let i = 0; i < 12; i++) {
     const a = i / 12 * Math.PI * 2, x = airport.x + Math.cos(a) * 66, z = airport.z + Math.sin(a) * 54;
-    items.push(item('star', x, lift(x, z, 24, 7, obstacles), z));
+    items.push(item('star', x, lift(x, z, 20, 7, obstacles), z));
   }
   for (let i = 0; i < 4; i++) {
     const a = i / 4 * Math.PI * 2 + .7, x = airport.x + Math.cos(a) * 98, z = airport.z + Math.sin(a) * 82;
     items.push(item('balloon', x, lift(x, z, 17 + i * 3, 9, obstacles), z));
   }
+  const x = airport.x - 23, z = airport.z - 19;
+  items.push(bigStar(x, lift(x, z, 20, 9, obstacles), z));
   return items;
 }
 export function buildSky(obstacles = []) {
@@ -68,28 +105,50 @@ export function buildSky(obstacles = []) {
   for (const from of AIRPORTS) for (const to of AIRPORTS) if (from !== to) items.push(...routeItems(from.id, to.id, obstacles));
   return items;
 }
-// The helping wing follows the star trail: the next star of this route that is
-// still ahead of the plane, so a missed star is left behind rather than circled for.
+// The helping wing follows the star trail forwards: the nearest star after the last one
+// caught. Asking for help late joins the trail where the plane is instead of flying back
+// to its start, and a star just missed is left behind rather than circled for.
 export function nextOnRoute(items, route, state) {
   if (!route) return null;
   const fx = Math.sin(state.heading), fz = -Math.cos(state.heading);
-  let started = false;
-  for (let i = items.length - 1; i >= 0 && !started; i--) started = items[i].route === route && items[i].kind === 'star' && items[i].taken;
-  for (const thing of items) {
-    if (thing.route !== route || thing.kind !== 'star' || thing.taken) continue;
-    const ahead = (thing.x - state.x) * fx + (thing.z - state.z) * fz;
-    // Before the first star is caught the plane may still be turning toward the trail.
-    if (ahead > -2 || !started && Math.hypot(thing.x - state.x, thing.z - state.z) > 30) return thing;
+  let best = null, nearest = Infinity;
+  for (let i = items.length - 1; i >= 0; i--) {
+    const thing = items[i];
+    if (thing.route !== route || thing.kind !== 'star') continue;
+    if (thing.taken) break;
+    const dx = thing.x - state.x, dz = thing.z - state.z, far = Math.hypot(dx, dz);
+    if (far < 20 && dx * fx + dz * fz < -2) continue;
+    if (far <= nearest) { nearest = far; best = thing; }
   }
-  return null;
+  return best;
 }
 export function resetSky(items) { for (const thing of items) thing.taken = false; return items; }
-// Collects everything the plane touched while moving from one frame to the next.
-export function collectSky(items, previous, current) {
-  const found = [];
+// How close the plane must come to catch a thing; fx.js uses it to lean stars toward the plane.
+export const reachOf = (thing, pull = 1) => REACH[thing.kind] * pull;
+// A pilot who is not steering up or down is eased to the height of the nearest star ahead.
+export function starHeight(items, route, state) {
+  const fx = Math.sin(state.heading), fz = -Math.cos(state.heading);
+  let best = null, nearest = 45;
   for (const thing of items) {
-    if (thing.taken || Math.abs(thing.x - current.x) > 40 || Math.abs(thing.z - current.z) > 40) continue;
-    if (touchesTarget(previous, current, thing, REACH[thing.kind])) { thing.taken = true; found.push(thing); }
+    if (thing.taken || thing.kind !== 'star' || !inSky(thing, route)) continue;
+    const dx = thing.x - state.x, dz = thing.z - state.z, far = Math.hypot(dx, dz);
+    if (far < nearest && dx * fx + dz * fz > 0) { nearest = far; best = thing; }
+  }
+  return best ? best.y : null;
+}
+// Every few stars fill one zoom. The plane takes off with one ready.
+export const freshZoom = () => ({ ready: 1, stars: 0 });
+export function chargeZoom(zoom, earned) {
+  const stars = zoom.stars + Math.max(0, earned), ready = Math.min(ZOOM_MAX, zoom.ready + Math.floor(stars / ZOOM_STARS));
+  return { ready, stars: ready === ZOOM_MAX ? 0 : stars % ZOOM_STARS };
+}
+export const spendZoom = zoom => zoom.ready > 0 ? { ...zoom, ready: zoom.ready - 1 } : null;
+// Collects everything in the sky that the plane touched while moving from one frame to the next.
+export function collectSky(items, previous, current, route = '', pull = 1) {
+  const found = [], from = { x: previous.x, y: previous.y * TALL, z: previous.z }, to = { x: current.x, y: current.y * TALL, z: current.z };
+  for (const thing of items) {
+    if (thing.taken || Math.abs(thing.x - current.x) > 40 || Math.abs(thing.z - current.z) > 40 || !inSky(thing, route)) continue;
+    if (touchesTarget(from, to, { x: thing.x, y: thing.y * TALL, z: thing.z }, REACH[thing.kind] * pull)) { thing.taken = true; found.push(thing); }
   }
   return found;
 }
@@ -101,7 +160,7 @@ export function normalizePilot(raw) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
   const owned = Array.isArray(saved.owned) ? SHOP.filter(thing => saved.owned.includes(thing.id)).map(thing => thing.id) : [];
   const pick = (list, id) => (list.find(thing => thing.id === id && (!thing.cost || owned.includes(id))) || list[0]).id;
-  return { stars: Number.isInteger(saved.stars) && saved.stars > 0 ? Math.min(saved.stars, 99999) : 0, owned, paint: pick(PLANE_PAINTS, saved.paint), trail: pick(PLANE_TRAILS, saved.trail) };
+  return { stars: Number.isInteger(saved.stars) && saved.stars > 0 ? Math.min(saved.stars, 99999) : 0, owned, paint: pick(PLANE_PAINTS, saved.paint), trail: pick(PLANE_TRAILS, saved.trail), toy: pick(PLANE_TOYS, saved.toy), sound: saved.sound === true };
 }
 export function earnStars(pilot, count) {
   const current = normalizePilot(pilot);
@@ -112,5 +171,9 @@ export function buyForPilot(pilot, id) {
   const current = normalizePilot(pilot), thing = SHOP.find(i => i.id === id);
   if (!thing || current.owned.includes(id) || current.stars < thing.cost) return current;
   return normalizePilot({ ...current, stars: current.stars - thing.cost, owned: [...current.owned, id] });
+}
+// Paints and trails the latest stars have just brought within reach, so the game can say so.
+export function nowAffordable(before, after) {
+  return SHOP.filter(thing => !after.owned.includes(thing.id) && before.stars < thing.cost && after.stars >= thing.cost);
 }
 export const pilotOwns = (pilot, thing) => !thing.cost || pilot.owned.includes(thing.id);

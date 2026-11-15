@@ -62,3 +62,33 @@ body[data-phase="parked"] .star-counter,body[data-phase="loading"] .star-counter
 @media(max-width:650px){.bubble{left:30px;top:calc(160px + env(safe-area-inset-top));font-size:15px}.toast{font-size:18px}.guide{font-size:14px;padding:11px 14px;min-height:50px}.plane-paints{grid-template-columns:repeat(7,1fr);gap:5px}.plane-paints button{height:44px;font-size:9px}.star-counter{font-size:18px}}
 @media(max-height:500px){.bubble{top:132px;font-size:14px}.toast{font-size:16px}.guide{font-size:13px;padding:8px 12px;min-height:44px;width:auto}.trick{margin:0}.hangar{margin-top:8px;padding:8px 12px}.plane-trails{margin-top:6px}.plane-trails button{min-height:44px;font-size:16px}}
 @media(prefers-reduced-motion:reduce){.rush{display:none}}
+/* Something in My plane that the pilot now has enough stars for. */
+.plane-paints button.ready,.plane-trails button.ready{filter:none;box-shadow:0 0 0 3px #ffd23f,0 2px 8px #e8a51a88;animation:ready 1.1s ease-in-out infinite}
+@keyframes ready{0%,100%{transform:rotate(0) scale(1)}25%{transform:rotate(-4deg) scale(1.06)}75%{transform:rotate(4deg) scale(1.06)}}
+@media(prefers-reduced-motion:reduce){.plane-paints button.ready,.plane-trails button.ready{animation:none}}
+/* The top bar is out of reach behind the airport card, so the card has its own sound button. */
+.board-sound{flex-shrink:0;width:46px;height:46px;margin-left:auto;backdrop-filter:none;border:2px solid #e7e2cf;box-shadow:0 3px 0 #e3e4d1}
+.board-sound+.airline-tag{margin-left:12px}
+.board-sound[aria-pressed=false]{opacity:.8}
+.board-sound[aria-pressed=true]{background:var(--gold);border-color:#e0a82e;box-shadow:0 3px 0 #d39b22}
+.star-counter{flex-shrink:0}
+/* Loop, zoom and toy: three round buttons above Land and Guide me. */
+.fun-row{display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px}
+.fun{width:64px;height:64px;border-radius:50%;display:grid;place-content:center;justify-items:center;gap:1px;background:#ffe27a;box-shadow:0 5px 0 #d9a520,var(--shadow);font-weight:900}
+.fun span{font-size:25px;line-height:1}
+.fun small{font-size:10px;line-height:1.1;max-width:58px;overflow:hidden;white-space:nowrap}
+.fun:active{transform:translateY(4px);box-shadow:0 1px 0 #d9a520}
+.fun:disabled{opacity:.45}
+.fun.zoom{background:#ffb199;box-shadow:0 5px 0 #d2664a,var(--shadow)}
+.fun.zoom small{font-size:11px;letter-spacing:1px;color:#8a2d14}
+.fun.zoom.empty{background:#efe6d6;box-shadow:0 5px 0 #c4b9a3,var(--shadow)}
+.fun.zoom.empty span{filter:grayscale(1);opacity:.6}
+.fun.toy{background:#bfe6ff;box-shadow:0 5px 0 #6aa7cf,var(--shadow)}
+.star-bonus{margin:2px 0 0;font-size:13px!important;font-weight:900;color:#7c8570!important}
+.star-bonus:empty{display:none}
+.plane-trails button[data-toy]{background:#eef7ff;border-color:#cfe3f2}
+@media(max-width:650px){.fun{width:56px;height:56px}.fun span{font-size:22px}.fun-row{gap:6px}}
+@media(max-height:500px){.fun-row{margin:0;gap:6px}.fun{width:50px;height:50px}.fun span{font-size:19px}.fun small{font-size:9px}.bottom-right{align-items:flex-end}}
+/* Upright phone: the three round buttons stand in a column on the left, clear of the plane. */
+@media(max-width:650px) and (min-height:501px){.fun-row{position:fixed;left:16px;bottom:calc(222px + env(safe-area-inset-bottom));flex-direction:column;margin:0}}
+@media(max-width:650px) and (min-height:501px) and (max-height:640px){.fun{width:48px;height:48px}.fun span{font-size:19px}.fun small{font-size:9px}}
