@@ -92,3 +92,7 @@ body[data-phase="parked"] .star-counter,body[data-phase="loading"] .star-counter
 /* Upright phone: the three round buttons stand in a column on the left, clear of the plane. */
 @media(max-width:650px) and (min-height:501px){.fun-row{position:fixed;left:16px;bottom:calc(222px + env(safe-area-inset-bottom));flex-direction:column;margin:0}}
 @media(max-width:650px) and (min-height:501px) and (max-height:640px){.fun{width:48px;height:48px}.fun span{font-size:19px}.fun small{font-size:9px}}
+/* The button the passenger is asking for while the autopilot flies. */
+.fun.wanted{animation:wanted .7s ease-in-out infinite;outline:4px solid #fff;outline-offset:2px}
+@keyframes wanted{0%,100%{transform:scale(1)}50%{transform:scale(1.16)}}
+@media(prefers-reduced-motion:reduce){.fun.wanted{animation:none}}

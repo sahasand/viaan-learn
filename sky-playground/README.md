@@ -52,13 +52,22 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
   in stars; tapping one buys it when there are enough and otherwise says how many more
   are needed. Anything affordable glows, and the game says so in flight the moment the
   stars reach a price. Stars only come from flying. Choices save under `viaan-pilot-v1`.
-- **Guide me** follows the star trail forwards to the destination. Asked for late, it
-  joins the trail where the plane is and never turns back for a star. Steering takes
-  control back during flight. Reaching the destination marker starts the runway approach.
+- **Autopilot** flies the plane by itself and stays on, flight after flight, until its
+  button is tapped again. With a passenger it follows the star trail forwards (joining
+  it where the plane is, never turning back for a star), detours for a balloon or island
+  star close ahead, then lines up and lands on its own. With nobody aboard it tours
+  whatever is nearest and lands at the island its trail leads to. It loops after a hoop
+  or a big star and zooms when all three zooms are full. Steering takes the stick only
+  while the pilot steers; a moment after letting go the autopilot carries on, and
+  steering never interrupts a landing it has begun. Choosing to steer the landing, or
+  **Keep flying**, switches it off.
+- While the autopilot flies, the passenger asks for a loop, a zoom or the toy every few
+  seconds and that button pulses. Doing it within six seconds earns three stars.
+- Reaching the destination marker starts the runway approach, with or without autopilot.
 - **Land** offers **I'll steer · with helping wings**, or **Land for me**.
   The approach first aligns the plane; on the final glide, helping wings narrow the
   steering corridor for a safe touchdown. **Land for me** can take over mid-glide.
-- **Keep flying** or steering cancels the approach before final descent. Passenger
+- **Keep flying** or (without autopilot) steering cancels the approach before final descent. Passenger
   flights land at their destination; free exploration uses the nearest airport.
 - Every completed passenger trip earns a passport visit. Stamps and the trip count
   save locally under `viaan-airline-v1`; other games' learner progress is untouched.
@@ -120,11 +129,11 @@ Controller tests run the actual game logic with a minimal DOM/scene harness.
 `sky.test.mjs` covers item placement clear of land, trees and the world edge, star
 trails for all six routes starting dead ahead and bending gently, which trail is in
 the sky, helped and height-blind flights gathering the trail, help joining late
-without turning back, single collection, the tall reach and the wider reach while
+without turning back, the autopilot flying every trip and touring without circling, single collection, the tall reach and the wider reach while
 zooming, the height help, zoom charging, reset, validated pilot saves, unlocks and
 their announcement, and matching version numbers.
 Browser checks should cover complete passenger trips, the first stars in view after
 takeoff, star collecting and the saved total after leaving mid-flight, a hoop zoom, a
-loop, the zoom button filling and emptying, each toy, the landing bonuses, an unlock in
-My plane, sound on at the airport and remembered after a reload,
+loop, the zoom button filling and emptying, each toy, the landing bonuses, an autopilot
+trip with a wish granted and a landing, an unlock in My plane, sound on at the airport and remembered after a reload,
 saved passport reload, manual steering, landing choice, and portrait/landscape layouts.

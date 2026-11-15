@@ -135,6 +135,55 @@ test('help asked for late joins the trail where the plane is and follows it forw
   assert.equal(S.nextOnRoute(items, 'sunny>snowy', afterTakeoff('sunny')), null);
 });
 
+test('the autopilot flies a whole trip: nearly every star, both hoops, every balloon, then on to the landing', () => {
+  for (const from of AIRPORTS) for (const to of AIRPORTS) {
+    if (from === to) continue;
+    const route = `${from.id}>${to.id}`, items = S.buildSky(obstacles), target = approachFor(to.id)[0], mine = items.filter(i => i.route === route), found = [];
+    let state = afterTakeoff(from.id), steps = 0, held = null, since = 0, longest = 0;
+    while (steps++ < 30000) {
+      const previous = state, next = S.autoTarget(items, route, state, held);
+      if (next !== held) { held = next; since = steps; }
+      longest = Math.max(longest, steps - since);
+      state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, next || target, obstacles, { speed: 13, guideSpeed: 13, boundary: 490, groundHeight: worldGroundHeight });
+      found.push(...S.collectSky(items, previous, state, route));
+      if (!next && touchesTarget(previous, state, target, 8)) break;
+    }
+    const count = (list, kind) => list.filter(i => i.kind === kind).length;
+    assert.ok(steps < 30000, `${route} reaches the landing approach`);
+    assert.ok(found.filter(i => i.route === route && i.kind === 'star').length >= count(mine, 'star') * .9, `${route}: ${count(found, 'star')} stars`);
+    assert.equal(found.filter(i => i.route === route && i.kind === 'hoop').length, 2, `${route} hoops`);
+    assert.equal(found.filter(i => i.route === route && i.kind === 'balloon').length, 3, `${route} balloons`);
+    assert.ok(longest < 60 * 10, `${route} never chases one thing for long: ${longest} steps`);
+    assert.ok(found.every(i => S.inSky(i, route)));
+  }
+});
+
+test('with nobody aboard the autopilot tours the sky, keeps its choice, and skips what it is told to avoid', () => {
+  const items = S.buildSky(obstacles), found = [], avoid = new Set();
+  let state = afterTakeoff('sunny'), held = null, since = 0;
+  for (let steps = 0; steps < 60 * 150; steps++) {
+    const previous = state, next = S.autoTarget(items, '', state, held, avoid);
+    if (next !== held) { held = next; since = steps; } else if (next && steps - since > 60 * 12) { avoid.add(next); held = null; }
+    assert.ok(next, 'there is always something to fly to');
+    state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, next, obstacles, { speed: 13, guideSpeed: 13, boundary: 490, groundHeight: worldGroundHeight });
+    found.push(...S.collectSky(items, previous, state, ''));
+  }
+  assert.ok(found.length >= 70, `${found.length} things in two and a half minutes`);
+  assert.ok(avoid.size <= 2, `gave up on ${avoid.size}`);
+  assert.ok(new Set(found.map(i => i.route)).size >= 2, 'it leaves the island it took off from');
+  // A choice is kept while it is still there, dropped once taken or flown past, and never comes from the avoid list.
+  const fresh = S.buildSky(obstacles), start = afterTakeoff('sunny'), first = S.autoTarget(fresh, '', start);
+  const other = fresh.find(i => i !== first && S.inSky(i, '') && Math.hypot(i.x - start.x, i.z - start.z) > 60);
+  assert.equal(S.autoTarget(fresh, '', start, other), other);
+  other.taken = true;
+  assert.equal(S.autoTarget(fresh, '', start, other), first);
+  assert.notEqual(S.autoTarget(fresh, '', start, null, new Set([first])), first);
+  assert.equal(S.autoTarget(fresh, '', { ...start, x: first.x, z: first.z - 9 }, first) === first, false, 'flown past');
+  fresh.forEach(i => { i.taken = true; });
+  assert.equal(S.autoTarget(fresh, '', start), null);
+  assert.equal(S.autoTarget(fresh, 'sunny>snowy', start), null);
+});
+
 test('collecting marks things taken once, works at low frame rates, and a new flight puts them back', () => {
   const items = S.routeItems('sunny', 'snowy'), star = items[7], route = 'sunny>snowy';
   const before = { x: star.x, y: star.y - 9, z: star.z }, after = { x: star.x, y: star.y + 9, z: star.z };

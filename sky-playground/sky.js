@@ -1,6 +1,6 @@
 // Things to find in the sky and the pilot's star bank, independent of rendering and storage.
-import { touchesTarget } from './flight.js?v=3';
-import { AIRPORTS, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=3';
+import { touchesTarget } from './flight.js?v=4';
+import { AIRPORTS, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=4';
 
 export const PILOT_KEY = 'viaan-pilot-v1';
 export const BOOST_SECONDS = 3;
@@ -37,6 +37,7 @@ export const BIG_STAR = 5, CLOUD_STARS = 2;
 export const LANDING_STARS = 10, GIFT_STARS = 10, SIGHT_STARS = 5;
 export const ZOOM_PULL = 2;             // a zooming plane pulls stars in from twice as far
 export const ZOOM_STARS = 6, ZOOM_MAX = 3;  // stars that fill one zoom, and how many zooms the plane holds
+export const WISH_STARS = 3;            // for doing what the passenger asks while the autopilot flies
 const TURN = 36;                        // radius of the bend that starts every star trail
 // Free flying shows one trail leaving each island, a round trip of all three.
 const TOUR = ['sunny>snowy', 'snowy>jungle', 'jungle>sunny'];
@@ -119,6 +120,33 @@ export function nextOnRoute(items, route, state) {
     const dx = thing.x - state.x, dz = thing.z - state.z, far = Math.hypot(dx, dz);
     if (far < 20 && dx * fx + dz * fz < -2) continue;
     if (far <= nearest) { nearest = far; best = thing; }
+  }
+  return best;
+}
+// Where the autopilot flies next. It keeps a choice until that is caught or flown past.
+// On a passenger trip it follows the trail forwards, with a small detour for a balloon
+// or island star close ahead; with the trail finished it returns null, and the game
+// heads for the landing. When just flying it tours whatever is nearest and easiest to
+// turn toward. `avoid` holds things it has given up on.
+export function autoTarget(items, route, state, held = null, avoid = null) {
+  const fx = Math.sin(state.heading), fz = -Math.cos(state.heading);
+  const open = thing => !thing.taken && inSky(thing, route) && !avoid?.has(thing);
+  const missed = (far, ahead) => far < 20 && ahead < -2;
+  if (held && open(held)) {
+    const dx = held.x - state.x, dz = held.z - state.z;
+    if (!missed(Math.hypot(dx, dz), dx * fx + dz * fz)) return held;
+  }
+  const lead = route ? nextOnRoute(items, route, state) : null;
+  if (route && !lead) return null;
+  const limit = lead ? Math.min(30, Math.hypot(lead.x - state.x, lead.z - state.z) + 12) : Infinity;
+  let best = lead, least = Infinity;
+  for (const thing of items) {
+    if (!open(thing) || lead && thing.route === route && thing.kind !== 'balloon') continue;
+    const dx = thing.x - state.x, dz = thing.z - state.z, far = Math.hypot(dx, dz), ahead = dx * fx + dz * fz;
+    if (missed(far, ahead) || lead && (ahead < 4 || far > limit)) continue;
+    // A thing off to one side costs the distance of the turn it takes to face it.
+    const cost = far + Math.abs(Math.atan2(dx * fz - dz * fx, ahead)) * 16;
+    if (cost < least) { least = cost; best = thing; }
   }
   return best;
 }

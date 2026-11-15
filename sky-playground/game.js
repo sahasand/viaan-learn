@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=3';
+import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=4';
 
-import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, nextOnRoute, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=3';
-import { createFun } from './fx.js?v=3';
-import { createTunes } from './tunes.js?v=3';
-import { AIRPORTS, SPEEDS, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=3';
+import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=4';
+import { createFun } from './fx.js?v=4';
+import { createTunes } from './tunes.js?v=4';
+import { AIRPORTS, SPEEDS, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=4';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
@@ -22,6 +22,9 @@ let savedPassport; try { savedPassport=localStorage.getItem('viaan-airline-v1');
 let passport=normalizePassport(savedPassport);
 const approachLights=new Map();
 let audio, away = false, touched = false, zoom = freshZoom(), toyAt = -9;
+// The autopilot: a mode that stays on until its button is tapped again. `guided` says whether it is steering right now.
+let autopilot = false, autoHeld = null, autoSince = 0, autoTrickAt = 0, handsAt = -9, wish = null, nextWish = 0, wishes = 0;
+const shy = new Set();
 let skyItems = [], fun = null, tunes = null, flightStars = 0, starStreak = 0, lastStarAt = -9, boostUntil = -1, bubbleUntil = 0;
 let savedPilot; try { savedPilot = localStorage.getItem(PILOT_KEY); } catch {}
 let pilot = normalizePilot(savedPilot);
@@ -169,7 +172,7 @@ function savePilot() { try { localStorage.setItem(PILOT_KEY, JSON.stringify(pilo
 // The badge shows every star the pilot owns, so it never appears to start again.
 function showStars() { $('stars').textContent = pilot.stars; }
 // The passenger (or pilot bear) pipes up in a little speech bubble.
-function chatter(text) { $('bubble').textContent = text; $('bubble').classList.add('show'); bubbleUntil = elapsed + 2.6; }
+function chatter(text, seconds = 2.6) { $('bubble').textContent = text; $('bubble').classList.add('show'); bubbleUntil = elapsed + seconds; }
 const PRAISE = ['So many stars!', 'Twinkle twinkle!', 'Star catcher!', 'Wow, look at them all!'];
 // Stars are banked and saved the moment they are earned, so leaving mid-flight loses nothing.
 function bank(count) {
@@ -192,6 +195,22 @@ function doZoom() {
   const left = spendZoom(zoom);
   if (!left) { toast('Catch stars to fill your zoom! ⭐', 1.8); return; }
   zoom = left; showZoom(); boostUntil = elapsed + BOOST_SECONDS; tunes?.whoosh(); toast('Zoom! 🚀', 1.4);
+  return true;
+}
+// While the autopilot flies, the passenger asks for a loop, a zoom or the toy. Doing it earns stars.
+const ASKS = { trick: () => 'Do a loop! 🌀', zoom: () => 'Zoom, zoom! 🚀', toy: () => `Tap the ${(PLANE_TOYS.find(t => t.id === pilot.toy) || PLANE_TOYS[0]).icon} button!` };
+function setWish(next) {
+  wish = next;
+  for (const id of ['trick', 'zoom', 'toy']) $(id).classList.toggle('wanted', wish?.kind === id);
+}
+function askWish() {
+  // No zooming on the way down to the runway.
+  const kinds = ['trick', 'toy', ...(zoom.ready && airportLeg < 0 ? ['zoom'] : [])], kind = kinds[wishes++ % kinds.length];
+  setWish({ kind, until: elapsed + 6 }); chatter(ASKS[kind](), 6);
+}
+function grantWish(kind) {
+  if (wish?.kind !== kind) return;
+  setWish(null); nextWish = elapsed + 5; bank(WISH_STARS); tunes?.chime(); chatter(`Yay, thank you! +${WISH_STARS} ⭐`);
 }
 function showToy() {
   const toy = PLANE_TOYS.find(t => t.id === pilot.toy) || PLANE_TOYS[0];
@@ -200,6 +219,7 @@ function showToy() {
 function doToy() {
   if (phase !== 'flying' || paused || elapsed - toyAt < .7) return;
   toyAt = elapsed; fun?.toy(pilot.toy, state.speed); tunes?.toy(pilot.toy);
+  return true;
 }
 function gather(found) {
   let earned = 0;
@@ -211,6 +231,8 @@ function gather(found) {
       if (starStreak && starStreak % 8 === 0) { fun?.shower(); chatter(PRAISE[(starStreak / 8 - 1) % PRAISE.length]); }
     } else if (thing.kind === 'balloon') { tunes?.pop(); toast('Pop! +3 ⭐', 1.4); }
     else { boostUntil = elapsed + BOOST_SECONDS; tunes?.whoosh(); toast('Zoom! 🌈', 1.6); }
+    // The autopilot celebrates a hoop or a big star with a loop of its own.
+    if (autopilot && guided && (thing.kind === 'hoop' || thing.big)) autoTrickAt = elapsed + .45;
   }
   bank(earned);
 }
@@ -218,11 +240,12 @@ function gather(found) {
 const skyRoute = () => mode === 'picnic' ? 'picnic' : trip?.status === 'flying' ? `${trip.origin}>${trip.destination}` : '';
 function newSky() {
   resetSky(skyItems); flightStars = 0; starStreak = 0; boostUntil = -1; zoom = freshZoom(); showStars(); showZoom(); showToy();
+  shy.clear(); autoHeld = null; autoTrickAt = 0; setWish(null); nextWish = elapsed + 10.5;
   fun?.setRoute(skyRoute());
 }
 function doTrick() {
   if (phase !== 'flying' || paused) return;
-  if (fun?.trick()) { tunes?.trick(); chatter('Wheee!'); }
+  if (fun?.trick()) { tunes?.trick(); chatter('Wheee!'); return true; }
 }
 const TRAIL_ICONS = { clouds: '☁️', bubbles: '🫧', ribbon: '🌈', hearts: '💗' };
 function renderHangar() {
@@ -301,6 +324,8 @@ function openLandingChoice() {
   $('landingChoice').showModal();
 }
 function beginLanding(style) {
+  // Choosing to steer the landing takes the plane back from the autopilot.
+  if (style === 'hands' && autopilot) setAutopilot(false);
   landingStyle = style; $('landingChoice').close(); paused = false;
   lastTime = performance.now(); visitAirport(); updateSound();
 }
@@ -308,7 +333,7 @@ function restartAirline() {
   for (const id of ['menu','celebration','airportBoard','landingChoice']) if ($(id).open) $(id).close();
   mode = 'airline'; trip = null; currentAirport = 'sunny'; landingAirport = 'sunny';
   clearInput(); state = parkedAt('sunny'); phase = 'parked'; paused = true; airportLeg = -1;
-  collected = 0; freeFlight = true; landingStyle = 'hands'; chooseSpeed('cruise'); setGuided(false);
+  collected = 0; freeFlight = true; landingStyle = 'hands'; chooseSpeed('cruise'); autopilot = false; setGuided(false);
   updatePassenger(); updateMission(); setCamera(true); airportBoard();
 }
 function updatePassenger() {
@@ -346,9 +371,15 @@ function makeAirportDetails() {
   }
 }
 
-function setGuided(on) {
-  guided = on; $('guide').setAttribute('aria-pressed', on);
-  $('guide').innerHTML = on ? '<span>✧</span> Helping you' : '<span>✧</span> Guide me';
+// The button reads Autopilot (off), Auto ON, Your turn (the pilot has taken the stick for
+// a moment), or Helping you (lining up a landing the pilot asked for).
+function setGuided(on, hands = false) {
+  guided = on; $('guide').setAttribute('aria-pressed', on || autopilot);
+  $('guide').innerHTML = autopilot ? (hands ? '<span aria-hidden="true">🖐️</span> Your turn' : '<span aria-hidden="true">🤖</span> Auto ON') : on ? '<span aria-hidden="true">✧</span> Helping you' : '<span aria-hidden="true">🤖</span> Autopilot';
+}
+function setAutopilot(on) {
+  autopilot = on; autoHeld = null; setWish(null); nextWish = elapsed + 3.5; setGuided(on);
+  if (phase !== 'parked') updateMission();
 }
 function updateMission() {
   const airline = mode !== 'picnic';
@@ -364,7 +395,7 @@ function updateMission() {
     $('missionIcon').innerHTML=trip?.boarded?`<img src="../memory-assets/${airportById(trip.destination).animal}.png" alt="">`:'✈';
     $('missionKicker').textContent=phase==='parked'?airportById(currentAirport).airport:airportLeg>=0?dest.airport:trip?'HAPPY PASSENGER FLIGHT':'FREE FLIGHT';
     $('missionTitle').textContent=phase==='takeoff'?'Ready, set, fly!':phase==='landing'?(landingStyle==='hands'?'You’re landing the plane!':'A lovely gentle landing'):phase==='parked'?'Where shall we go?':trip?`${dest.passenger} → ${dest.name}`:'Explore our three islands';
-    $('missionSubtitle').textContent=phase==='landing'?(landingStyle==='hands'?'Steer gently. Helping wings keep you safe.':'Wheels down. Rolling to a stop.'):airportLeg>=0?'Follow the glowing runway gates':phase==='takeoff'?'Speeding up along the runway':trip?'Follow the stars! ⭐':'Find stars. Pop balloons. Land anywhere.';
+    $('missionSubtitle').textContent=phase==='landing'?(landingStyle==='hands'?'Steer gently. Helping wings keep you safe.':'Wheels down. Rolling to a stop.'):airportLeg>=0?'Follow the glowing runway gates':phase==='takeoff'?'Speeding up along the runway':autopilot?'You do the tricks! 🤖':trip?'Follow the stars! ⭐':'Find stars. Pop balloons. Land anywhere.';
     $('land').innerHTML=phase==='landing'&&landingStyle==='hands'?'Land for me':airportLeg>=0&&phase==='flying'?'Keep flying':'↘ Land';
     $('land').disabled=!(phase==='flying'||phase==='landing'&&landingStyle==='hands');
     $('guide').disabled=phase!=='flying'||airportLeg>=0;
@@ -400,10 +431,26 @@ function getTarget() {
   if (mode !== 'picnic') return approachFor(trip?.status === 'flying' ? trip.destination : nearestAirport(state))[0];
   return freeFlight ? { x: 22, y: 14, z: 40 } : collected < TRAIL.length ? TRAIL[collected] : PICNIC;
 }
-// With a passenger aboard, the helping wing sweeps up the star trail on its way.
+// Where the guided plane heads: the runway approach, the picnic rings, or the autopilot's
+// next treat. Something it cannot catch in a while is left alone for the rest of the flight.
 function guideTarget() {
-  const lead = airportLeg < 0 && trip?.status === 'flying' ? nextOnRoute(skyItems, `${trip.origin}>${trip.destination}`, state) : null;
-  return lead || getTarget();
+  if (airportLeg >= 0 || mode === 'picnic') return getTarget();
+  const next = autoTarget(skyItems, skyRoute(), state, autoHeld, shy);
+  if (next !== autoHeld) { autoHeld = next; autoSince = elapsed; }
+  else if (next && elapsed - autoSince > 12) { shy.add(next); autoHeld = null; }
+  return next || getTarget();
+}
+// Run every frame of flight: the autopilot takes the stick back when it is let go, does
+// its own loops and zooms, and passes on what the passenger asks for.
+function flyAutopilot(steering) {
+  if (!autopilot) return;
+  if (steering) { handsAt = elapsed; return; }
+  if (!guided) { if (elapsed - handsAt > 1.2 && airportLeg < 0) setGuided(true); return; }
+  if (wish && (elapsed > wish.until || wish.kind === 'zoom' && airportLeg >= 0)) { setWish(null); nextWish = elapsed + 4; }
+  else if (!wish && elapsed > nextWish) askWish();
+  if (airportLeg >= 0) return;
+  if (autoTrickAt && elapsed > autoTrickAt) { autoTrickAt = 0; if (wish?.kind !== 'trick' && fun?.trick()) tunes?.trick(); }
+  if (zoom.ready === ZOOM_MAX && elapsed > boostUntil + 2 && Math.abs(state.turn) < .25 && wish?.kind !== 'zoom') doZoom();
 }
 function visitAirport() {
   if (phase !== 'flying') return;
@@ -412,8 +459,11 @@ function visitAirport() {
   toast('Let’s line up with the runway. 🛬', 4);
   say('Time to land! I’ll line us up with the runway.');
 }
+// Steering takes the stick. With the autopilot on that is only for as long as the pilot
+// steers, and it does not interrupt a landing the autopilot has begun.
 function takeControl() {
-  setGuided(false);
+  if (autopilot && airportLeg >= 0) return;
+  handsAt = elapsed; setGuided(false, true);
   if (airportLeg >= 0 && phase === 'flying') { airportLeg = -1; updateMission(); }
 }
 function clearInput() {
@@ -435,7 +485,7 @@ function restart() {
   mode='picnic';trip=null;currentAirport='sunny';landingAirport='sunny';landingStyle='auto';updatePassenger();
   if ($('menu').open) $('menu').close(); if ($('celebration').open) $('celebration').close();
   clearInput(); state = initialFlight(); collected = 0; freeFlight = false; airportLeg = -1; phase = 'flying'; paused = false;
-  setGuided(false); newSky(); updateMission(); setCamera(true); hintUntil = elapsed + 10;
+  autopilot = false; setGuided(false); newSky(); updateMission(); setCamera(true); hintUntil = elapsed + 10;
   toast('Let’s take Bear a picnic! 🧺', 4); updateSound();
 }
 
@@ -445,7 +495,10 @@ function setupControls() {
   $('pause').addEventListener('click', () => openMenu()); $('help').addEventListener('click', () => openMenu(true));
   $('resume').addEventListener('click', resume); $('restart').addEventListener('click', restartAirline); $('again').addEventListener('click', ()=>mode==='picnic'?restart():airportBoard());
   $('picnicFlight').addEventListener('click',restart);
-  $('trick').addEventListener('click', doTrick); $('zoom').addEventListener('click', doZoom); $('toy').addEventListener('click', doToy);
+  // A tap or key press is the pilot's own doing, which is what the passenger's wishes reward.
+  const mine = (kind, act) => () => { if (act()) grantWish(kind); };
+  const own = { trick: mine('trick', doTrick), zoom: mine('zoom', doZoom), toy: mine('toy', doToy) };
+  for (const id of ['trick', 'zoom', 'toy']) $(id).addEventListener('click', own[id]);
   $('planeToys').addEventListener('click', e => { const b = e.target.closest('[data-toy]'); if (b) choosePlane('toy', b.dataset.toy); });
   $('planePaints').addEventListener('click', e => { const b = e.target.closest('[data-paint]'); if (b) choosePlane('paint', b.dataset.paint); });
   $('planeTrails').addEventListener('click', e => { const b = e.target.closest('[data-trail]'); if (b) choosePlane('trail', b.dataset.trail); });
@@ -466,14 +519,14 @@ function setupControls() {
     if (paused) return;
     if (phase === 'landing' && landingStyle === 'hands') {landingTime=landingTime<=8?landingTime*5/8:landingTime-3;landingStyle='auto';updateMission();return;}
     if (phase !== 'flying') return;
-    if (airportLeg >= 0) { takeControl(); toast('You’re the pilot!'); }
+    if (airportLeg >= 0) { setAutopilot(false); takeControl(); toast('You’re the pilot!'); }
     else if(mode==='picnic') visitAirport();else openLandingChoice();
   });
   $('guide').addEventListener('click', () => {
     if (phase !== 'flying' || paused) return;
-    setGuided(!guided); clearInput(); tunes?.tap();
-    toast(guided ? 'I’ll help! Steer anytime to take over. ✧' : 'You’re the pilot!');
-    if (guided) say('I’ll help you. You can steer whenever you like.');
+    setAutopilot(!autopilot); clearInput(); tunes?.tap();
+    toast(autopilot ? 'Autopilot on! 🤖 You do the tricks.' : 'You’re the pilot!');
+    if (autopilot) say('Autopilot on. I’ll fly, you do the tricks!');
   });
   $('explore').addEventListener('click', () => {
     if (phase !== 'parked') return;
@@ -500,9 +553,9 @@ function setupControls() {
   window.addEventListener('keydown', e => {
     const k = e.key.toLowerCase();
     if (k === 'escape' && !$('menu').open && !$('celebration').open && !$('airportBoard').open && !$('landingChoice').open) { e.preventDefault(); openMenu(); return; }
-    if (k === 't') { doTrick(); return; }
-    if (k === 'z') { doZoom(); return; }
-    if (k === ' ') { e.preventDefault(); doToy(); return; }
+    if (k === 't') { own.trick(); return; }
+    if (k === 'z') { own.zoom(); return; }
+    if (k === ' ') { e.preventDefault(); own.toy(); return; }
     if (!controlKeys.includes(k) || paused || !(phase === 'flying' || phase === 'landing' && landingStyle === 'hands')) return;
     e.preventDefault(); keys.add(k); takeControl(); hintUntil = elapsed + 1;
   });
@@ -561,13 +614,14 @@ function updateFlight(dt) {
     x: Number(keys.has('arrowright') || keys.has('d')) - Number(keys.has('arrowleft') || keys.has('a')),
     y: Number(keys.has('arrowup') || keys.has('w')) - Number(keys.has('arrowdown') || keys.has('s'))
   } : input;
+  flyAutopilot(keyboard || pointer !== null);
   // Hands off the height, the plane eases to the level of the next star (not while chasing the picnic rings).
   let fly = steer;
   if (!guided && airportLeg < 0 && Math.abs(steer.y) < .15 && (mode !== 'picnic' || freeFlight)) {
     const level = starHeight(skyItems, skyRoute(), state);
     if (level !== null) fly = { x: steer.x, y: clamp((level - state.y) * .12, -.6, .6) };
   }
-  state = stepFlight(state, fly, dt, guided ? guideTarget() : null, obstacles, {speed:SPEEDS[speedMode]*(elapsed<boostUntil?BOOST_SPEED:1),guideSpeed:elapsed<boostUntil?15:10,boundary:mode === 'picnic' ? 165 : 490,groundHeight:mode === 'picnic' ? groundHeight : worldGroundHeight});
+  state = stepFlight(state, fly, dt, guided ? guideTarget() : null, obstacles, {speed:SPEEDS[speedMode]*(elapsed<boostUntil?BOOST_SPEED:1),guideSpeed:airportLeg>=0||mode==='picnic'?(elapsed<boostUntil?15:10):elapsed<boostUntil?19:Math.min(SPEEDS[speedMode],14),boundary:mode === 'picnic' ? 165 : 490,groundHeight:mode === 'picnic' ? groundHeight : worldGroundHeight});
   if (state.returning && !previous.returning) toast('Let’s turn back toward our islands. ☀️');
   const found = collectSky(skyItems, previous, state, skyRoute(), elapsed < boostUntil ? ZOOM_PULL : 1);
   if (found.length) gather(found);
@@ -575,7 +629,7 @@ function updateFlight(dt) {
     if (touchesTarget(previous, state, getTarget(), 4.5)) {
       if (airportLeg === 0) { airportLeg = 1; updateMission(); toast('There’s the runway. Coming in! 🛬'); }
       else if (Math.abs(angleDelta(0, state.heading)) < .45) {
-        phase = 'landing'; landingTime = 0; touched = false; landingStart = { ...state }; clearInput(); updateMission();
+        phase = 'landing'; landingTime = 0; touched = false; landingStart = { ...state }; clearInput(); setWish(null); if (autopilot) landingStyle = 'auto'; updateMission();
         toast('A gentle landing… 🛬', 4); updateSound();
       } else { airportLeg = 0; updateMission(); toast('One more turn to line up. ✈'); }
     }
@@ -627,7 +681,7 @@ function updateLanding(dt) {
     }
   } else {
     state = runwayTakeoff(landingStart, landingTime, airportRunway(currentAirport));
-    if (state.finished) { phase = 'flying'; airportLeg = -1; updateMission(); updateSound(); chime(); toast('You’re flying! ✈'); }
+    if (state.finished) { phase = 'flying'; airportLeg = -1; updateMission(); updateSound(); chime(); toast(autopilot ? 'Autopilot on! 🤖 You do the tricks.' : 'You’re flying! ✈'); }
   }
 }
 function animate(now) {

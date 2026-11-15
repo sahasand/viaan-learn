@@ -43,3 +43,31 @@ test('free flight and the original picnic remain available without boarding',()=
  const h=harness();h.run('restartAirline()');h.get('freeFly').listeners.click();assert.equal(h.run('mode'),'free');assert.equal(h.run('phase'),'takeoff');assert.equal(h.run('trip'),null);
  h.run('openMenu()');h.get('picnicFlight').listeners.click();assert.equal(h.run('mode'),'picnic');assert.equal(h.run('phase'),'flying');assert.equal(h.run('collected'),0);assert.equal(h.run('landingAirport'),'sunny');
 });
+// The harness has no animation loop, so these tests move the clock themselves.
+const CLOCK="skyItems=buildSky([]);function fly(n,each){for(let i=0;i<n&&phase==='flying';i++){elapsed+=.05;updateFlight(.05);if(each)each();}}function takeOff(){for(let i=0;i<141;i++){elapsed+=.05;updateLanding(.05);}}";
+test('the autopilot flies a trip by itself, hands the stick back while the pilot steers, and lands on its own', () => {
+ const h=harness();h.run(CLOCK+"restartAirline();trip=newTrip('sunny','snowy');trip=prepareTrip(prepareTrip(trip,'bag'),'board');leaveAirport();takeOff();");
+ assert.equal(h.run('phase'),'flying');h.get('guide').listeners.click();assert.equal(h.run('autopilot&&guided'),true);assert.match(h.get('guide').innerHTML,/Auto ON/);
+ h.run('fly(80)');assert.ok(h.run('flightStars')>0,'it gathers stars');
+ // Steering takes over only while it lasts.
+ h.run("takeControl();keys.add('arrowleft');fly(20)");assert.equal(h.run('guided'),false);assert.equal(h.run('autopilot'),true);assert.match(h.get('guide').innerHTML,/Your turn/);
+ h.run("keys.clear();fly(30)");assert.equal(h.run('guided'),true);assert.match(h.get('guide').innerHTML,/Auto ON/);
+ // The passenger asks for something; doing it earns stars.
+ h.run("setWish({kind:'toy',until:elapsed+7})");const before=h.run('pilot.stars');h.get('toy').listeners.click();assert.equal(h.run('wish'),null);assert.equal(h.run('pilot.stars'),before+3);
+ h.get('toy').listeners.click();assert.equal(h.run('pilot.stars'),before+3,'only when asked');
+ h.run("fly(6000,()=>{if(airportLeg>=0)takeControl();})");
+ assert.equal(h.run('phase'),'landing','steering does not interrupt a landing the autopilot has begun');assert.equal(h.run('landingStyle'),'auto');assert.equal(h.run('landingAirport'),'snowy');
+ h.run("for(let i=0;i<281&&phase==='landing';i++)updateLanding(.05)");assert.equal(h.run('phase'),'parked');assert.equal(h.run('passport.trips'),1);
+ // It stays on for the next flight until its button is tapped.
+ assert.equal(h.run('autopilot'),true);h.run("airportBoard();leaveAirport(true);takeOff();fly(1)");assert.equal(h.run('guided'),true);
+ h.get('guide').listeners.click();assert.equal(h.run('autopilot||guided'),false);assert.match(h.get('guide').innerHTML,/Autopilot/);
+});
+test('with nobody aboard the autopilot tours to the next island and lands there', () => {
+ const h=harness();h.run(CLOCK+"restartAirline();leaveAirport(true);takeOff();");h.get('guide').listeners.click();
+ h.run("fly(9000)");assert.equal(h.run('phase'),'landing');assert.notEqual(h.run('landingAirport'),'sunny');assert.ok(h.run('flightStars')>25,`${h.run('flightStars')} stars`);
+});
+test('choosing to steer the landing, or Keep flying, takes the plane back from the autopilot', () => {
+ const h=harness();h.run(CLOCK+"restartAirline();leaveAirport(true);takeOff();");h.get('guide').listeners.click();
+ h.run("openLandingChoice()");h.get('handsLand').listeners.click();assert.equal(h.run('autopilot'),false);assert.equal(h.run('landingStyle'),'hands');assert.ok(h.run('airportLeg')>=0);
+ h.run("visitAirport();autopilot=true");h.get('land').listeners.click();assert.equal(h.run('airportLeg'),-1);assert.equal(h.run('autopilot||guided'),false);
+});
