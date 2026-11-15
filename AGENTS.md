@@ -81,9 +81,11 @@ boost, an unlock, pause, saved choices, and the garage and race display on a wid
 
 The home Little Dominoes link opens `little-dominoes/`, a static Three.js domino run: drag to stand
 dominoes up along the finger's path, tap one, and the line falls while the camera follows it. A bell,
-a rocket and a present stand at one end of the mat and go off when a domino falls against them. Three
-ready-made runs (Snake, Swirl, Big tree), Stand up (the fall rewinds), Undo, Clear with a second tap,
-and four colour palettes. Read `little-dominoes/README.md` when changing the falling rules, the runs,
+a rocket and a present stand at one end of the mat and go off when a domino falls against them. Nine
+ready-made runs: four picture fields (Viaan, Heart, Smiley, Rainbow) of 432 white dominoes that take
+their picture colour as they fall, a Sunburst, a Fan, and three single lines (Swirl, Snake, Big tree).
+Also Stand up (the fall rewinds), Undo, Clear with a second tap, and four colour palettes. Pictures
+are laid the right way up for how the screen is held, and must fit 18 by 18. Read `little-dominoes/README.md` when changing the falling rules, the runs,
 the toys or the camera. `topple.js` holds every rule in plain numbers and runs in Node; `game.js` owns
 the scene, toys, camera and pointer input; `audio.js` synthesizes sound. It imports Three.js from
 `sky-playground/vendor`. The falling is a hand-written model, not a physics engine: each domino tips

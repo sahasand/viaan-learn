@@ -18,14 +18,31 @@ Open `little-dominoes/` from the home page, or serve the repository and visit
   domino still standing. Drawing across the gap fills only the gap.
 - **Stand up.** Every fallen domino rises again, the last to fall first, and the toys reset. The same
   tap then gives the same fall.
-- **Show me.** Three ready-made runs: Snake (rocket), Swirl (bell) and Big tree (all three toys).
-  Choosing one replaces what is on the mat. The first visit starts with Snake already standing.
+- **Show me.** Nine ready-made runs. Choosing one replaces what is on the mat. The first visit starts
+  with the Viaan picture already standing, and the star wiggles until the newest runs have been seen.
 - **Undo** takes away the line drawn last. **Clear** asks for a second tap. **Colours** steps
   through four palettes.
 - The camera follows the front of a fall and returns when it is over. With reduced motion it stays
   still, dominoes stand up at once and runs appear at once.
 
 There is no score, timer or way to fail. The number on screen counts fallen dominoes.
+
+## The ready-made runs
+
+- **Viaan, Heart, Smiley, Rainbow** are picture fields: 432 plain white dominoes, 18 across and 23
+  deep plus a starter row. Each domino carries the colour it turns as it falls, so the fall paints
+  the picture. The starter row runs along the front edge and sets the columns off one after
+  another, which makes the fall sweep across on a slant. All three toys go off in turn at the end.
+  The picture is laid the right way up for the way the screen is held when the run is chosen.
+- **Sunburst** runs a line in to a ring of 25. The fall goes both ways round the ring and every
+  ring domino sets off a ray, so the rays shoot out in pairs towards the toys.
+- **Fan** grows from one domino to eighteen, one more in every row.
+- **Swirl** (bell), **Snake** (rocket) and **Big tree** (all three toys) are single lines.
+
+Runs marked `still` in `RUNS` are best seen whole, so the camera does not follow them. Pictures are
+rows of letters in `ART` in `topple.js` (the rainbow is worked out from arcs). Each letter is a
+colour from `INKS`; a picture may be at most 18 wide and 18 tall so it fits both ways up. The
+name is built from the small `FONT` there, which only has the letters it needs.
 
 ## Files
 
@@ -59,12 +76,14 @@ would need new rules in `topple.js`.
 ## Saving
 
 `viaan-dominoes-v1` in localStorage holds the sound choice, the palette, whether the first visit
-has happened, a running total of dominoes knocked over, and the dominoes on the mat as
-`[x, z, yaw, colour, line]`. `normalizeSave` validates everything and drops anything off the mat.
+has happened, how many ready-made runs have been seen, whether the camera should stay still, a
+running total of dominoes knocked over, and the dominoes on the mat as `[x, z, yaw, colour, line]`
+with a sixth number, the picture colour, on dominoes that have one. `normalizeSave` validates everything and drops anything off the mat.
 The mat holds at most 500 dominoes.
 
 ## Checks
 
 Run `node --test little-dominoes/*.test.mjs`. In a browser, check a drawn line, a gap, a branch,
 each toy, each ready-made run, Stand up, Undo, Clear, a reload with dominoes on the mat, and the
-layout on a wide screen and a phone both ways up.
+layout on a wide screen and a phone both ways up. Look at a picture run both ways up: the name
+must read left to right.

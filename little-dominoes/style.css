@@ -57,6 +57,9 @@ svg{display:block}
 .tools .big svg{width:38px;height:38px}
 .tools .big small{font-size:12px}
 .tools .big.ready{animation:ready 1s ease-in-out infinite}
+.tools .new{background:#fff1b8}
+.tools .new svg{color:#e58a00;animation:wiggle 1.4s ease-in-out infinite}
+@keyframes wiggle{0%,60%,100%{transform:none}70%{transform:rotate(-18deg) scale(1.15)}85%{transform:rotate(18deg) scale(1.15)}}
 @keyframes ready{0%,100%{transform:none}50%{transform:scale(1.1)}}
 #clear[data-sure]{background:var(--coral);color:#fff}
 
@@ -66,11 +69,11 @@ dialog::backdrop{background:#0d2f3366}
 .card{width:min(560px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow:auto;border-radius:28px;background:var(--paper);border:5px solid #fff;box-shadow:var(--shadow);padding:22px;text-align:center}
 .card[open]{display:flex;flex-direction:column;gap:16px}
 .card h2{font-size:28px;font-weight:800}
-.run-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.run-list button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px 8px;border-radius:20px;background:#fff;border:3px solid var(--mint);box-shadow:0 4px 0 #0d2f3320;min-width:0}
+.run-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.run-list button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px 6px;border-radius:20px;background:#fff;border:3px solid var(--mint);box-shadow:0 4px 0 #0d2f3320;min-width:0}
 .run-list button:active{transform:translateY(3px);box-shadow:none}
 .run-list canvas{width:100%;height:auto;border-radius:12px;background:#d5efe0}
-.run-list strong{font-size:18px;font-weight:800}
+.run-list strong{font-size:16px;font-weight:800}
 .tally{font-size:15px;color:#4a6b63}
 .tally:empty{display:none}
 .secondary{min-height:48px;border-radius:16px;background:var(--mint);font-size:17px;font-weight:800;padding:0 18px}
@@ -111,9 +114,14 @@ dialog::backdrop{background:#0d2f3366}
   .count b{font-size:46px}
   .count small{display:none}
   .brand{font-size:24px}
-  .run-list canvas{max-height:34vh;width:auto;max-width:100%}
+  .card{width:min(820px,calc(100vw - 28px));padding:14px}
+  .card[open]{gap:10px}
+  .card h2{font-size:22px}
+  .run-list{grid-template-columns:repeat(5,1fr)}
+  .run-list strong{font-size:14px}
+  .tally{display:none}
 }
 @media (prefers-reduced-motion:reduce){
-  .hint span,.prompt .finger,.tools .big.ready,.count.bump b{animation:none}
+  .hint span,.prompt .finger,.tools .big.ready,.tools .new svg,.count.bump b{animation:none}
   .toast{transition:opacity .2s}
 }

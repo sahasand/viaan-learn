@@ -1,7 +1,7 @@
 // Little Dominoes: the scene, the finger drawing, the toys and the camera. The rules live in topple.js.
 import * as THREE from 'three';
-import { SIZE, AREA, LIMIT, TOYS, PALETTES, RUNS, STORAGE_KEY, createTable, place, startStroke, trace, push, step, standUp, undo, clear, runSpecs, snapshot, restore, normalizeSave } from './topple.js?v=1';
-import { createSound } from './audio.js?v=1';
+import { SIZE, AREA, LIMIT, TOYS, PALETTES, RUNS, BLANK, INKS, STORAGE_KEY, createTable, place, startStroke, trace, push, step, standUp, undo, clear, runSpecs, snapshot, restore, normalizeSave } from './topple.js?v=2';
+import { createSound } from './audio.js?v=2';
 
 const $ = id => document.getElementById(id);
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -77,13 +77,17 @@ dominoMesh.castShadow = true; dominoMesh.receiveShadow = true; dominoMesh.frustu
 scene.add(dominoMesh);
 
 const born = new WeakMap();          // when each domino was stood up, for its little pop
+const shades = PALETTES.map(palette => [...palette.colours, '#fbf6ea'].map(colour => new THREE.Color(colour)));
+const inks = INKS.map(colour => new THREE.Color(colour));
+// How far a domino has turned from its standing colour to its picture colour.
+const shown = d => !d.dir ? 0 : table.rewind ? (d.from > 0 ? d.angle / d.from : 0) : clamp((table.clock - d.started) / .22, 0, 1);
 const pivot = new THREE.Object3D(); pivot.rotation.order = 'YZX';
 const offset = new THREE.Matrix4().makeTranslation(-SIZE.t / 2, 0, 0), matrix = new THREE.Matrix4(), tint = new THREE.Color();
 let clock = 0, growing = 0;
 
 // Each domino turns about the bottom edge on the side it is falling towards.
 function pose() {
-  const list = table.dominoes, colours = PALETTES[prefs.palette].colours;
+  const list = table.dominoes, colours = shades[prefs.palette];
   dominoMesh.count = list.length;
   growing = 0;
   for (let i = 0; i < list.length; i++) {
@@ -97,7 +101,12 @@ function pose() {
     dominoMesh.setMatrixAt(i, matrix.multiplyMatrices(pivot.matrix, offset));
   }
   dominoMesh.instanceMatrix.needsUpdate = true;
-  for (let i = 0; i < list.length; i++) dominoMesh.setColorAt(i, tint.set(colours[list[i].c]));
+  for (let i = 0; i < list.length; i++) {
+    const d = list[i];
+    tint.copy(colours[d.c]);
+    if (d.p !== null && d.dir) tint.lerp(inks[d.p], shown(d));
+    dominoMesh.setColorAt(i, tint);
+  }
   if (dominoMesh.instanceColor) dominoMesh.instanceColor.needsUpdate = true;
 }
 
@@ -323,7 +332,7 @@ function moveCamera(dt) {
     }
   }
   const chasing = table.falling.length > 0 && table.down >= 3;
-  const want = !reducedMotion && !strokes.size && (chasing || clock < holdUntil) ? 1 : 0;
+  const want = !reducedMotion && !prefs.still && !strokes.size && (chasing || clock < holdUntil) ? 1 : 0;
   if (follow < .02 && want) focus.copy(goal);
   follow += clamp(want - follow, -dt * .9, dt * 1.6);
   focus.lerp(goal, 1 - Math.exp(-dt * 5));
@@ -382,10 +391,14 @@ function showHint(dt) {
 }
 
 // ---------- what happens during a fall ----------
-let counted = 0;
+let counted = 0, glitter = 0;      // glitter: how many sparkles the fall may still throw this frame
 function handle(event) {
   if (event.type === 'push') sound.click(0);
-  else if (event.type === 'click') { sound.click(event.d.order); lastFallen = event.d; }
+  else if (event.type === 'click') {
+    const d = event.d;
+    sound.click(d.order); lastFallen = d;
+    if (glitter > 0) { glitter--; burst(d.x, SIZE.h * .8, d.z, 2, 2.6, [d.p !== null ? INKS[d.p] : PALETTES[prefs.palette].colours[d.c] || '#ffffff', '#ffffff'], 7, .55, .8); }
+  }
   else if (event.type === 'flat') { sound.thud(); lastFallen = event.d; burst(event.d.x + event.d.fx * SIZE.h, .15, event.d.z + event.d.fz * SIZE.h, 8, 2.2, ['#ffffff', '#f6ead2'], 3, .5); }
   else if (event.type === 'toy') { const toy = toyViews[event.toy.kind]; fired.push({ view: toy, at: clock }); lastToyAt = clock; toy.fire(); }
   else if (event.type === 'done') {
@@ -402,18 +415,23 @@ function handle(event) {
 }
 
 // ---------- laying a ready-made run ----------
-let laying = null;
+let laying = null, lastPop = 0;
 function lay(id) {
-  clear(table); resetToys(); counted = 0; lastFallen = null; hintFrom = null;
-  laying = { specs: runSpecs(id), next: 0, stroke: ++table.strokes, owed: 0, first: null };
+  const run = RUNS.find(r => r.id === id);
+  if (!run) return;
+  clear(table); resetToys(); fired.length = 0; counted = 0; lastFallen = null; hintFrom = null;
+  prefs.still = Boolean(run.still);
+  const specs = runSpecs(id, innerHeight > innerWidth);
+  // Big runs are laid faster, so none takes more than about two seconds to appear.
+  laying = { specs, next: 0, stroke: ++table.strokes, owed: 0, first: null, rate: Math.max(110, specs.length / 1.8) };
   refreshTools();
   if (reducedMotion) layMore(99);
 }
 function layMore(dt) {
-  laying.owed += dt * 110;
+  laying.owed += dt * laying.rate;
   while (laying.owed >= 1 && laying.next < laying.specs.length) {
-    const spec = laying.specs[laying.next++], d = place(table, spec.x, spec.z, spec.yaw, laying.stroke);
-    if (d) { born.set(d, clock); laying.first ||= d; if (laying.next % 2) sound.pop(laying.next); }
+    const spec = laying.specs[laying.next++], d = place(table, spec.x, spec.z, spec.yaw, laying.stroke, spec.c ?? null, spec.p ?? null);
+    if (d) { born.set(d, clock); laying.first ||= d; if (clock - lastPop > .04) { lastPop = clock; sound.pop(laying.next); } }
     laying.owed -= 1;
   }
   if (laying.next >= laying.specs.length) { hintFrom = laying.first; laying = null; save(); refreshTools(); }
@@ -492,7 +510,7 @@ $('again').addEventListener('click', () => {
 });
 $('undo').addEventListener('click', () => {
   if (off('undo')) return;
-  if (undo(table)) { resetToys(); counted = 0; lastFallen = null; hintFrom = null; sound.pop(3); save(); pose(); showCount(); refreshTools(); }
+  if (undo(table)) { if (!table.dominoes.length) prefs.still = false; resetToys(); counted = 0; lastFallen = null; hintFrom = null; sound.pop(3); save(); pose(); showCount(); refreshTools(); }
 });
 let sureTimer = 0;
 function unsure() { clearTimeout(sureTimer); $('clear').removeAttribute('data-sure'); $('clear').querySelector('small').textContent = 'Clear'; $('clear').setAttribute('aria-label', 'Clear the mat'); }
@@ -503,7 +521,7 @@ $('clear').addEventListener('click', () => {
     sureTimer = setTimeout(unsure, 3000);
     return;
   }
-  unsure(); clear(table); resetToys(); counted = 0; lastFallen = null; hintFrom = null; sound.thud(); save(); pose(); showCount(); refreshTools();
+  unsure(); clear(table); prefs.still = false; resetToys(); counted = 0; lastFallen = null; hintFrom = null; sound.thud(); save(); pose(); showCount(); refreshTools();
 });
 $('paint').addEventListener('click', () => {
   prefs.palette = (prefs.palette + 1) % PALETTES.length;
@@ -523,16 +541,21 @@ function drawMaps() {
     map.width = w; map.height = h;
     const g = map.getContext('2d');
     for (const toy of TOYS) { g.fillStyle = run.toys.includes(toy.kind) ? '#ffc44e' : '#ffffff'; g.beginPath(); g.arc(...spot(toy.x, toy.z), 9, 0, Math.PI * 2); g.fill(); }
-    g.lineWidth = 3.4; g.lineCap = 'round';
-    runSpecs(run.id).forEach((s, i) => {
-      const reach = .27 * SIZE.w / .75, [ax, ay] = spot(s.x + Math.sin(s.yaw) * reach, s.z - Math.cos(s.yaw) * reach), [bx, by] = spot(s.x - Math.sin(s.yaw) * reach, s.z + Math.cos(s.yaw) * reach);
-      g.strokeStyle = colours[i % 7]; g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
+    g.lineCap = 'round';
+    runSpecs(run.id, tall).forEach((s, i) => {
+      // A picture domino is shown the colour it falls to, as a fat mark so the picture reads.
+      const inked = s.p !== undefined && s.p !== null, reach = inked ? .3 : .27;
+      const [ax, ay] = spot(s.x + Math.sin(s.yaw) * reach, s.z - Math.cos(s.yaw) * reach), [bx, by] = spot(s.x - Math.sin(s.yaw) * reach, s.z + Math.cos(s.yaw) * reach);
+      g.lineWidth = inked ? 8 : 3.4; g.lineCap = inked ? 'butt' : 'round';
+      g.strokeStyle = inked ? INKS[s.p] : colours[(s.c ?? i) % 7];
+      g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, by); g.stroke();
     });
   }
 }
 $('runs').addEventListener('click', () => {
   drawMaps();
   $('tally').textContent = prefs.toppled ? `You have knocked over ${prefs.toppled.toLocaleString('en')} dominoes so far.` : '';
+  prefs.seen = RUNS.length; $('runs').classList.remove('new'); save();
   $('runsDialog').showModal();
 });
 $('runsClose').addEventListener('click', () => $('runsDialog').close());
@@ -558,6 +581,7 @@ function frame(now) {
   if (real < .5) ease(real);
   let moved = growing > 0;
   if (laying) { layMore(dt); moved = true; }
+  glitter = 5;
   if (table.falling.length || table.rewind) {
     const events = [];
     for (let i = 0; i < 4; i++) step(table, dt / 4, events);
@@ -584,6 +608,8 @@ sound.set(prefs.sound); showSound();
 fit(); pose(); refreshTools();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
 // The first visit starts with a run already standing, so the first thing to do is tap and watch.
-if (!prefs.met && !table.dominoes.length) { prefs.met = true; lay('snake'); }
+if (!prefs.met && !table.dominoes.length) { prefs.met = true; lay('name'); }
+// The star wiggles until the newest runs have been looked at.
+$('runs').classList.toggle('new', prefs.seen < RUNS.length);
 window.littleDominoes = { table, prefs, lay, knock, get follow() { return follow; }, get laying() { return Boolean(laying); } };
 requestAnimationFrame(frame);

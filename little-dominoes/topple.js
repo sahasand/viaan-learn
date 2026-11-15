@@ -18,10 +18,22 @@ export const TOYS = [
   { kind: 'rocket', x: 8.6, z: 0, r: .6 },
   { kind: 'box', x: 8.4, z: 4.8, r: .6 }
 ];
+// A domino can stand plain white (BLANK) and take one of these colours as it falls. That is how a white
+// field turns into a picture.
+export const BLANK = 7;
+export const INKS = ['#f2495c', '#ff8a3c', '#ffc93c', '#4fc36b', '#35b6e8', '#5b7cf0', '#a868e8', '#ffffff', '#1d2b53', '#ff8fb8', '#2b2b33', '#9bdcff', '#7a4a2a'];
+const EVERY = ['bell', 'rocket', 'box'];
+// `still` runs are best seen whole, so the camera stays where it is while they fall.
 export const RUNS = [
-  { id: 'snake', name: 'Snake', toys: ['rocket'] },
+  { id: 'name', name: 'Viaan', toys: EVERY, still: true },
+  { id: 'heart', name: 'Heart', toys: EVERY, still: true },
+  { id: 'smiley', name: 'Smiley', toys: EVERY, still: true },
+  { id: 'rainbow', name: 'Rainbow', toys: EVERY, still: true },
+  { id: 'sun', name: 'Sunburst', toys: EVERY, still: true },
+  { id: 'fan', name: 'Fan', toys: EVERY, still: true },
   { id: 'swirl', name: 'Swirl', toys: ['bell'] },
-  { id: 'tree', name: 'Big tree', toys: ['bell', 'rocket', 'box'] }
+  { id: 'snake', name: 'Snake', toys: ['rocket'] },
+  { id: 'tree', name: 'Big tree', toys: EVERY }
 ];
 
 const KEEP = .5, EDGE = .4;
@@ -47,14 +59,14 @@ function crowds(ax, az, ayaw, bx, bz) {
   return Math.abs(dx * cos + dz * sin) < .5 && Math.abs(dz * cos - dx * sin) < .68;
 }
 
-export function place(table, x, z, yaw, stroke = 0, colour = null) {
+export function place(table, x, z, yaw, stroke = 0, colour = null, ink = null) {
   if (table.dominoes.length >= LIMIT || !Number.isFinite(x + z + yaw)) return null;
   if (Math.abs(x) > AREA.x - EDGE || Math.abs(z) > AREA.z - EDGE) return null;
   for (const toy of table.toys) if (Math.hypot(toy.x - x, toy.z - z) < toy.r + KEEP) return null;
   for (const d of table.dominoes) {
     if (Math.hypot(d.x - x, d.z - z) < .5 || crowds(d.x, d.z, d.yaw, x, z) || crowds(x, z, yaw, d.x, d.z)) return null;
   }
-  const d = { x, z, yaw, c: colour ?? table.hue++ % 7, stroke, into: yaw, angle: 0, vel: 0, dir: 0, fx: Math.cos(yaw), fz: Math.sin(yaw), targets: [], toy: null, rest: false, flat: false, still: 0, top: -1, started: 0, order: 0, from: 0 };
+  const d = { x, z, yaw, c: colour ?? table.hue++ % 7, p: ink, stroke, into: yaw, angle: 0, vel: 0, dir: 0, fx: Math.cos(yaw), fz: Math.sin(yaw), targets: [], toy: null, rest: false, flat: false, still: 0, top: -1, started: 0, order: 0, from: 0 };
   table.dominoes.push(d);
   return d;
 }
@@ -326,17 +338,131 @@ function tree() {
   return out;
 }
 
-export function runSpecs(id) {
-  return id === 'snake' ? snake() : id === 'swirl' ? swirl() : id === 'tree' ? tree() : [];
+// ---------- fields that turn into pictures ----------
+// A field is a grid of white dominoes, 18 across and 23 deep, all falling towards the toys. A starter row
+// runs along the front edge: each starter knocks the next starter and the first domino of one column, so
+// the fall sweeps across the field on a slant.
+const ROWS = 23, COLUMNS = 18, PITCH = .76, FRONT = -9.4;
+const columnZ = j => (j - (COLUMNS - 1) / 2) * PITCH, rowX = r => FRONT + SPACING * (r + 1);
+
+function field(inkAt) {
+  const out = [];
+  for (let j = 0; j < COLUMNS; j++) out.push({ x: FRONT, z: columnZ(j) - .1, yaw: Math.PI / 2, c: BLANK, p: inkAt(-1, j), order: j - 1 });
+  for (let r = 0; r < ROWS; r++) for (let j = 0; j < COLUMNS; j++) out.push({ x: rowX(r), z: columnZ(j), yaw: 0, c: BLANK, p: inkAt(r, j), order: r + j });
+  return out.sort((a, b) => a.order - b.order);
+}
+// The picture is drawn the right way up for the way the mat is seen: on a tall screen the far end of the
+// mat is the top of the picture, on a wide screen the toy end is its right-hand side.
+function picture(paint, tall) {
+  const W = tall ? COLUMNS : ROWS + 1, H = tall ? ROWS + 1 : COLUMNS;
+  return field((r, j) => tall ? paint(j, ROWS - 1 - r, W, H) : paint(r + 1, j, W, H));
+}
+
+const INK = { r: 0, o: 1, y: 2, g: 3, c: 4, b: 5, p: 6, w: 7, n: 8, k: 9, d: 10, s: 11, t: 12 };
+const FONT = {
+  V: ['x.x', 'x.x', 'x.x', 'x.x', 'x.x', 'x.x', '.x.'],
+  I: ['x', 'x', 'x', 'x', 'x', 'x', 'x'],
+  A: ['.x.', 'x.x', 'x.x', 'xxx', 'x.x', 'x.x', 'x.x'],
+  N: ['x..x', 'xx.x', 'xx.x', 'x.xx', 'x.xx', 'x..x', 'x..x']
+};
+const word = (letters, colours) => FONT.V.map((_, row) => [...letters].map((letter, i) => FONT[letter][row].replaceAll('x', colours[i])).join('.'));
+export const ART = {
+  name: { ground: 'n', stars: true, rows: word('VIAAN', 'roygc') },
+  heart: { ground: 's', rows: [
+    '...rrr...rrr...',
+    '..rrrrr.rrrrr..',
+    '.rrwwrrrrrrrrr.',
+    '.rrwrrrrrrrrrr.',
+    '.rrrrrrrrrrrrr.',
+    '.rrrrrrrrrrrrr.',
+    '..rrrrrrrrrrr..',
+    '...rrrrrrrrr...',
+    '....rrrrrrr....',
+    '.....rrrrr.....',
+    '......rrr......',
+    '.......r.......'] },
+  smiley: { ground: 'b', rows: [
+    '.....yyyyy.....',
+    '...yyyyyyyyy...',
+    '..yyyyyyyyyyy..',
+    '.yyyyyyyyyyyyy.',
+    '.yyyddyyyddyyy.',
+    'yyyyddyyyddyyyy',
+    'yyyyddyyyddyyyy',
+    'yyyyyyyyyyyyyyy',
+    'ykkyyyyyyyyykky',
+    'yydyyyyyyyyydyy',
+    '.yyddyyyyyddyy.',
+    '.yyyydddddyyyy.',
+    '..yyyyyyyyyyy..',
+    '...yyyyyyyyy...',
+    '.....yyyyy.....'] }
+};
+const fromArt = art => (px, py, W, H) => {
+  const high = art.rows.length, wide = art.rows[0].length, x = px - Math.floor((W - wide) / 2), y = py - Math.floor((H - high) / 2);
+  const mark = y >= 0 && y < high && x >= 0 && x < wide ? art.rows[y][x] : '.';
+  if (mark !== '.') return INK[mark];
+  // A sprinkle of stars in the sky around the name.
+  // Only every other square can hold a star, so no two ever touch.
+  if (art.stars && (y < -1 || y > high) && px % 2 === 0 && py % 2 === 1 && ((Math.imul(px + 3, 73856093) ^ Math.imul(py + 7, 19349663)) >>> 3) % 3 === 0) return INK.y;
+  return INK[art.ground];
+};
+// Six arcs over green grass, with a cloud at each foot.
+function rainbowAt(px, py, W, H) {
+  const cx = (W - 1) / 2, cy = Math.round(H * .68), outer = Math.min(cx + .5, cy + .5), band = outer / 9;
+  if (py >= H - 2) return INK.g;
+  for (const side of [-1, 1]) if (Math.hypot(px - (cx + side * (outer - band * 3)), (py - cy) * 1.3) < 2.3) return INK.w;
+  const far = Math.hypot(px - cx, py - cy), arc = Math.floor((outer - far) / band);
+  if (py <= cy && far <= outer && arc < 6) return [INK.r, INK.o, INK.y, INK.g, INK.c, INK.p][arc];
+  return INK.s;
+}
+
+// One domino knocks two, which knock three, and so on out to eighteen: every row is one wider.
+function fan() {
+  const out = [], first = rowX(ROWS - 1) - SPACING * (COLUMNS - 1);
+  for (let x = first - SPACING * Math.floor((first - FRONT) / SPACING), i = 0; x < first - .01; x += SPACING, i++) out.push({ x, z: 0, yaw: 0, c: i % 7 });
+  for (let k = 0; k < COLUMNS; k++) for (let i = 0; i <= k; i++) out.push({ x: first + SPACING * k, z: (i - k / 2) * PITCH, yaw: 0, c: (k + 6) % 7 });
+  return out;
+}
+
+// A line runs in to a ring. The fall goes both ways round the ring, and each ring domino sets off a ray,
+// so the rays shoot out in pairs from the near side to the toys.
+function sun() {
+  const spokes = 25, ring = spokes * PITCH / (Math.PI * 2), out = [], lead = [[-9.2, 0]];
+  line(lead, -(ring + .78), 0);
+  spread(lead).forEach((spec, i) => out.push({ ...spec, c: i % 7, order: -2 }));
+  const angle = i => Math.PI + (i + .5) * Math.PI * 2 / spokes;
+  for (let i = 0; i < spokes; i++) out.push({ x: Math.cos(angle(i)) * ring, z: Math.sin(angle(i)) * ring, yaw: angle(i) + Math.PI / 2, c: 2, order: -1 });
+  // No ray on either side of the line coming in: there is no room for one.
+  for (let i = 1; i < spokes - 1; i++) {
+    for (let far = ring + .8, n = 0; ; far += SPACING, n++) {
+      const x = Math.cos(angle(i)) * far, z = Math.sin(angle(i)) * far;
+      if (Math.abs(x) > 9.3 || Math.abs(z) > 6.35 || TOYS.some(toy => Math.hypot(toy.x - x, toy.z - z) < toy.r + KEEP + .02)) break;
+      out.push({ x, z, yaw: angle(i), c: i % 7, order: n });
+    }
+  }
+  return out.sort((a, b) => a.order - b.order);
+}
+
+// `tall` says which way up the mat is seen, which only matters to the pictures.
+export function runSpecs(id, tall = false) {
+  if (id === 'snake') return snake();
+  if (id === 'swirl') return swirl();
+  if (id === 'tree') return tree();
+  if (id === 'fan') return fan();
+  if (id === 'sun') return sun();
+  if (id === 'rainbow') return picture(rainbowAt, tall);
+  if (ART[id]) return picture(fromArt(ART[id]), tall);
+  return [];
 }
 
 // ---------- saving ----------
 const round = v => Math.round(v * 1000) / 1000;
-export const snapshot = table => table.dominoes.map(d => [round(d.x), round(d.z), round(d.yaw), d.c, d.stroke]);
+export const snapshot = table => table.dominoes.map(d => d.p === null ? [round(d.x), round(d.z), round(d.yaw), d.c, d.stroke] : [round(d.x), round(d.z), round(d.yaw), d.c, d.stroke, d.p]);
 
 export function restore(table, list) {
   clear(table);
-  for (const [x, z, yaw, c, stroke] of list) place(table, x, z, yaw, stroke, c);
+  for (const [x, z, yaw, c, stroke, ink = null] of list) place(table, x, z, yaw, stroke, c, ink);
   table.strokes = table.dominoes.reduce((most, d) => Math.max(most, d.stroke), 0);
   table.hue = table.dominoes.length;
   return table;
@@ -351,14 +477,18 @@ export function normalizeSave(raw) {
     for (const item of data.dominoes) {
       if (dominoes.length >= LIMIT) break;
       if (!Array.isArray(item) || item.length < 3 || !item.slice(0, 3).every(Number.isFinite)) continue;
-      const [x, z, yaw, c, stroke] = item;
+      const [x, z, yaw, c, stroke, ink] = item;
       if (Math.abs(x) > AREA.x - EDGE || Math.abs(z) > AREA.z - EDGE || Math.abs(yaw) > 7) continue;
-      dominoes.push([x, z, yaw, Number.isInteger(c) && c >= 0 && c < 7 ? c : dominoes.length % 7, Number.isInteger(stroke) && stroke >= 0 && stroke < 1e6 ? stroke : 0]);
+      const kept = [x, z, yaw, Number.isInteger(c) && c >= 0 && c <= BLANK ? c : dominoes.length % 7, Number.isInteger(stroke) && stroke >= 0 && stroke < 1e6 ? stroke : 0];
+      if (Number.isInteger(ink) && ink >= 0 && ink < INKS.length) kept.push(ink);
+      dominoes.push(kept);
     }
   }
   return {
     sound: data.sound === true,
     met: data.met === true,
+    still: data.still === true,
+    seen: Number.isInteger(data.seen) && data.seen >= 0 && data.seen <= RUNS.length ? data.seen : 0,
     palette: Number.isInteger(data.palette) && data.palette >= 0 && data.palette < PALETTES.length ? data.palette : 0,
     toppled: Number.isFinite(data.toppled) ? clamp(Math.floor(data.toppled), 0, 9999999) : 0,
     dominoes

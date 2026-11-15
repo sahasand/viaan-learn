@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { SIZE, SPACING, AREA, LIMIT, TOYS, RUNS, PALETTES, createTable, place, startStroke, trace, push, step, standUp, undo, clear, runSpecs, snapshot, restore, normalizeSave } from './topple.js';
+import { SIZE, SPACING, AREA, LIMIT, TOYS, RUNS, PALETTES, BLANK, INKS, ART, createTable, place, startStroke, trace, push, step, standUp, undo, clear, runSpecs, snapshot, restore, normalizeSave } from './topple.js';
 
 const here = name => fileURLToPath(new URL(name, import.meta.url));
 
@@ -22,7 +22,7 @@ function topple(table, d) {
   return events;
 }
 const standing = table => table.dominoes.filter(d => !d.dir).length;
-const lay = id => { const table = createTable(); for (const s of runSpecs(id)) place(table, s.x, s.z, s.yaw, 1); return table; };
+const lay = (id, tall = false) => { const table = createTable(); for (const s of runSpecs(id, tall)) place(table, s.x, s.z, s.yaw, 1, s.c ?? null, s.p ?? null); return table; };
 
 test('nothing moves until a domino is tapped', () => {
   const table = createTable();
@@ -152,18 +152,53 @@ test('a toy goes off again for a new fall, without standing anything up', () => 
 });
 
 test('every ready-made run fits the mat, falls completely and sets off its toys', () => {
-  assert.deepEqual(RUNS.map(r => r.id), ['snake', 'swirl', 'tree']);
-  for (const run of RUNS) {
-    const specs = runSpecs(run.id), table = lay(run.id);
-    assert.ok(specs.length >= 60 && specs.length <= 140, `${run.id} has ${specs.length} dominoes`);
-    assert.equal(table.dominoes.length, specs.length, `${run.id} places every domino`);
+  assert.deepEqual(RUNS.map(r => r.id), ['name', 'heart', 'smiley', 'rainbow', 'sun', 'fan', 'swirl', 'snake', 'tree']);
+  for (const run of RUNS) for (const tall of [false, true]) {
+    const specs = runSpecs(run.id, tall), table = lay(run.id, tall), label = `${run.id} ${tall ? 'tall' : 'wide'}`;
+    assert.ok(specs.length >= 60 && specs.length <= LIMIT - 40, `${label} has ${specs.length} dominoes`);
+    assert.equal(table.dominoes.length, specs.length, `${label} places every domino`);
     const events = topple(table, table.dominoes[0]);
-    assert.equal(standing(table), 0, `${run.id} falls completely`);
-    assert.deepEqual(events.filter(e => e.type === 'toy').map(e => e.toy.kind).sort(), [...run.toys].sort(), `${run.id} toys`);
+    assert.equal(standing(table), 0, `${label} falls completely`);
+    assert.deepEqual(events.filter(e => e.type === 'toy').map(e => e.toy.kind).sort(), [...run.toys].sort(), `${label} toys`);
     const seconds = table.dominoes.reduce((most, d) => Math.max(most, d.started), 0);
-    assert.ok(seconds > 2 && seconds < 14, `${run.id} takes ${seconds.toFixed(1)} s`);
+    assert.ok(seconds > 2 && seconds < 14, `${label} takes ${seconds.toFixed(1)} s`);
   }
   assert.deepEqual(runSpecs('nope'), []);
+});
+
+test('picture runs stand white and fall into a picture, the right way up either way round', () => {
+  for (const art of Object.values(ART)) {
+    assert.ok(art.rows.every(row => row.length === art.rows[0].length && row.length <= 18), 'every row of a picture is the same width');
+    assert.ok(art.rows.length <= 18);
+  }
+  for (const id of ['name', 'heart', 'smiley', 'rainbow']) for (const tall of [false, true]) {
+    const specs = runSpecs(id, tall);
+    assert.equal(specs.length, 18 * 24);
+    assert.ok(specs.every(s => s.c === BLANK && Number.isInteger(s.p) && s.p >= 0 && s.p < INKS.length));
+    assert.ok(new Set(specs.map(s => s.p)).size >= 3, `${id} uses several colours`);
+  }
+  // The red V of the name is the first letter: on the left of a wide screen, and on the left of a tall one.
+  const red = (tall, across) => { const marks = runSpecs('name', tall).filter(s => s.p === 0 && s.yaw === 0).map(across); return [Math.min(...marks), Math.max(...marks)]; };
+  const blue = (tall, across) => { const marks = runSpecs('name', tall).filter(s => s.p === 4 && s.yaw === 0).map(across); return [Math.min(...marks), Math.max(...marks)]; };
+  assert.ok(red(false, s => s.x)[1] < blue(false, s => s.x)[0], 'wide: V is left of N along the mat');
+  assert.ok(red(true, s => s.z)[1] < blue(true, s => s.z)[0], 'tall: V is left of N across the mat');
+  // A field falls on a slant: the far corner starts well after the near one.
+  const table = lay('heart');
+  topple(table, table.dominoes[0]);
+  const at = (x, z) => table.dominoes.reduce((best, d) => Math.hypot(d.x - x, d.z - z) < Math.hypot(best.x - x, best.z - z) ? d : best);
+  assert.ok(at(-8, 6).started > at(-8, -6).started + 2, 'the starter row runs along the front edge');
+  assert.ok(at(7, -6).started > at(-8, -6).started + 2, 'each column runs to the toy end');
+});
+
+test('the fan grows by one domino a row and the sunburst sends out a ray from every ring domino', () => {
+  const rows = new Map();
+  for (const s of runSpecs('fan')) rows.set(s.x.toFixed(2), (rows.get(s.x.toFixed(2)) || 0) + 1);
+  assert.deepEqual([...rows.values()].slice(-18), Array.from({ length: 18 }, (_, i) => i + 1));
+  const sun = lay('sun');
+  topple(sun, sun.dominoes[0]);
+  const rays = sun.dominoes.filter(d => Math.hypot(d.x, d.z) > 3.5 && Math.abs(d.z) > .5);
+  assert.ok(rays.length > 120);
+  assert.ok(rays.every(d => d.dir === 1 && d.fx * d.x + d.fz * d.z > 0), 'every ray falls outwards');
 });
 
 test('standing up rewinds the fall and the same tap gives the same fall again', () => {
@@ -203,8 +238,9 @@ test('undo takes away the last line and clear empties the mat', () => {
 test('saved mats are validated and restored', () => {
   const table = lay('snake');
   draw(table, [-9, 6.3], [9, 6.3]);
-  const saved = normalizeSave(JSON.stringify({ sound: true, met: true, palette: 2, toppled: 41.7, dominoes: snapshot(table) }));
+  const saved = normalizeSave(JSON.stringify({ sound: true, met: true, still: true, seen: 9, palette: 2, toppled: 41.7, dominoes: snapshot(table) }));
   assert.equal(saved.sound, true); assert.equal(saved.met, true); assert.equal(saved.palette, 2); assert.equal(saved.toppled, 41);
+  assert.equal(saved.still, true); assert.equal(saved.seen, 9);
   const again = restore(createTable(), saved.dominoes);
   assert.equal(again.dominoes.length, table.dominoes.length);
   assert.equal(again.strokes, table.strokes);
@@ -213,10 +249,13 @@ test('saved mats are validated and restored', () => {
   assert.equal(again.down, table.down, 'and falls the same way');
 
   for (const junk of [null, undefined, 'not json', '[]', 7, { dominoes: 'x' }]) {
-    assert.deepEqual(normalizeSave(junk), { sound: false, met: false, palette: 0, toppled: 0, dominoes: [] });
+    assert.deepEqual(normalizeSave(junk), { sound: false, met: false, still: false, seen: 0, palette: 0, toppled: 0, dominoes: [] });
   }
-  const mixed = normalizeSave({ sound: 'yes', palette: 99, toppled: -5, dominoes: [[0, 0, 0, 3, 2], [99, 0, 0], [1, 1, NaN], 'x', [2, 2, 1, 44, -1], [3, 3]] });
-  assert.deepEqual(mixed, { sound: false, met: false, palette: 0, toppled: 0, dominoes: [[0, 0, 0, 3, 2], [2, 2, 1, 1, 0]] });
+  const mixed = normalizeSave({ sound: 'yes', seen: 99, palette: 99, toppled: -5, dominoes: [[0, 0, 0, 3, 2], [99, 0, 0], [1, 1, NaN], 'x', [2, 2, 1, 44, -1], [3, 3], [4, 4, 0, 7, 1, 8], [5, 5, 0, 7, 1, 99]] });
+  assert.deepEqual(mixed, { sound: false, met: false, still: false, seen: 0, palette: 0, toppled: 0, dominoes: [[0, 0, 0, 3, 2], [2, 2, 1, 1, 0], [4, 4, 0, 7, 1, 8], [5, 5, 0, 7, 1]] });
+  const pictured = restore(createTable(), normalizeSave({ dominoes: snapshot(lay('name', true)) }).dominoes);
+  assert.equal(pictured.dominoes.length, 432);
+  assert.deepEqual(pictured.dominoes.map(d => d.p), lay('name', true).dominoes.map(d => d.p), 'a saved picture keeps its colours');
   assert.equal(normalizeSave({ dominoes: Array.from({ length: LIMIT + 50 }, () => [0, 0, 0]) }).dominoes.length, LIMIT);
   assert.equal(restore(createTable(), [[0, 0, 0, 1, 1], [0, 0, 0, 1, 1]]).dominoes.length, 1, 'overlapping saved dominoes are dropped');
 });
