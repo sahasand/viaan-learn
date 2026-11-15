@@ -1,0 +1,119 @@
+@font-face{font-family:LocalRounded;src:local('Avenir Next');font-display:swap}
+:root{--ink:#143f42;--deep:#0d2f33;--paper:#fff9e9;--coral:#eb6548;--gold:#ffc44e;--mint:#dff1e2;--shadow:0 6px 20px #0d2f3328;--font:'Baloo 2',LocalRounded,'Trebuchet MS',sans-serif;
+  --top:calc(14px + env(safe-area-inset-top));--side:calc(16px + env(safe-area-inset-left));--foot:calc(14px + env(safe-area-inset-bottom));
+  --outline:3px 0 0 var(--deep),-3px 0 0 var(--deep),0 3px 0 var(--deep),0 -3px 0 var(--deep),2px 2px 0 var(--deep),-2px 2px 0 var(--deep),2px -2px 0 var(--deep),-2px -2px 0 var(--deep),0 6px 0 var(--deep)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;margin:0;overflow:hidden}
+body{background:#f4e8d0;color:var(--ink);font-family:var(--font);font-weight:700;line-height:1.2;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+[hidden]{display:none!important}
+button,a{-webkit-touch-callout:none;touch-action:manipulation}
+button{font:inherit;cursor:pointer;color:inherit;border:0}
+button:focus-visible,a:focus-visible,canvas:focus-visible{outline:3px solid var(--coral);outline-offset:4px}
+canvas:focus-visible{outline-offset:-6px}
+#world{display:block;width:100%;height:100%;touch-action:none}
+h2,p{margin:0}
+svg{display:block}
+
+/* ---------- top bar ---------- */
+.topbar{position:absolute;top:var(--top);left:var(--side);right:var(--side);display:flex;align-items:center;gap:12px;pointer-events:none;z-index:3}
+.topbar>*{pointer-events:auto}
+.round{width:50px;height:50px;flex:none;border:4px solid #fff;border-radius:50%;background:var(--paper);box-shadow:0 4px 0 #0d2f3330,var(--shadow);display:grid;place-items:center;color:var(--ink)}
+.round svg{width:25px;height:25px}
+.round:active{transform:translateY(3px);box-shadow:0 1px 0 #0d2f3330}
+.round[aria-pressed="true"]{background:var(--gold)}
+#sound{margin-left:auto}
+#sound[aria-pressed="true"] .mute,#sound[aria-pressed="false"] .wave{display:none}
+.brand{font-size:30px;font-weight:800;letter-spacing:-1px;line-height:1;color:#fff;text-shadow:var(--outline);pointer-events:none;white-space:nowrap}
+.brand-dot{color:var(--gold)}
+
+/* ---------- counting the fall ---------- */
+.count{position:absolute;top:calc(var(--top) + 58px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;z-index:2}
+.count b{font-size:64px;font-weight:800;line-height:.9;color:#fff;text-shadow:var(--outline);font-variant-numeric:tabular-nums}
+.count small{font-size:13px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--deep);margin-top:10px}
+.count.bump b{animation:bump .12s ease-out}
+@keyframes bump{from{transform:scale(1.18)}to{transform:none}}
+
+.toast{position:absolute;left:50%;top:64%;transform:translate(-50%,-50%) scale(.6);opacity:0;font-size:44px;font-weight:800;color:#fff;text-shadow:var(--outline);text-align:center;white-space:nowrap;pointer-events:none;z-index:4;transition:opacity .2s,transform .25s cubic-bezier(.3,1.6,.5,1)}
+.toast.show{opacity:1;transform:translate(-50%,-50%)}
+
+/* The pointing hand that shows which domino to tap. JavaScript moves the outer box; the hand bounces inside it. */
+.hint{position:absolute;left:0;top:0;width:0;height:0;pointer-events:none;z-index:2}
+.hint span{position:absolute;left:-24px;bottom:0;width:48px;font-size:40px;line-height:1;text-align:center;filter:drop-shadow(0 3px 0 #0d2f3340);animation:tap 1s ease-in-out infinite}
+@keyframes tap{0%,100%{transform:translateY(-16px)}50%{transform:none}}
+
+.prompt{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;z-index:2}
+.prompt p{font-size:26px;font-weight:800;color:var(--deep);opacity:.75}
+.prompt .finger{display:block;font-size:54px;animation:draw 2.8s ease-in-out infinite}
+@keyframes draw{0%,100%{transform:translate(-90px,10px)}25%{transform:translate(-30px,-18px)}50%{transform:translate(30px,10px)}75%{transform:translate(90px,-18px)}}
+
+/* ---------- tools ---------- */
+.tools{position:absolute;left:50%;bottom:var(--foot);transform:translateX(-50%);display:flex;align-items:flex-end;gap:10px;z-index:3}
+.tools button{width:64px;height:66px;border:4px solid #fff;border-radius:20px;background:var(--paper);box-shadow:0 4px 0 #0d2f3330,var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--ink);padding:0}
+.tools svg{width:28px;height:28px}
+.tools small{font-size:11px;font-weight:800;line-height:1;white-space:nowrap}
+.tools button:active{transform:translateY(3px);box-shadow:0 1px 0 #0d2f3330}
+.tools button[aria-disabled="true"]{opacity:.45}
+.tools .big{width:84px;height:84px;border-radius:26px;background:var(--gold)}
+.tools .big svg{width:38px;height:38px}
+.tools .big small{font-size:12px}
+.tools .big.ready{animation:ready 1s ease-in-out infinite}
+@keyframes ready{0%,100%{transform:none}50%{transform:scale(1.1)}}
+#clear[data-sure]{background:var(--coral);color:#fff}
+
+/* ---------- cards ---------- */
+dialog{border:0;padding:0;color:var(--ink);font-family:var(--font)}
+dialog::backdrop{background:#0d2f3366}
+.card{width:min(560px,calc(100vw - 28px));max-height:calc(100dvh - 28px);overflow:auto;border-radius:28px;background:var(--paper);border:5px solid #fff;box-shadow:var(--shadow);padding:22px;text-align:center}
+.card[open]{display:flex;flex-direction:column;gap:16px}
+.card h2{font-size:28px;font-weight:800}
+.run-list{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.run-list button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px 8px;border-radius:20px;background:#fff;border:3px solid var(--mint);box-shadow:0 4px 0 #0d2f3320;min-width:0}
+.run-list button:active{transform:translateY(3px);box-shadow:none}
+.run-list canvas{width:100%;height:auto;border-radius:12px;background:#d5efe0}
+.run-list strong{font-size:18px;font-weight:800}
+.tally{font-size:15px;color:#4a6b63}
+.tally:empty{display:none}
+.secondary{min-height:48px;border-radius:16px;background:var(--mint);font-size:17px;font-weight:800;padding:0 18px}
+.text-link{color:var(--ink);font-size:16px;text-decoration:underline;min-height:44px;display:inline-grid;place-items:center}
+.veil{position:absolute;inset:0;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;z-index:9}
+.noscript{position:absolute;inset:0;display:grid;place-items:center;background:var(--paper);padding:24px;text-align:center}
+
+/* ---------- small and sideways screens ---------- */
+@media (max-width:430px){
+  .brand{font-size:24px}
+  .tools{gap:7px}
+  .tools button{width:58px;height:62px}
+  .tools .big{width:76px;height:78px}
+  .toast{font-size:36px}
+  .count b{font-size:54px}
+}
+@media (max-width:359px){
+  .tools{gap:5px}
+  .tools button{width:52px;height:58px}
+  .tools .big{width:66px;height:70px}
+  .tools small{font-size:10px}
+}
+/* With room to spare the count sits in the top row, so it never covers the toys. */
+@media (min-width:760px){
+  .count{top:var(--top);flex-direction:row;align-items:center;gap:10px;height:50px}
+  .count b{font-size:54px}
+  .count small{margin:0;width:70px;text-align:left;line-height:1.15}
+}
+/* A phone on its side: the tools stand in a column on the left so the mat keeps the full height. */
+@media (orientation:landscape) and (max-height:560px){
+  .tools{left:var(--side);bottom:auto;top:calc(var(--top) + 60px);transform:none;flex-direction:column;align-items:center;gap:6px}
+  .tools button{width:56px;height:48px;border-radius:16px;border-width:3px}
+  .tools svg{width:22px;height:22px}
+  .tools small{font-size:9px}
+  .tools .big{width:62px;height:58px;border-radius:18px;order:-1}
+  .tools .big svg{width:26px;height:26px}
+  .count{top:var(--top)}
+  .count b{font-size:46px}
+  .count small{display:none}
+  .brand{font-size:24px}
+  .run-list canvas{max-height:34vh;width:auto;max-width:100%}
+}
+@media (prefers-reduced-motion:reduce){
+  .hint span,.prompt .finger,.tools .big.ready,.count.bump b{animation:none}
+  .toast{transition:opacity .2s}
+}

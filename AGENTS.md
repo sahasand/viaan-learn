@@ -4,7 +4,7 @@
 
 Viaan is a static learning app for a young child, hosted on GitHub Pages. `index.html` contains the curriculum data and HTML shell; `curriculum-assets/learning.js`, `experience.js`, and `experience.css` provide rules, interactions, and design. No build step. Serve the repository over HTTP, for example `python3 -m http.server 8765`.
 
-Run `node --test curriculum.test.mjs chess.test.mjs memory.test.mjs sky-playground/*.test.mjs little-racer/*.test.mjs`. For curriculum changes, also verify a complete lesson with a wrong answer, a clue, a correct retry, manual Next, completion, and saved-progress reload. Check a phone viewport for overflow and usable controls.
+Run `node --test curriculum.test.mjs chess.test.mjs memory.test.mjs sky-playground/*.test.mjs little-racer/*.test.mjs little-dominoes/*.test.mjs`. For curriculum changes, also verify a complete lesson with a wrong answer, a clue, a correct retry, manual Next, completion, and saved-progress reload. Check a phone viewport for overflow and usable controls.
 
 ## Curriculum
 
@@ -76,6 +76,26 @@ finish earns a cup and nothing is ever lost. Choices, coins, unlocks and cups pe
 `viaan-racer-v1`, validated by `normalizePrefs`. `index.html` and `game.js` load their files with a `?v=` number; raise it in both whenever code or styles change.
 Run `node --test little-racer/*.test.mjs` after changes and verify a full race, a drift
 boost, an unlock, pause, saved choices, and the garage and race display on a wide screen and a phone both ways up.
+
+## Little Dominoes (standalone game)
+
+The home Little Dominoes link opens `little-dominoes/`, a static Three.js domino run: drag to stand
+dominoes up along the finger's path, tap one, and the line falls while the camera follows it. A bell,
+a rocket and a present stand at one end of the mat and go off when a domino falls against them. Three
+ready-made runs (Snake, Swirl, Big tree), Stand up (the fall rewinds), Undo, Clear with a second tap,
+and four colour palettes. Read `little-dominoes/README.md` when changing the falling rules, the runs,
+the toys or the camera. `topple.js` holds every rule in plain numbers and runs in Node; `game.js` owns
+the scene, toys, camera and pointer input; `audio.js` synthesizes sound. It imports Three.js from
+`sky-playground/vendor`. The falling is a hand-written model, not a physics engine: each domino tips
+about its bottom edge, knocks what is in its path and leans on it. Two rules are deliberately generous
+so a child's drawing works: drawn lines bend gently however sharp the scribble, and a domino standing
+side on to a falling one is knocked when merely close, which lets a branch fall. Keep both. There is
+no score, timer or way to fail, and toys reset themselves so they can go off again. The mat, palette,
+sound choice and a running total persist in `viaan-dominoes-v1`, validated by `normalizeSave`; the mat
+holds at most 500 dominoes. `index.html` and `game.js` load their files with a `?v=` number; raise it
+everywhere whenever code or styles change (a test checks they match). Run
+`node --test little-dominoes/*.test.mjs` after changes and verify a drawn line, a gap, a branch, each
+toy, each run, Stand up, a reload, and the layout on a wide screen and a phone both ways up.
 
 ## Shared conventions
 

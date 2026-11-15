@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Three dominoes tipping over">
+  <ellipse cx="62" cy="104" rx="50" ry="7" fill="#143f42" opacity=".12"/>
+  <g stroke="#143f42" stroke-width="4" stroke-linejoin="round">
+    <rect x="14" y="30" width="22" height="72" rx="6" fill="#f2495c"/>
+    <rect x="46" y="30" width="22" height="72" rx="6" fill="#ffc93c" transform="rotate(16 68 102)"/>
+    <rect x="76" y="30" width="22" height="72" rx="6" fill="#35b6e8" transform="rotate(38 98 102)"/>
+  </g>
+</svg>
