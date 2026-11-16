@@ -71,3 +71,25 @@ test('choosing to steer the landing, or Keep flying, takes the plane back from t
  h.run("openLandingChoice()");h.get('handsLand').listeners.click();assert.equal(h.run('autopilot'),false);assert.equal(h.run('landingStyle'),'hands');assert.ok(h.run('airportLeg')>=0);
  h.run("visitAirport();autopilot=true");h.get('land').listeners.click();assert.equal(h.run('airportLeg'),-1);assert.equal(h.run('autopilot||guided'),false);
 });
+
+test('the airport card shows tickets, then one boarding step at a time, and the plane shop on its own page',()=>{
+ const h=harness(),view=()=>h.get('airportBoard').dataset.view;h.run("restartAirline()");assert.equal(view(),'pick');assert.equal(h.get('boardingSteps').hidden,true);
+ assert.match(h.get('destinationCards').innerHTML,/data-destination="starry"/);assert.equal((h.get('destinationCards').innerHTML.match(/class="ticket"/g)||[]).length,3,'three flights from every airport');
+ h.run("trip=newTrip('sunny','starry');airportBoard()");assert.equal(view(),'board');assert.match(h.get('airportHeading').textContent,/Starlight Island/);
+ const showing=()=>['loadBag','boardPassenger','depart'].filter(id=>!h.get(id).hidden);
+ assert.deepEqual(showing(),['loadBag']);h.get('loadBag').listeners.click();assert.deepEqual(showing(),['boardPassenger']);h.get('boardPassenger').listeners.click();assert.deepEqual(showing(),['depart']);
+ h.get('openHangar').listeners.click();assert.equal(view(),'hangar');assert.equal(h.run('trip.boarded'),true,'looking at the plane keeps the flight');h.get('closeHangar').listeners.click();assert.equal(view(),'board');
+ h.get('otherPlaces').listeners.click();assert.equal(view(),'pick');assert.equal(h.run('trip'),null);
+});
+test('takeoff counts three, two, one, go as the plane rolls',()=>{
+ const h=harness(),seen=[];h.run("restartAirline();trip=newTrip('sunny','starry');trip=prepareTrip(prepareTrip(trip,'bag'),'board');leaveAirport();");
+ for(let i=0;i<141;i++){h.run('updateLanding(.05)');const now=h.get('countdown').textContent;if(now!==seen.at(-1))seen.push(now);}
+ assert.deepEqual(seen,['3','2','1','Go!','']);assert.equal(h.run('phase'),'flying');
+});
+test('a guided trip to Starlight Island lands at Moonbeam Airport and stamps the passport',()=>{
+ const h=harness();h.run("restartAirline();trip=newTrip('jungle','starry');currentAirport='jungle';state=parkedAt('jungle');trip=prepareTrip(prepareTrip(trip,'bag'),'board');leaveAirport();");
+ h.run("for(let i=0;i<141;i++)updateLanding(.05);setGuided(true);for(let i=0;i<6000&&phase==='flying';i++)updateFlight(.05);");
+ assert.equal(h.run('phase'),'landing');assert.equal(h.run('landingAirport'),'starry');
+ h.run("for(let i=0;i<281&&phase==='landing';i++)updateLanding(.05)");
+ assert.equal(h.run('currentAirport'),'starry');assert.deepEqual(h.run('passport.stamps'),['starry']);assert.match(h.get('arrivalTitle').textContent,/Owl/);
+});

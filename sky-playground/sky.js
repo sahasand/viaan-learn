@@ -1,6 +1,6 @@
 // Things to find in the sky and the pilot's star bank, independent of rendering and storage.
-import { touchesTarget } from './flight.js?v=4';
-import { AIRPORTS, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=4';
+import { touchesTarget } from './flight.js?v=5';
+import { AIRPORTS, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=5';
 
 export const PILOT_KEY = 'viaan-pilot-v1';
 export const BOOST_SECONDS = 3;
@@ -35,12 +35,13 @@ const VALUE = { star: 1, balloon: 3, hoop: 2 };
 export const BIG_STAR = 5, CLOUD_STARS = 2;
 // Stars also come from landing, from a passenger's thank-you and from spotting a sea friend.
 export const LANDING_STARS = 10, GIFT_STARS = 10, SIGHT_STARS = 5;
+export const SHOOTING_STARS = 2;         // for a shooting star seen in the night over Starlight Island
 export const ZOOM_PULL = 2;             // a zooming plane pulls stars in from twice as far
 export const ZOOM_STARS = 6, ZOOM_MAX = 3;  // stars that fill one zoom, and how many zooms the plane holds
 export const WISH_STARS = 3;            // for doing what the passenger asks while the autopilot flies
 const TURN = 36;                        // radius of the bend that starts every star trail
-// Free flying shows one trail leaving each island, a round trip of all three.
-const TOUR = ['sunny>snowy', 'snowy>jungle', 'jungle>sunny'];
+// Free flying shows one trail leaving each island, a round trip of all four.
+const TOUR = ['sunny>snowy', 'snowy>starry', 'starry>jungle', 'jungle>sunny'];
 // What is in the sky right now: island things always, and one star trail. On a passenger
 // trip that is the trail to the destination; any other route name shows no trail at all.
 export const inSky = (thing, route = '') => !thing.route || (route ? thing.route === route : TOUR.includes(thing.route));
@@ -82,7 +83,9 @@ export function routeItems(fromId, toId, obstacles = []) {
     const p = at(i / count), big = i === count - 1 || i === Math.floor(count / 2);
     items.push(big ? bigStar(p.x, p.y, p.z, { route }) : item('star', p.x, p.y, p.z, { route }));
   }
-  for (const t of [.25, .75]) { const p = at(t); items.push(item('hoop', p.x, p.y, p.z, { route, heading: p.heading })); }
+  // Hoops hang over open sea, clear of an island's own ring of stars.
+  const atSea = t => { const p = path.at(t * path.length); return AIRPORTS.every(a => Math.hypot(p.x - a.x, p.z - a.z) > 112); };
+  for (const tries of [[.25, .3, .2, .35], [.75, .7, .65, .8, .6, .55, .5, .45, .4]]) { const p = at(tries.find(atSea) ?? tries[0]); items.push(item('hoop', p.x, p.y, p.z, { route, heading: p.heading })); }
   [.2, .5, .86].forEach((t, i) => { const p = at(t, i % 2 ? 13 : -13); items.push(item('balloon', p.x, p.y + 3, p.z, { route })); });
   return items;
 }

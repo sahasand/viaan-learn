@@ -53,8 +53,9 @@ export function stepFlight(state, input, elapsed, target = null, obstacles = [],
   const speed = clamp(options.speed ?? 10, 6, 28), boundary = options.boundary || 165;
   let steer = { x: clamp(input.x, -1, 1), y: clamp(input.y, -1, 1) };
   // Turn gently back toward the island, with hysteresis to avoid boundary chatter.
-  next.returning = Math.hypot(state.x, state.z) > (state.returning ? boundary * 120 / 165 : boundary);
-  if (next.returning) steer = guidance(state, { x: 0, y: 25, z: 0 });
+  const center = options.center || { x: 0, z: 0 };
+  next.returning = Math.hypot(state.x - center.x, state.z - center.z) > (state.returning ? boundary * 120 / 165 : boundary);
+  if (next.returning) steer = guidance(state, { x: center.x, y: 25, z: center.z });
   else if (target) steer = guidance(state, target);
   const smooth = 1 - Math.exp(-4 * dt);
   next.turn += (steer.x - state.turn) * smooth;

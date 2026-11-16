@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stepFlight, touchesTarget } from './flight.js';
-import { AIRPORTS, airportRunway, approachFor, worldGroundHeight, worldObstacles } from './airline.js';
+import { AIRPORTS, WORLD, airportRunway, approachFor, worldGroundHeight, worldObstacles } from './airline.js';
 import * as S from './sky.js';
 
 const obstacles = worldObstacles(JSON.parse(readFileSync(new URL('./assets/obstacles.json', import.meta.url))));
@@ -11,11 +11,11 @@ const afterTakeoff = id => { const r = airportRunway(id); return { x: r.x, y: r.
 test('the sky holds stars, balloons and hoops that float clear of land, trees and the edge of the world', () => {
   const items = S.buildSky(obstacles);
   assert.ok(items.filter(i => i.kind === 'star').length > 150);
-  assert.equal(items.filter(i => i.kind === 'hoop').length, 12);
-  assert.equal(items.filter(i => i.kind === 'balloon').length, 30);
-  assert.equal(items.filter(i => i.big).length, 3 + 6 * 2, 'a big star over every island, and two on every trail');
+  assert.equal(items.filter(i => i.kind === 'hoop').length, 24);
+  assert.equal(items.filter(i => i.kind === 'balloon').length, 4 * 4 + 12 * 3);
+  assert.equal(items.filter(i => i.big).length, 4 + 12 * 2, 'a big star over every island, and two on every trail');
   for (const thing of items) {
-    assert.ok(Math.hypot(thing.x, thing.z) < 430, 'well inside the turn-back boundary');
+    assert.ok(Math.hypot(thing.x - WORLD.x, thing.z - WORLD.z) < WORLD.radius - 60, 'well inside the turn-back boundary');
     assert.ok(thing.y - worldGroundHeight(thing.x, thing.z) >= 6.4 && thing.y <= 44, `${thing.kind} height ${thing.y}`);
     for (const o of obstacles) if (Math.hypot(thing.x - o.x, thing.z - o.z) < o.radius + 3) assert.ok(thing.y >= o.top + 3);
     assert.equal(thing.taken, false);
@@ -59,7 +59,7 @@ test('every trail starts straight ahead of the takeoff and bends gently toward i
 test('only one star trail is in the sky at a time, and only what is in the sky can be collected', () => {
   const items = S.buildSky(obstacles), island = items.find(i => !i.route), routes = route => new Set(items.filter(i => S.inSky(i, route) && i.route).map(i => i.route));
   assert.deepEqual([...routes('sunny>jungle')], ['sunny>jungle']);
-  assert.deepEqual([...routes('')].sort(), ['jungle>sunny', 'snowy>jungle', 'sunny>snowy'], 'free flying shows one trail leaving each island');
+  assert.deepEqual([...routes('')].sort(), ['jungle>sunny', 'snowy>starry', 'starry>jungle', 'sunny>snowy'], 'free flying shows one trail leaving each island');
   assert.equal(routes('picnic').size, 0);
   for (const route of ['', 'picnic', 'snowy>sunny']) assert.equal(S.inSky(island, route), true);
   // A star from the middle of a trail, well away from where the two trails leaving Sunny Island part.
@@ -76,7 +76,7 @@ test('a helped flight straight from takeoff gathers nearly every star and both h
     let state = afterTakeoff(from.id), steps = 0;
     while (steps++ < 20000) {
       const previous = state, lead = S.nextOnRoute(items, route, state);
-      state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, lead || target, obstacles, { speed: 13, boundary: 490, groundHeight: worldGroundHeight });
+      state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, lead || target, obstacles, { speed: 13, boundary: WORLD.radius, center: WORLD, groundHeight: worldGroundHeight });
       found.push(...S.collectSky(items, previous, state, route));
       if (!lead && touchesTarget(previous, state, target, 8)) break;
     }
@@ -97,7 +97,7 @@ test('a child who only steers left and right, never up or down, still gathers mo
       const previous = state, lead = S.nextOnRoute(items, route, state);
       if (!lead) break;
       const turn = Math.atan2(Math.sin(Math.atan2(lead.x - state.x, -(lead.z - state.z)) - state.heading), Math.cos(Math.atan2(lead.x - state.x, -(lead.z - state.z)) - state.heading));
-      state = stepFlight(state, { x: Math.max(-1, Math.min(1, turn * 1.5)), y: 0 }, 1 / 60, null, obstacles, { speed: 13, boundary: 490, groundHeight: worldGroundHeight });
+      state = stepFlight(state, { x: Math.max(-1, Math.min(1, turn * 1.5)), y: 0 }, 1 / 60, null, obstacles, { speed: 13, boundary: WORLD.radius, center: WORLD, groundHeight: worldGroundHeight });
       got += S.collectSky(items, previous, state, route).filter(i => i.kind === 'star').length;
     }
     assert.ok(got >= stars.length * .7, `${route}: ${got} of ${stars.length} stars`);
@@ -110,12 +110,12 @@ test('help asked for late joins the trail where the plane is and follows it forw
     const route = `${from.id}>${to.id}`, items = S.buildSky(obstacles), target = approachFor(to.id)[0], stars = items.filter(i => i.route === route && i.kind === 'star');
     let state = afterTakeoff(from.id), steps = 0, order = [], turned = 0;
     // Fly straight on for a few seconds first, as a child would before asking for help.
-    for (let i = 0; i < 300; i++) { const previous = state; state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, null, obstacles, { speed: 13, boundary: 490, groundHeight: worldGroundHeight }); S.collectSky(items, previous, state, route); }
+    for (let i = 0; i < 300; i++) { const previous = state; state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, null, obstacles, { speed: 13, boundary: WORLD.radius, center: WORLD, groundHeight: worldGroundHeight }); S.collectSky(items, previous, state, route); }
     const joined = S.nextOnRoute(items, route, state), nearest = stars.filter(i => !i.taken).reduce((a, b) => Math.hypot(a.x - state.x, a.z - state.z) <= Math.hypot(b.x - state.x, b.z - state.z) ? a : b);
     assert.equal(joined, nearest, `${route} joins at the nearest star`);
     while (steps++ < 30000) {
       const previous = state, lead = S.nextOnRoute(items, route, state);
-      state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, lead || target, obstacles, { speed: 13, boundary: 490, groundHeight: worldGroundHeight });
+      state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, lead || target, obstacles, { speed: 13, boundary: WORLD.radius, center: WORLD, groundHeight: worldGroundHeight });
       turned += Math.abs(state.heading - previous.heading);
       order.push(...S.collectSky(items, previous, state, route).filter(i => i.route === route && i.kind === 'star').map(i => stars.indexOf(i)));
       if (!lead && touchesTarget(previous, state, target, 8)) break;
@@ -144,7 +144,7 @@ test('the autopilot flies a whole trip: nearly every star, both hoops, every bal
       const previous = state, next = S.autoTarget(items, route, state, held);
       if (next !== held) { held = next; since = steps; }
       longest = Math.max(longest, steps - since);
-      state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, next || target, obstacles, { speed: 13, guideSpeed: 13, boundary: 490, groundHeight: worldGroundHeight });
+      state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, next || target, obstacles, { speed: 13, guideSpeed: 13, boundary: WORLD.radius, center: WORLD, groundHeight: worldGroundHeight });
       found.push(...S.collectSky(items, previous, state, route));
       if (!next && touchesTarget(previous, state, target, 8)) break;
     }
@@ -165,7 +165,7 @@ test('with nobody aboard the autopilot tours the sky, keeps its choice, and skip
     const previous = state, next = S.autoTarget(items, '', state, held, avoid);
     if (next !== held) { held = next; since = steps; } else if (next && steps - since > 60 * 12) { avoid.add(next); held = null; }
     assert.ok(next, 'there is always something to fly to');
-    state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, next, obstacles, { speed: 13, guideSpeed: 13, boundary: 490, groundHeight: worldGroundHeight });
+    state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, next, obstacles, { speed: 13, guideSpeed: 13, boundary: WORLD.radius, center: WORLD, groundHeight: worldGroundHeight });
     found.push(...S.collectSky(items, previous, state, ''));
   }
   assert.ok(found.length >= 70, `${found.length} things in two and a half minutes`);
@@ -268,7 +268,7 @@ test('a pilot who is not steering up or down is eased to the height of the neare
     const previous = state, lead = S.nextOnRoute(items, route, state), y = S.starHeight(items, route, state);
     if (!lead) break;
     const turn = Math.atan2(Math.sin(Math.atan2(lead.x - state.x, -(lead.z - state.z)) - state.heading), Math.cos(Math.atan2(lead.x - state.x, -(lead.z - state.z)) - state.heading));
-    state = stepFlight(state, { x: Math.max(-1, Math.min(1, turn * 1.5)), y: y === null ? 0 : Math.max(-.6, Math.min(.6, (y - state.y) * .12)) }, 1 / 60, null, obstacles, { speed: 13, boundary: 490, groundHeight: worldGroundHeight });
+    state = stepFlight(state, { x: Math.max(-1, Math.min(1, turn * 1.5)), y: y === null ? 0 : Math.max(-.6, Math.min(.6, (y - state.y) * .12)) }, 1 / 60, null, obstacles, { speed: 13, boundary: WORLD.radius, center: WORLD, groundHeight: worldGroundHeight });
     got += S.collectSky(items, previous, state, route).filter(i => i.kind === 'star').length;
   }
   const stars = items.filter(i => i.kind === 'star').length;

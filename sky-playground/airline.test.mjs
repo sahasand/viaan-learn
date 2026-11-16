@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stepFlight,touchesTarget,angleDelta,runwayLanding,runwayTakeoff} from './flight.js';
-import {AIRPORTS,SPEEDS,airportRunway,approachFor,parkedAt,worldGroundHeight,worldObstacles,newTrip,prepareTrip,arriveTrip,normalizePassport,stampArrival,assistedLanding,nearestAirport} from './airline.js';
+import {AIRPORTS,SPEEDS,airportRunway,approachFor,parkedAt,worldGroundHeight,worldObstacles,newTrip,prepareTrip,arriveTrip,normalizePassport,stampArrival,assistedLanding,nearestAirport,WORLD,nightAt} from './airline.js';
 const local=JSON.parse(readFileSync(new URL('./assets/obstacles.json',import.meta.url))),obstacles=worldObstacles(local);
 
 test('a passenger can depart only after choosing another airport, loading a bag and boarding',()=>{
@@ -16,7 +16,7 @@ test('all six airport routes reach a correctly aligned approach at each speed',(
     let s=runwayTakeoff(parkedAt(from.id),7,airportRunway(from.id)),leg=0,aligned=false;
     const route=approachFor(to.id);
     for(let i=0;i<60*160;i++){
-      const before=s;s=stepFlight(s,{x:0,y:0},1/60,route[leg],obstacles,{speed,boundary:490,groundHeight:worldGroundHeight});
+      const before=s;s=stepFlight(s,{x:0,y:0},1/60,route[leg],obstacles,{speed,boundary:WORLD.radius,center:WORLD,groundHeight:worldGroundHeight});
       if(touchesTarget(before,s,route[leg],4.5)){if(leg===0)leg=1;else if(Math.abs(angleDelta(0,s.heading))<.45){aligned=true;break;}else leg=0;}
     }
     assert.ok(aligned,`${from.id} → ${to.id}, speed ${speed}`);
@@ -38,14 +38,14 @@ test('guided manual landings accept steering but stay in the corridor and finish
 });
 test('full input cannot cross island terrain or cloned obstacle tops in airline flight',()=>{
   for(const a of AIRPORTS){let s={...parkedAt(a.id),y:20};for(let i=0;i<900;i++){
-    s=stepFlight(s,{x:.3,y:-1},1/30,null,obstacles,{speed:19,boundary:490,groundHeight:worldGroundHeight});
+    s=stepFlight(s,{x:.3,y:-1},1/30,null,obstacles,{speed:19,boundary:WORLD.radius,center:WORLD,groundHeight:worldGroundHeight});
     assert.ok(s.y>=worldGroundHeight(s.x,s.z)+5.2-1e-8);
     for(const o of obstacles)if(Math.hypot(s.x-o.x,s.z-o.z)<o.radius+2.8)assert.ok(s.y>=o.top+2-1e-8);
   }}
 });
 test('selected speeds change travel distance while assistance retains tight turns',()=>{
   const start={...parkedAt('sunny'),x:0,z:130,y:25};const distances=[];
-  for(const speed of Object.values(SPEEDS)){let s=start;for(let i=0;i<60;i++)s=stepFlight(s,{x:0,y:0},1/60,null,[],{speed,boundary:490,groundHeight:worldGroundHeight});distances.push(Math.hypot(s.x-start.x,s.z-start.z));}
+  for(const speed of Object.values(SPEEDS)){let s=start;for(let i=0;i<60;i++)s=stepFlight(s,{x:0,y:0},1/60,null,[],{speed,boundary:WORLD.radius,center:WORLD,groundHeight:worldGroundHeight});distances.push(Math.hypot(s.x-start.x,s.z-start.z));}
   assert.ok(distances[0]<distances[1]&&distances[1]<distances[2]);
 });
 test('landing at the wrong airport cannot finish a trip or award passport progress',()=>{
@@ -61,11 +61,24 @@ test('passport reload validates unknown stamps and invalid counts',()=>{
 });
 test('airline boundary turns back without preventing inter-island travel',()=>{
   let s={...parkedAt('sunny'),x:500,z:0,y:30,heading:Math.PI/2},cameBack=false;
-  for(let i=0;i<3600;i++){s=stepFlight(s,{x:0,y:0},1/60,null,[],{speed:19,boundary:490,groundHeight:worldGroundHeight});if(Math.hypot(s.x,s.z)<355){cameBack=true;break;}}
+  for(let i=0;i<3600;i++){s=stepFlight(s,{x:0,y:0},1/60,null,[],{speed:19,boundary:WORLD.radius,center:WORLD,groundHeight:worldGroundHeight});if(Math.hypot(s.x-WORLD.x,s.z-WORLD.z)<330){cameBack=true;break;}}
   assert.ok(cameBack);
 });
-test('both added destinations have valid local Blender exports and distinct palettes',()=>{
+test('every destination has a valid local Blender export and its own palette',()=>{
   const colors=[];
   for(const a of AIRPORTS){const b=readFileSync(new URL(`./assets/${a.asset}.glb`,import.meta.url));assert.equal(b.toString('ascii',0,4),'glTF');const g=JSON.parse(b.toString('utf8',20,20+b.readUInt32LE(12)));assert.ok(g.meshes.length>5);colors.push(JSON.stringify(g.materials.find(m=>m.name==='Meadow 0').pbrMetallicRoughness.baseColorFactor));}
-  assert.equal(new Set(colors).size,3);
+  assert.equal(new Set(colors).size,AIRPORTS.length);
+});
+test('all four islands and their approaches are well inside the edge of the world',()=>{
+  assert.equal(AIRPORTS.length,4);
+  for(const a of AIRPORTS){
+    assert.ok(Math.hypot(a.x-WORLD.x,a.z-WORLD.z)+101<WORLD.radius-60,`${a.id} is clear of the edge`);
+    for(const p of approachFor(a.id))assert.ok(Math.hypot(p.x-WORLD.x,p.z-WORLD.z)<WORLD.radius*120/165,`${a.id} approach is where a turned-back plane is let go`);
+    for(const b of AIRPORTS)if(a!==b)assert.ok(Math.hypot(a.x-b.x,a.z-b.z)>240,`${a.id} and ${b.id} do not touch`);
+  }
+});
+test('it is night over Starlight Island, day over the others, and dusk on the way in',()=>{
+  for(const a of AIRPORTS)assert.equal(nightAt(a.x,a.z),a.id==='starry'?1:0,a.id);
+  const end=approachFor('starry')[0];assert.equal(nightAt(end.x,end.z),1,'the landing approach is flown in the dark');
+  let last=0;for(let z=0;z>=-420;z-=10){const n=nightAt(22,z);assert.ok(n>=last&&n-last<.2,'the sky darkens smoothly');last=n;}
 });

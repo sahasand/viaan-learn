@@ -1,16 +1,16 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=4';
+import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=5';
 
-import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=4';
-import { createFun } from './fx.js?v=4';
-import { createTunes } from './tunes.js?v=4';
-import { AIRPORTS, SPEEDS, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=4';
+import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, SHOOTING_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=5';
+import { createFun } from './fx.js?v=5';
+import { createTunes } from './tunes.js?v=5';
+import { AIRPORTS, SPEEDS, WORLD, nightAt, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=5';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let renderer, scene, camera, plane, propeller, water, sun, beacon;
+let renderer, scene, camera, plane, propeller, water, sun, hemi, beacon;
 let state = initialFlight(), phase = 'loading', collected = 0, guided = false;
 let paused = false, soundOn = false, pointer = null, toastUntil = 0, hintUntil = 12;
 let elapsed = 0, lastTime = 0, lastMap = 0, landingTime = 0, landingStart;
@@ -23,6 +23,9 @@ let passport=normalizePassport(savedPassport);
 const approachLights=new Map();
 let audio, away = false, touched = false, zoom = freshZoom(), toyAt = -9;
 // The autopilot: a mode that stays on until its button is tapped again. `guided` says whether it is steering right now.
+// Which part of the airport card is showing (a chosen flight shows its boarding instead of 'pick'),
+// the number last shown by the takeoff countdown, and how dark the sky was last drawn.
+let boardView = 'pick', countShown = '', nightShown = -1, nightSaid = false;
 let autopilot = false, autoHeld = null, autoSince = 0, autoTrickAt = 0, handsAt = -9, wish = null, nextWish = 0, wishes = 0;
 const shy = new Set();
 let skyItems = [], fun = null, tunes = null, flightStars = 0, starStreak = 0, lastStarAt = -9, boostUntil = -1, bubbleUntil = 0;
@@ -30,6 +33,7 @@ let savedPilot; try { savedPilot = localStorage.getItem(PILOT_KEY); } catch {}
 let pilot = normalizePilot(savedPilot);
 const rings = [], clouds = [], boats = [], birds = [], particles = [];
 const particleGeometry = new THREE.SphereGeometry(.15, 5, 4);
+let shade;
 const v = new THREE.Vector3(), cameraGoal = new THREE.Vector3(), lookGoal = new THREE.Vector3();
 const currentLook = new THREE.Vector3(), currentCamera = new THREE.Vector3();
 const map = $('map').getContext('2d');
@@ -84,17 +88,17 @@ function toast(text, seconds = 3) {
 function makeOcean() {
   // Small geometric waves; no textures, network services, or expensive reflections.
   const material = new THREE.ShaderMaterial({
-    uniforms: { time: { value: 0 }, fogColor: { value: new THREE.Color('#bde5df') } },
+    uniforms: { time: { value: 0 }, night: { value: 0 }, fogColor: { value: new THREE.Color('#bde5df') } },
     vertexShader: `uniform float time; varying vec3 world; varying float depth;
       void main(){ vec3 p=position; p.z += sin(p.x*.065+time*.7)*.10 + cos(p.y*.08+time*.5)*.08;
         vec4 w=modelMatrix*vec4(p,1.);world=w.xyz;vec4 mv=viewMatrix*w;depth=-mv.z;gl_Position=projectionMatrix*mv; }`,
-    fragmentShader: `uniform float time; uniform vec3 fogColor; varying vec3 world; varying float depth;
+    fragmentShader: `uniform float time, night; uniform vec3 fogColor; varying vec3 world; varying float depth;
       void main(){ float ripple=sin(world.x*.45+world.z*.19+time)*sin(world.z*.37-time*.6);
         vec3 col=mix(vec3(.16,.66,.69),vec3(.29,.77,.77),ripple*.5+.5);
         float glint=pow(max(0.,sin(world.x*.76+world.z*.35+time*.8)),28.)*pow(max(0.,cos(world.z*.86-time*.6)),18.);
-        col+=vec3(.20,.20,.13)*glint; col=mix(col,fogColor,smoothstep(100.,350.,depth));gl_FragColor=vec4(col,1.); }`
+        col=mix(col,col*vec3(.13,.2,.42)+vec3(.012,.02,.07),night); col+=vec3(.20,.20,.13)*glint*(1.+night*1.5); col=mix(col,fogColor,smoothstep(100.,350.,depth));gl_FragColor=vec4(col,1.); }`
   });
-  water = mesh(new THREE.PlaneGeometry(1200, 1200, 90, 90), material, 0, -.1, 0);
+  water = mesh(new THREE.PlaneGeometry(1900, 1900, 120, 120), material, WORLD.x, -.1, WORLD.z);
   water.rotation.x = -Math.PI / 2;
   // A wide translucent turquoise shelf makes the sandy island read against the sea.
   const shelf = mesh(new THREE.CircleGeometry(1, 80), new THREE.MeshBasicMaterial({ color: '#71d2c5', transparent: true, opacity: .37, depthWrite: false }), 0, .12, 0);
@@ -284,27 +288,38 @@ function airportBoard() {
   if ($('celebration').open) $('celebration').close();
   if ($('menu').open) $('menu').close();
   $('departureAirport').textContent = airportById(currentAirport).airport;
+  const view = boardView === 'hangar' ? 'hangar' : trip?.status === 'boarding' ? 'board' : 'pick';
+  $('airportBoard').dataset.view = view;
+  $('airportHeading').textContent = view === 'hangar' ? 'My plane' : view === 'board' ? `Off to ${airportById(trip.destination).name}!` : 'Where shall we fly?';
+  // One big ticket for each of the other islands; a place not yet visited says so.
   $('destinationCards').innerHTML = AIRPORTS.filter(a => a.id !== currentAirport).map(a =>
-    `<button class="destination-card ${trip?.destination === a.id ? 'selected' : ''}" data-destination="${a.id}" aria-pressed="${trip?.destination === a.id}"><span class="destination-sky ${a.id}"><span>${a.icon}</span><img src="../memory-assets/${a.animal}.png" alt=""></span><strong>${a.name}</strong><small>${a.passenger} wants ${a.wish}</small><b>Choose this flight →</b></button>`).join('');
+    `<button class="ticket" data-destination="${a.id}"><span class="ticket-sky ${a.id}"><i aria-hidden="true">${a.icon}</i><img src="../memory-assets/${a.animal}.png" alt=""></span><span class="ticket-words"><strong>${a.name}</strong><small>${a.passenger} wants ${a.wish}</small></span>${passport.stamps.includes(a.id) ? '' : '<em>New!</em>'}<b aria-hidden="true">➜</b></button>`).join('');
   $('destinationCards').querySelectorAll('button').forEach(b => b.onclick = () => {
-    trip = newTrip(currentAirport, b.dataset.destination); mode = 'airline'; airportBoard(); tunes?.tap();
+    trip = newTrip(currentAirport, b.dataset.destination); mode = 'airline'; boardView = 'pick'; airportBoard(); tunes?.tap();
     say(`${airportById(trip.destination).passenger} is coming with you! First, load the suitcase.`);
   });
-  $('boardingSteps').hidden = !trip || trip.status !== 'boarding';
+  $('boardingSteps').hidden = view !== 'board';
   if (trip?.status === 'boarding') {
-    const a = airportById(trip.destination);
-    $('boardingPortrait').src = `../memory-assets/${a.animal}.png`;
-    $('boardingName').textContent = `${a.passenger} is ready!`;
-    $('loadBag').innerHTML = '<span class="suitcase" aria-hidden="true"></span>' + (trip.bag ? '✓ Bag loaded' : '1. Load the suitcase'); $('loadBag').disabled = trip.bag;
-    $('boardPassenger').textContent = trip.boarded ? `✓ ${a.passenger} is aboard` : `2. Welcome ${a.passenger}`; $('boardPassenger').disabled = !trip.bag || trip.boarded;
-    $('depart').disabled = !trip.bag || !trip.boarded;
-    $('boardingStatus').textContent = trip.boarded ? 'All aboard. You’re ready for takeoff!' : trip.bag ? 'Now welcome your passenger aboard.' : 'Tap the suitcase to put it on the plane.';
+    // Boarding shows one big button at a time: the suitcase, then the friend, then takeoff.
+    const a = airportById(trip.destination), scene = $('boardScene');
+    $('boardingPortrait').src = `../memory-assets/${a.animal}.png`; scene.dataset.place = a.id;
+    scene.classList.toggle('bag', trip.bag); scene.classList.toggle('aboard', trip.boarded);
+    $('boardingName').textContent = trip.boarded ? 'All aboard!' : trip.bag ? `Now welcome ${a.passenger}!` : `${a.passenger} is ready!`;
+    $('boardingStatus').textContent = trip.boarded ? 'Ready for takeoff!' : trip.bag ? `Tap to let ${a.passenger} hop in.` : 'Tap the suitcase to put it on the plane.';
+    $('loadBag').innerHTML = '<span aria-hidden="true">🧳</span> Load the suitcase'; $('loadBag').disabled = trip.bag; $('loadBag').hidden = trip.bag;
+    $('boardPassenger').innerHTML = `<span aria-hidden="true">👋</span> Welcome ${a.passenger}!`; $('boardPassenger').disabled = !trip.bag || trip.boarded; $('boardPassenger').hidden = !trip.bag || trip.boarded;
+    $('depart').disabled = !trip.bag || !trip.boarded; $('depart').hidden = !trip.boarded;
+    $('dotBag').classList.toggle('done', trip.bag); $('dotFriend').classList.toggle('done', trip.boarded);
   }
+  // My plane glows when the stars can buy something new.
+  $('openHangar').classList.toggle('ready', [...PLANE_PAINTS, ...PLANE_TRAILS, ...PLANE_TOYS].some(i => i.cost && !pilotOwns(pilot, i) && pilot.stars >= i.cost));
+  $('starBankOpen').textContent = pilot.stars;
   $('passportStamps').innerHTML = AIRPORTS.map(a => `<span class="passport-stamp ${passport.stamps.includes(a.id) ? 'earned' : ''}"><b>${passport.stamps.includes(a.id) ? a.icon : '○'}</b>${a.name}</span>`).join('');
   $('tripTotal').textContent = `${passport.trips} happy passenger trip${passport.trips === 1 ? '' : 's'}`;
   renderHangar();
   // Opening the card puts keyboard focus on the first flight rather than on the sound button.
   if (!$('airportBoard').open) { $('airportBoard').showModal(); $('destinationCards').querySelector?.('button')?.focus(); }
+  else if (view === 'board') [$('loadBag'), $('boardPassenger'), $('depart')].find(b => !b.hidden)?.focus?.();
   updateMission(); updateSound();
 }
 function leaveAirport(free = false) {
@@ -314,7 +329,7 @@ function leaveAirport(free = false) {
   $('airportBoard').close(); $('celebration').close();
   paused = false; phase = 'takeoff'; landingTime = 0; landingStart = { ...state };
   clearInput(); setGuided(false); updatePassenger(); newSky(); updateMission(); updateSound();
-  lastTime = performance.now(); toast('Rolling down the runway…', 4); tunes?.ding();
+  lastTime = performance.now(); countShown = ''; boardView = 'pick';
   say(free ? 'Cleared for takeoff!' : 'Passenger ready. Bags ready. Cleared for takeoff!');
 }
 function openLandingChoice() {
@@ -331,7 +346,7 @@ function beginLanding(style) {
 }
 function restartAirline() {
   for (const id of ['menu','celebration','airportBoard','landingChoice']) if ($(id).open) $(id).close();
-  mode = 'airline'; trip = null; currentAirport = 'sunny'; landingAirport = 'sunny';
+  mode = 'airline'; trip = null; boardView = 'pick'; currentAirport = 'sunny'; landingAirport = 'sunny';
   clearInput(); state = parkedAt('sunny'); phase = 'parked'; paused = true; airportLeg = -1;
   collected = 0; freeFlight = true; landingStyle = 'hands'; chooseSpeed('cruise'); autopilot = false; setGuided(false);
   updatePassenger(); updateMission(); setCamera(true); airportBoard();
@@ -340,8 +355,8 @@ function updatePassenger() {
   if (!passengerModel) return;
   passengerModel.visible = trip?.boarded && trip.status !== 'arrived';
   const name = trip ? airportById(trip.destination).animal : 'panda';
-  passengerModel.getObjectByName('Passenger head').material.color.set(name === 'frog' ? '#92bb70' : name === 'penguin' ? '#374954' : '#ffefcf');
-  passengerModel.children.filter(o => o.name === 'Passenger ear').forEach(o => { o.visible = name !== 'penguin'; o.material.color.set(name === 'frog' ? '#92bb70' : '#374954'); });
+  passengerModel.getObjectByName('Passenger head').material.color.set(name === 'frog' ? '#92bb70' : name === 'penguin' ? '#374954' : name === 'owl' ? '#b98a5a' : '#ffefcf');
+  passengerModel.children.filter(o => o.name === 'Passenger ear').forEach(o => { o.visible = name !== 'penguin'; o.material.color.set(name === 'frog' ? '#92bb70' : name === 'owl' ? '#8a5f38' : '#374954'); });
 }
 function makePassenger() {
   passengerModel = new THREE.Group(); passengerModel.position.set(0,.65,.83);
@@ -394,7 +409,7 @@ function updateMission() {
     const dest=airportById(airportLeg>=0?landingAirport:tripAirport());
     $('missionIcon').innerHTML=trip?.boarded?`<img src="../memory-assets/${airportById(trip.destination).animal}.png" alt="">`:'✈';
     $('missionKicker').textContent=phase==='parked'?airportById(currentAirport).airport:airportLeg>=0?dest.airport:trip?'HAPPY PASSENGER FLIGHT':'FREE FLIGHT';
-    $('missionTitle').textContent=phase==='takeoff'?'Ready, set, fly!':phase==='landing'?(landingStyle==='hands'?'You’re landing the plane!':'A lovely gentle landing'):phase==='parked'?'Where shall we go?':trip?`${dest.passenger} → ${dest.name}`:'Explore our three islands';
+    $('missionTitle').textContent=phase==='takeoff'?'Ready, set, fly!':phase==='landing'?(landingStyle==='hands'?'You’re landing the plane!':'A lovely gentle landing'):phase==='parked'?'Where shall we go?':trip?`${dest.passenger} → ${dest.name}`:'Explore our four islands';
     $('missionSubtitle').textContent=phase==='landing'?(landingStyle==='hands'?'Steer gently. Helping wings keep you safe.':'Wheels down. Rolling to a stop.'):airportLeg>=0?'Follow the glowing runway gates':phase==='takeoff'?'Speeding up along the runway':autopilot?'You do the tricks! 🤖':trip?'Follow the stars! ⭐':'Find stars. Pop balloons. Land anywhere.';
     $('land').innerHTML=phase==='landing'&&landingStyle==='hands'?'Land for me':airportLeg>=0&&phase==='flying'?'Keep flying':'↘ Land';
     $('land').disabled=!(phase==='flying'||phase==='landing'&&landingStyle==='hands');
@@ -503,6 +518,9 @@ function setupControls() {
   $('planePaints').addEventListener('click', e => { const b = e.target.closest('[data-paint]'); if (b) choosePlane('paint', b.dataset.paint); });
   $('planeTrails').addEventListener('click', e => { const b = e.target.closest('[data-trail]'); if (b) choosePlane('trail', b.dataset.trail); });
   $('airportPicnic').addEventListener('click',restart);
+  $('openHangar').addEventListener('click',()=>{boardView='hangar';airportBoard();tunes?.tap();});
+  $('closeHangar').addEventListener('click',()=>{boardView='pick';airportBoard();tunes?.tap();});
+  $('otherPlaces').addEventListener('click',()=>{trip=null;boardView='pick';updatePassenger();airportBoard();tunes?.tap();});
   $('freeFly').addEventListener('click',()=>leaveAirport(true));
   $('loadBag').addEventListener('click',()=>{trip=prepareTrip(trip,'bag');airportBoard();tunes?.thump();});
   $('boardPassenger').addEventListener('click',()=>{trip=prepareTrip(trip,'board');updatePassenger();airportBoard();tunes?.hello(airportById(trip.destination).animal);});
@@ -530,7 +548,7 @@ function setupControls() {
   });
   $('explore').addEventListener('click', () => {
     if (phase !== 'parked') return;
-    if(mode!=='picnic'){trip=null;airportBoard();return;}
+    if(mode!=='picnic'){trip=null;boardView='pick';airportBoard();return;}
     $('celebration').close(); paused = false; phase = 'takeoff'; landingTime = 0;
     landingStart = { ...state }; clearInput(); setGuided(false); updateMission(); toast('Rolling down the runway… 🛫', 4); updateSound();
   });
@@ -577,11 +595,11 @@ function setCamera(immediate = false, dt = 0) {
   camera.position.copy(currentCamera); camera.lookAt(currentLook);
 }
 function drawMap() {
-  const c=map, airline=mode!=='picnic', scale=airline?.20:.54;
-  const toX=x=>80+x*scale,toY=z=>80+(z+(airline?85:0))*scale;
+  const c=map, airline=mode!=='picnic', scale=airline?.17:.54;
+  const toX=x=>80+x*scale,toY=z=>80+(z+(airline?165:0))*scale;
   c.clearRect(0,0,160,160);
   for(const a of airline?AIRPORTS:[AIRPORTS[0]]) {
-    c.fillStyle=a.id==='snowy'?'#e4edf0':a.id==='jungle'?'#6caa70':'#a6c889';c.beginPath();c.ellipse(toX(a.x),toY(a.z),90*scale,72*scale,0,0,Math.PI*2);c.fill();
+    c.fillStyle=a.id==='snowy'?'#e4edf0':a.id==='jungle'?'#6caa70':a.id==='starry'?'#7d76cf':'#a6c889';c.beginPath();c.ellipse(toX(a.x),toY(a.z),90*scale,72*scale,0,0,Math.PI*2);c.fill();
     c.strokeStyle='#fff2ce';c.lineWidth=3;c.beginPath();c.moveTo(toX(a.x+22),toY(a.z+16));c.lineTo(toX(a.x+22),toY(a.z+60));c.stroke();
     if(airline){c.fillStyle='#265552';c.font='bold 13px sans-serif';c.textAlign='center';c.fillText(a.icon,toX(a.x),toY(a.z)-2);}
   }
@@ -621,7 +639,7 @@ function updateFlight(dt) {
     const level = starHeight(skyItems, skyRoute(), state);
     if (level !== null) fly = { x: steer.x, y: clamp((level - state.y) * .12, -.6, .6) };
   }
-  state = stepFlight(state, fly, dt, guided ? guideTarget() : null, obstacles, {speed:SPEEDS[speedMode]*(elapsed<boostUntil?BOOST_SPEED:1),guideSpeed:airportLeg>=0||mode==='picnic'?(elapsed<boostUntil?15:10):elapsed<boostUntil?19:Math.min(SPEEDS[speedMode],14),boundary:mode === 'picnic' ? 165 : 490,groundHeight:mode === 'picnic' ? groundHeight : worldGroundHeight});
+  state = stepFlight(state, fly, dt, guided ? guideTarget() : null, obstacles, {speed:SPEEDS[speedMode]*(elapsed<boostUntil?BOOST_SPEED:1),guideSpeed:airportLeg>=0||mode==='picnic'?(elapsed<boostUntil?15:10):elapsed<boostUntil?19:Math.min(SPEEDS[speedMode],14),boundary:mode === 'picnic' ? 165 : WORLD.radius,center:mode === 'picnic' ? null : WORLD,groundHeight:mode === 'picnic' ? groundHeight : worldGroundHeight});
   if (state.returning && !previous.returning) toast('Let’s turn back toward our islands. ☀️');
   const found = collectSky(skyItems, previous, state, skyRoute(), elapsed < boostUntil ? ZOOM_PULL : 1);
   if (found.length) gather(found);
@@ -681,6 +699,12 @@ function updateLanding(dt) {
     }
   } else {
     state = runwayTakeoff(landingStart, landingTime, airportRunway(currentAirport));
+    // Three, two, one, go! The plane leaves the ground as the count ends.
+    const count = landingTime < 2.4 ? String(3 - Math.floor(landingTime / .8)) : landingTime < 3.6 ? 'Go!' : '';
+    if (count !== countShown) {
+      const el = $('countdown'); countShown = count; el.textContent = count; el.classList.remove('tick'); void el.offsetWidth; if (count) el.classList.add('tick');
+      if (count === 'Go!') chime(true); else if (count) tunes?.ding();
+    }
     if (state.finished) { phase = 'flying'; airportLeg = -1; updateMission(); updateSound(); chime(); toast(autopilot ? 'Autopilot on! 🤖 You do the tricks.' : 'You’re flying! ✈'); }
   }
 }
@@ -711,6 +735,15 @@ function animate(now) {
       if (p.userData.life <= 0) { scene.remove(p); p.material.dispose(); particles.splice(i, 1); }
     }
     setCamera(false, dt);
+    const night = mode === 'picnic' ? 0 : nightAt(state.x, state.z);
+    if (Math.abs(night - nightShown) > .004) {
+      nightShown = night; shade ||= new THREE.Color();
+      hemi.intensity = 2 - night * 1.1; hemi.color.set('#fff2d2').lerp(shade.set('#93a4ff'), night); hemi.groundColor.set('#568c84').lerp(shade.set('#1d2452'), night);
+      sun.intensity = 2.5 - night * 1.95; sun.color.set('#fff3db').lerp(shade.set('#b3c0ff'), night);
+      water.material.uniforms.night.value = night; fun?.night(night);
+    }
+    if (night > .6 && !nightSaid && phase === 'flying') { nightSaid = true; chatter('Look, the stars are coming out! 🌙', 3.5); }
+    if (night < .2) nightSaid = false;
     sun.position.set(state.x + 60, 120, state.z + 50); sun.target.position.set(state.x, 0, state.z);
   }
   tunes?.engine(state.speed, state.climb, !paused && inFlight(), elapsed < boostUntil); tunes?.hurry(!paused && elapsed < boostUntil);
@@ -722,6 +755,7 @@ function animate(now) {
       else if (sight === 'splash') { tunes?.splash(); chatter('Splash! 💦'); }
       else if (phase !== 'flying') continue;
       else if (sight === 'whale') { chatter(`Look, a whale! 🐋 +${SIGHT_STARS} ⭐`); tunes?.chime(); bank(SIGHT_STARS); }
+      else if (sight === 'shooting') { chatter(`A shooting star! Make a wish! 🌠 +${SHOOTING_STARS} ⭐`, 3); tunes?.chime(true); bank(SHOOTING_STARS); }
       else if (sight === 'dolphins') { chatter(`Dolphins! 🐬 +${SIGHT_STARS} ⭐`); tunes?.chime(); bank(SIGHT_STARS); }
       else { tunes?.poof(); chatter(`Poof! ☁️ +${CLOUD_STARS} ⭐`); bank(CLOUD_STARS); }
     }
@@ -752,7 +786,7 @@ async function init() {
     renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     scene = new THREE.Scene(); scene.background = new THREE.Color('#bde5df'); scene.fog = new THREE.Fog('#bde5df', 170, 600);
     camera = new THREE.PerspectiveCamera(56, innerWidth / innerHeight, .2, 900);
-    scene.add(new THREE.HemisphereLight('#fff2d2', '#568c84', 2.0));
+    hemi = new THREE.HemisphereLight('#fff2d2', '#568c84', 2.0); scene.add(hemi);
     sun = new THREE.DirectionalLight('#fff3db', 2.5); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = -45; sun.shadow.camera.right = 45;
     sun.shadow.camera.top = 45; sun.shadow.camera.bottom = -45; sun.shadow.camera.far = 240;

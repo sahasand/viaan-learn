@@ -1,9 +1,10 @@
 # Little Pilot
 
-A forgiving 3D airline playground for Viaan, with original Blender models and three
+A forgiving 3D airline playground for Viaan, with original Blender models and four
 island airports. Choose a destination, load a suitcase, welcome an animal passenger,
 take off, and bring them safely to their holiday. Sunny Island welcomes Panda,
-Snowy Mountain welcomes Penguin, and Jungle Bay welcomes Frog.
+Snowy Mountain welcomes Penguin, Jungle Bay welcomes Frog, and Starlight Island,
+where it is always night, welcomes Owl.
 
 ## Play locally
 
@@ -20,8 +21,17 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 
 ## Controls and journeys
 
-- Pick one of the other two islands at the airport. Load the suitcase, welcome the
-  passenger, then tap **Take off**. Each arrival opens boarding at the new airport.
+- The airport card shows one thing at a time. First a big ticket for each of the other
+  three islands (one not yet visited says **New!**), with **My plane** and **Just fly**
+  beneath. A chosen ticket opens boarding, which shows a single big button: load the
+  suitcase, welcome the passenger, then **Take off**. **Pick another place** goes back.
+  **My plane** is a page of its own and glows when the stars can buy something.
+- Takeoff counts **3, 2, 1, Go!** as the plane rolls and lifts off.
+- Flying toward Starlight Island the day turns to dusk and then night (`nightAt` in
+  `airline.js`): the lights dim, the sea darkens, and stars, a sleepy moon, northern
+  lights and drifting lanterns fade in. The island's trees and houses glow. Now and
+  then a shooting star crosses ahead of the plane and the passenger makes a wish, for
+  two stars. Flying away brings the day back. It has its own lullaby.
 - Drag on the sky to steer; move up to climb and release to level out. Arrow keys or
   WASD also steer. The plane avoids terrain and mapped trees/buildings.
 - **Slow**, **Cruise**, and **Fast** change free steering speed. Guidance slows down
@@ -93,7 +103,8 @@ blender --background --factory-startup --python sky-playground/tools/build_asset
 blender --background --factory-startup --python sky-playground/tools/build_destinations.py
 ```
 
-The second script derives snowy and jungle material variants from Sunny Island.
+The second script derives the snowy, jungle and starry material variants from Sunny
+Island; island names after `--` build only those (`... -- starry-island`).
 They share geometry and local obstacle coordinates, translated per airport. If
 moving buildings or trees, update `assets/obstacles.json` to match. The analytic
 terrain formula in `flight.js` matches the original asset generator.
@@ -121,7 +132,9 @@ state, saved pilot, sound module and sky items for checking by hand.
 node --test sky-playground/*.test.mjs
 ```
 
-Tests cover all six inter-airport routes at every speed, runway alignment and
+Tests cover all twelve inter-airport routes at every speed, the islands and their
+approaches sitting inside the edge of the world (`WORLD` in `airline.js`), night and
+dusk, the airport card's pages, the takeoff countdown, runway alignment and
 rollout, takeoff, steering effects and safe touchdown at 20–120 Hz, world terrain
 and obstacle clearance, boundaries, passport validation, boarding order, pause and
 resume, mid-glide takeover, original picnic availability, and GLB integrity.
@@ -132,7 +145,8 @@ the sky, helped and height-blind flights gathering the trail, help joining late
 without turning back, the autopilot flying every trip and touring without circling, single collection, the tall reach and the wider reach while
 zooming, the height help, zoom charging, reset, validated pilot saves, unlocks and
 their announcement, and matching version numbers.
-Browser checks should cover complete passenger trips, the first stars in view after
+Browser checks should cover the airport card's three pages on a phone both ways up, a
+flight into the night and back out, complete passenger trips, the first stars in view after
 takeoff, star collecting and the saved total after leaving mid-flight, a hoop zoom, a
 loop, the zoom button filling and emptying, each toy, the landing bonuses, an autopilot
 trip with a wish granted and a landing, an unlock in My plane, sound on at the airport and remembered after a reload,

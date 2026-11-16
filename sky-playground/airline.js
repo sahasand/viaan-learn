@@ -1,12 +1,23 @@
 // Airline journeys and world coordinates, independent of rendering and storage.
-import { clamp, groundHeight, RUNWAY, AIRPORT_APPROACH, runwayLanding } from './flight.js?v=4';
+import { clamp, groundHeight, RUNWAY, AIRPORT_APPROACH, runwayLanding } from './flight.js?v=5';
 export const AIRPORTS = [
   { id:'sunny', name:'Sunny Island', airport:'Sunny Airport', x:0, z:0, icon:'☀', color:'#edd28b', animal:'panda', passenger:'Panda', wish:'a day at the beach', asset:'sunny-island' },
   { id:'snowy', name:'Snowy Mountain', airport:'Snowflake Airport', x:-235, z:-190, icon:'❄', color:'#c5deeb', animal:'penguin', passenger:'Penguin', wish:'a snowy holiday', asset:'snowy-island' },
-  { id:'jungle', name:'Jungle Bay', airport:'Jungle Airport', x:235, z:-180, icon:'❀', color:'#b3d7a1', animal:'frog', passenger:'Frog', wish:'a jungle picnic', asset:'jungle-island' }
+  { id:'jungle', name:'Jungle Bay', airport:'Jungle Airport', x:235, z:-180, icon:'❀', color:'#b3d7a1', animal:'frog', passenger:'Frog', wish:'a jungle picnic', asset:'jungle-island' },
+  // Starlight Island is always in the night: see nightAt.
+  { id:'starry', name:'Starlight Island', airport:'Moonbeam Airport', x:0, z:-420, icon:'☾', color:'#8f8ad6', animal:'owl', passenger:'Owl', wish:'a night full of stars', asset:'starry-island' }
 ];
-export const SPEEDS = { slow:8, cruise:13, fast:19 };
+// How dark the sky is at a place, from 0 (day) to 1 (night). It is always night over
+// Starlight Island and dusk on the way in.
+export const NIGHT = { near: 150, far: 320 };
+export function nightAt(x, z) {
+  const a=airportById('starry'), t=clamp((NIGHT.far-Math.hypot(x-a.x,z-a.z))/(NIGHT.far-NIGHT.near),0,1);
+  return t*t*(3-2*t);
+}
+// The middle of the four islands, and how far from it the plane may go before it is turned back.
+export const WORLD = { x: 0, z: -170, radius: 440 };
 export const airportById = id => AIRPORTS.find(a=>a.id===id) || AIRPORTS[0];
+export const SPEEDS = { slow:8, cruise:13, fast:19 };
 export function airportRunway(id) {
   const a=airportById(id); return {...RUNWAY,x:RUNWAY.x+a.x,touchdownZ:RUNWAY.touchdownZ+a.z,stopZ:RUNWAY.stopZ+a.z};
 }

@@ -1,7 +1,7 @@
 // The playful layer of Little Pilot: things to collect, sparkles, sea friends,
 // runway fans, plane paint and trails. Rules live in sky.js; this file only draws.
 import * as THREE from 'three';
-import { PLANE_PAINTS, inSky, reachOf } from './sky.js?v=4';
+import { PLANE_PAINTS, inSky, reachOf } from './sky.js?v=5';
 
 const PARTY = ['#eb6548', '#ffc44e', '#58c7b0', '#f2559c', '#5b8def', '#ffffff'];
 const BALLOONS = ['#f2559c', '#ffc44e', '#5b8def', '#58c7b0', '#eb6548', '#8a55e0'];
@@ -19,12 +19,12 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, gro
   const horizon = new THREE.Color('#d3f1f6');
   const sky = new THREE.Mesh(new THREE.SphereGeometry(840, 24, 14), new THREE.ShaderMaterial({
     side: THREE.BackSide, depthWrite: false, fog: false,
-    uniforms: { top: { value: new THREE.Color('#2f97ea') }, horizon: { value: horizon }, sunDir: { value: new THREE.Vector3(.4, .78, .32).normalize() } },
+    uniforms: { top: { value: new THREE.Color('#2f97ea') }, horizon: { value: horizon }, sunGlow: { value: 1 }, sunDir: { value: new THREE.Vector3(.4, .78, .32).normalize() } },
     vertexShader: 'varying vec3 dir; void main(){ dir = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }',
-    fragmentShader: `uniform vec3 top, horizon, sunDir; varying vec3 dir;
+    fragmentShader: `uniform vec3 top, horizon, sunDir; uniform float sunGlow; varying vec3 dir;
       void main(){ vec3 d = normalize(dir); float h = clamp(d.y, 0., 1.);
         vec3 c = mix(horizon, top, pow(h, .55)); float s = max(dot(d, sunDir), 0.);
-        c += vec3(1., .95, .78) * (pow(s, 380.) * 1.4 + pow(s, 9.) * .22);
+        c += vec3(1., .95, .78) * (pow(s, 380.) * 1.4 + pow(s, 9.) * .22) * sunGlow;
         gl_FragColor = vec4(c, 1.);
         #include <colorspace_fragment>
       }`
@@ -32,6 +32,83 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, gro
   sky.frustumCulled = false; sky.renderOrder = -1; scene.add(sky);
   scene.background = horizon; scene.fog.color.copy(horizon);
   if (water?.material?.uniforms?.fogColor) water.material.uniforms.fogColor.value.copy(horizon);
+
+  /* ---------- night over Starlight Island ---------- */
+  // Everything here fades in with `dark`, from 0 (day) to 1 (night): see nightAt in airline.js.
+  const DAY = { top: new THREE.Color('#2f97ea'), horizon: new THREE.Color('#d3f1f6') }, NIGHT = { top: new THREE.Color('#070b33'), horizon: new THREE.Color('#34388c') };
+  const starry = airports.find(a => a.id === 'starry') || { x: 0, z: 0 }, glow = { transparent: true, opacity: 0, depthWrite: false, fog: false };
+  let dark = 0, nextShooting = 5, shooter = null;
+  // A soft round dot, for stars and lanterns.
+  const dot = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), fill = g.createRadialGradient(32, 32, 0, 32, 32, 32); fill.addColorStop(0, '#fff'); fill.addColorStop(.35, '#ffffffcc'); fill.addColorStop(1, '#fff0'); g.fillStyle = fill; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  const starField = (() => {
+    const count = 620, at = new Float32Array(count * 3), hue = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const a = rand() * Math.PI * 2, up = .04 + rand() * .96, flat = Math.sqrt(1 - up * up), bright = .55 + rand() * .45, warm = rand();
+      at.set([Math.cos(a) * flat * 800, up * 800, Math.sin(a) * flat * 800], i * 3); hue.set([bright, bright * (warm < .2 ? .86 : 1), bright * (warm > .8 ? .8 : 1)], i * 3);
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(at, 3)); g.setAttribute('color', new THREE.BufferAttribute(hue, 3));
+    return new THREE.Points(g, new THREE.PointsMaterial({ ...glow, map: dot, size: 7, sizeAttenuation: false, vertexColors: true }));
+  })();
+  // A friendly full moon with a sleepy face, hanging in the north.
+  const moon = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'), halo = g.createRadialGradient(128, 128, 60, 128, 128, 128);
+    halo.addColorStop(0, '#fff6c9aa'); halo.addColorStop(1, '#fff6c900'); g.fillStyle = halo; g.fillRect(0, 0, 256, 256);
+    g.fillStyle = '#fff3c2'; g.beginPath(); g.arc(128, 128, 74, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#f1dd9c'; for (const [x, y, r] of [[92, 96, 13], [160, 84, 8], [172, 150, 15], [100, 168, 7]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
+    g.strokeStyle = '#8a6b3a'; g.lineWidth = 5; g.lineCap = 'round';
+    for (const x of [104, 152]) { g.beginPath(); g.arc(x, 122, 10, .15 * Math.PI, .85 * Math.PI); g.stroke(); }
+    g.beginPath(); g.arc(128, 138, 20, .2 * Math.PI, .8 * Math.PI); g.stroke();
+    g.fillStyle = '#f7a8a066'; for (const x of [88, 168]) { g.beginPath(); g.arc(x, 146, 10, 0, Math.PI * 2); g.fill(); }
+    const texture = new THREE.CanvasTexture(c); texture.colorSpace = THREE.SRGBColorSpace;
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ ...glow, map: texture })); sprite.scale.setScalar(210); return sprite;
+  })();
+  const MOON_AT = new THREE.Vector3(-.2, .25, -.92).normalize().multiplyScalar(760);
+  // Northern lights: three slow curtains behind the island.
+  const aurora = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, fog: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, uniforms: { time: { value: 0 }, dark: { value: 0 } },
+    vertexShader: 'uniform float time; varying vec2 at; void main(){ at = uv; vec3 p = position; p.z += sin(p.x * .035 + time * .35) * 16. + sin(p.x * .09 - time * .2) * 6.; gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.); }',
+    fragmentShader: `uniform float time, dark; varying vec2 at;
+      void main(){ float rays = .55 + .45 * sin(at.x * 70. + time * .9 + sin(at.x * 11. - time * .4) * 3.);
+        float fade = smoothstep(0., .18, at.y) * (1. - smoothstep(.45, 1., at.y)) * smoothstep(0., .08, at.x) * smoothstep(1., .92, at.x);
+        gl_FragColor = vec4(mix(vec3(.25, 1., .62), vec3(.62, .35, 1.), at.y) * rays, fade * dark * .5); }`
+  });
+  const curtains = [[-70, 62, -150, .25, 250], [70, 78, -190, -.2, 280], [0, 96, -235, 0, 330]].map(([x, y, z, turn, wide]) => {
+    const curtain = new THREE.Mesh(new THREE.PlaneGeometry(wide, 70, 60, 1), aurora); curtain.position.set(starry.x + x, y, starry.z + z); curtain.rotation.y = turn; curtain.frustumCulled = false; scene.add(curtain); return curtain;
+  });
+  // Paper lanterns drifting up around the island.
+  const LANTERNS = 54, lanternAt = new Float32Array(LANTERNS * 3);
+  for (let i = 0; i < LANTERNS; i++) { const a = rand() * Math.PI * 2, r = 22 + rand() * 105; lanternAt.set([starry.x + Math.cos(a) * r, 7 + rand() * 50, starry.z + Math.sin(a) * r * .85], i * 3); }
+  const lanterns = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(lanternAt, 3)), new THREE.PointsMaterial({ ...glow, map: dot, color: '#ffb057', size: 3.4, blending: THREE.AdditiveBlending }));
+  for (const thing of [starField, moon, lanterns]) { thing.frustumCulled = false; thing.visible = false; scene.add(thing); }
+  curtains.forEach(c => c.visible = false);
+  function setNight(n) {
+    dark = n; const lit = n > .01;
+    sky.material.uniforms.top.value.copy(DAY.top).lerp(NIGHT.top, n); horizon.copy(DAY.horizon).lerp(NIGHT.horizon, n); sky.material.uniforms.sunGlow.value = 1 - n;
+    scene.fog.color.copy(horizon); if (water?.material?.uniforms?.fogColor) water.material.uniforms.fogColor.value.copy(horizon);
+    for (const thing of [starField, moon, lanterns]) { thing.visible = lit; thing.material.opacity = n; }
+    curtains.forEach(c => c.visible = lit); aurora.uniforms.dark.value = n;
+  }
+  // Called every frame: the sky things follow the camera, lanterns rise, and now and then a star falls.
+  function updateNight(dt, flying, where, fx, fz) {
+    if (dark <= .01) return null;
+    starField.position.copy(camera.position); moon.position.copy(camera.position).add(MOON_AT); aurora.uniforms.time.value = clock;
+    if (!reducedMotion) {
+      for (let i = 0; i < LANTERNS; i++) { const y = lanternAt[i * 3 + 1] + dt * (.5 + (i % 5) * .12); lanternAt[i * 3 + 1] = y > 60 ? 6 : y; lanternAt[i * 3] += Math.sin(clock * .4 + i) * dt * .3; }
+      lanterns.geometry.attributes.position.needsUpdate = true;
+    }
+    let seen = null;
+    if (shooter) {
+      shooter.life -= dt; shooter.at.addScaledVector(shooter.go, dt);
+      for (let i = 0; i < 3; i++) spawn(shooter.at.x - shooter.go.x * i * .006, shooter.at.y - shooter.go.y * i * .006, shooter.at.z - shooter.go.z * i * .006, 0, 0, 0, .55 - i * .1, .55, i ? '#fff3b0' : '#ffffff');
+      if (shooter.life <= 0) shooter = null;
+    } else if (flying && dark > .7 && !reducedMotion && clock > nextShooting) {
+      nextShooting = clock + 9 + rand() * 7;
+      const side = rand() < .5 ? -1 : 1, rx = -fz, rz = fx;   // rx, rz point to the plane's right
+      shooter = { life: 1.5, at: new THREE.Vector3(where.x + fx * 95 + rx * side * 55, where.y + 46, where.z + fz * 95 + rz * side * 55), go: new THREE.Vector3(-rx * side * 62, -22, -rz * side * 62) };
+      seen = 'shooting';
+    }
+    return seen;
+  }
 
   /* ---------- particles ---------- */
   const pPos = new Float32Array(PMAX * 3), pVel = new Float32Array(PMAX * 3), pLife = new Float32Array(PMAX), pTime = new Float32Array(PMAX), pSize = new Float32Array(PMAX), pFall = new Float32Array(PMAX), pPuff = new Uint8Array(PMAX);
@@ -200,7 +277,7 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, gro
 
   return {
     get roll() { return roll; },
-    setPaint, burst,
+    setPaint, burst, night: setNight,
     setTrail(id) { trail = id; },
     // Which star trail is in the sky: see inSky in sky.js.
     setRoute(id) { route = id; seen.clear(); hops.clear(); },
@@ -264,7 +341,8 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, gro
         spawn(star.x + Math.cos(a) * r, star.y + (rand() - .5) * 6, star.z + Math.sin(a) * r, 0, .6, 0, .22 + rand() * .16, .7, rand() < .5 ? '#fff6c9' : '#ffd84a');
       }
       updateToys(dt);
-      const sights = [...updateSea(dt, where), ...noticed.splice(0)];
+      const sights = [...updateSea(dt, where), ...noticed.splice(0)], falling = updateNight(dt, flying, where, fx, fz);
+      if (falling) sights.push(falling);
       for (const cloud of puffs) {
         if (flying && clock > cloud.userData.ready && where.distanceTo(cloud.position) < 6.5) {
           cloud.userData.ready = clock + 6; sights.push('cloud');
