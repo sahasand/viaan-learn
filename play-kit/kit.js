@@ -1,8 +1,9 @@
 // The shell the three learning games share: the map of stops, a visit of tasks, speech,
 // the win card, surprise eggs and the sticker book. A game supplies its stops, a round
 // maker and one function per kind of task, then calls startPlayground. One page, one game.
-import { REWARDS_KEY, EGG_COST, ANIMALS, TOYS, TREATS, STICKERS, normalizeRewards, normalizeVisits, reached, friendsOf, finishRound, canHatch, hatchEgg, advanceAdventure, dayStamp } from './progress.js?v=3';
-import { createSound } from './audio.js?v=3';
+import { REWARDS_KEY, EGG_COST, ANIMALS, TOYS, TREATS, STICKERS, normalizeRewards, normalizeVisits, reached, friendsOf, finishRound, canHatch, hatchEgg, advanceAdventure, dayStamp, isClip, lineId, textOf, KIT } from './progress.js?v=4';
+import { VOICED, NUMBERS } from './voice.js?v=4';
+import { createSound } from './audio.js?v=4';
 
 export const $ = id => document.getElementById(id);
 export const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -21,6 +22,7 @@ const timers = new Set();
 // A picture by name: the clay model when there is one, otherwise the emoji the game registered.
 export const art = name => ANIMALS.includes(name) || TOYS.includes(name) ? `<img src="../${ANIMALS.includes(name) ? 'memory-assets' : 'curriculum-assets'}/${name}.png" alt="" draggable="false">` : `<span class="emoji" aria-hidden="true">${game?.pictures?.[name] || TREATS[name] || '❔'}</span>`;
 export const cap = word => word[0].toUpperCase() + word.slice(1);
+export { textOf };
 export const later = (fn, ms) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); };
 const stopTimers = () => { for (const id of timers) clearTimeout(id); timers.clear(); };
 export const wobble = el => { el.classList.remove('wobble'); void el.offsetWidth; el.classList.add('wobble'); };
@@ -50,14 +52,24 @@ export function playClips(names, then) {
   };
   next();
 }
-const NUMBER_CLIPS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 18, 20, 25, 30];
-export function sayNumber(n) { if (NUMBER_CLIPS.includes(n)) playClips(['num_' + n]); else say(String(n)); }
-// The buddy asks the question. `clips` are recorded sounds played after the words; tapping the bubble repeats both.
-export function ask(text, who = game.buddy, clips = null) {
-  lastAsk = { text, clips }; $('askText').textContent = text; $('buddy').innerHTML = art(who);
-  say(text, clips ? () => playClips(clips) : undefined);
+export function sayNumber(n) { speak([n]); }
+// Speak a list of parts (see progress.js). When every line and number in it has a
+// recording, the recordings play in order in one natural voice; if any is missing, the
+// device voice reads the words and the named clips follow.
+export function speak(parts, then) {
+  const list = (Array.isArray(parts) ? parts : [parts]).filter(p => p !== '' && p != null && !/^[.!?,]$/.test(p));
+  const clips = list.map(p => isClip(p) ? p : typeof p === 'number' ? (NUMBERS.has(p) ? 'num_' + p : null) : VOICED.has(lineId(p)) ? lineId(p) : null);
+  if (clips.every(Boolean)) { playClips(clips, then); return; }
+  const named = list.filter(isClip), words = textOf(list);
+  if (!words) { playClips(named, then); return; }
+  say(words, named.length ? () => playClips(named, then) : then);
 }
-export function tell(text) { $('askText').textContent = text; say(text); }
+// The buddy asks the question. `clips` are recorded sounds played after the words; tapping the bubble repeats both.
+export function ask(parts, who = game.buddy, clips = null) {
+  lastAsk = [parts, clips].flat().filter(p => p != null); $('askText').textContent = textOf(parts); $('buddy').innerHTML = art(who);
+  speak(lastAsk);
+}
+export function tell(parts) { $('askText').textContent = textOf(parts); speak(parts); }
 // Tapping dots, pins and the like counts them out loud and numbers them; it is help, never a mistake.
 export function countOne(el) {
   if (el.classList.contains('counted')) return;
@@ -105,11 +117,11 @@ function runTask() {
 }
 // A wrong try is never punished: a boing, a hint, and the task stays open.
 export function miss(text) { clean = false; sound.boing(); react('no'); if (text) tell(text); }
-// `clips` are recorded sounds to play in place of speaking the text (which is still shown).
+// `clips` are parts to speak in place of the text, which is still what is shown.
 export function solved(text, clips = null) {
   if (busy) return; busy = true;
   firsts.push(clean); sound.yay(); confetti(); drawSteps(); react('yes'); flyStar();
-  if (clips) { $('askText').textContent = text; playClips(clips); } else tell(text);
+  $('askText').textContent = textOf(text); speak(clips || text);
   later(() => { at++; if (at < tasks.length) runTask(); else finish(); }, 2600);
 }
 function finish() {
@@ -126,7 +138,7 @@ function finish() {
   $('winNext').dataset.stop = game.stops[Math.min(index + 1, last)].id;
   // Arriving from the Daily Adventure, the way back to it comes first.
   if (advanced) { $('winNext').before($('winAdventure')); $('winAdventure').className = 'primary'; $('winNext').className = 'secondary'; }
-  sound.win(); confetti(40); playClips([CHEERS[Math.floor(Math.random() * CHEERS.length)]], () => say(`${result.earned} new stars!`));
+  sound.win(); confetti(40); speak([CHEERS[Math.floor(Math.random() * CHEERS.length)], ...KIT.newStars(result.earned)]);
   drawMap(); $('win').showModal();
 }
 // The buddy nods or shakes its head, and each solved task sends a star up to the bank.
@@ -148,11 +160,11 @@ function confetti(count = 16) {
 
 /* ---------- surprise eggs and the sticker book ---------- */
 function openEgg() {
-  if (!canHatch(rewards)) { wobble($('eggButton')); say(rewards.stickers.length === STICKERS.length ? 'You found every sticker!' : `You need ${EGG_COST - rewards.stars} more stars. Play a game!`); return; }
+  if (!canHatch(rewards)) { wobble($('eggButton')); speak(rewards.stickers.length === STICKERS.length ? KIT.allFound() : KIT.needStars(EGG_COST - rewards.stars)); return; }
   cracks = 0; $('eggTap').hidden = false; $('eggTap').className = 'egg'; $('hatched').hidden = true; $('eggDone').hidden = true;
   $('eggTitle').textContent = 'Tap the egg!'; $('eggText').textContent = 'Tap, tap, tap…';
   if ($('win').open) $('win').close();
-  $('egg').showModal(); say('Tap the egg!');
+  $('egg').showModal(); speak(KIT.tapEgg());
 }
 function crackEgg() {
   cracks++; sound.crack(); wobble($('eggTap')); $('eggTap').classList.add('crack' + Math.min(cracks, 3));
@@ -162,7 +174,7 @@ function crackEgg() {
   const name = cap(egg.sticker);
   $('eggTap').hidden = true; $('hatched').hidden = false; $('hatched').innerHTML = art(egg.sticker); $('eggDone').hidden = false;
   $('eggTitle').textContent = `It’s ${name}!`; $('eggText').textContent = ANIMALS.includes(egg.sticker) ? `${name} will play the games with you.` : 'A new sticker for your book.';
-  sound.hatch(); confetti(30); say(`Surprise! It’s ${name}!`); drawMap(); $('eggDone').focus();
+  sound.hatch(); confetti(30); speak(KIT.surprise(egg.sticker)); drawMap(); $('eggDone').focus();
 }
 function openBook() {
   $('stickers').innerHTML = ['bear', ...STICKERS].map(name => {
@@ -222,14 +234,14 @@ export function startPlayground(config) {
   for (const event of ['pointerup', 'keydown']) addEventListener(event, firstTap);
   $('sound').onclick = () => setSound(!rewards.sound);
   $('back').onclick = toMap;
-  $('ask').onclick = () => { if (!busy && lastAsk) say(lastAsk.text, lastAsk.clips ? () => playClips(lastAsk.clips) : undefined); };
+  $('ask').onclick = () => { if (!busy && lastAsk) speak(lastAsk); };
   $('path').onclick = e => { const button = e.target.closest('[data-stop]'); if (button && !button.disabled) { sound.tap(); startStop(button.dataset.stop); } };
   $('eggButton').onclick = openEgg; $('winEgg').onclick = openEgg; $('eggTap').onclick = crackEgg;
   $('eggDone').onclick = () => $('egg').close();
   // An egg opened from the end of a visit leaves a finished game behind it, so go back to the map.
   $('egg').addEventListener('close', () => { if (!$('play').hidden && at >= tasks.length) toMap(); });
   $('bookButton').onclick = openBook; $('bookDone').onclick = () => $('book').close();
-  $('stickers').onclick = e => { const sticker = e.target.closest('[data-name]'); if (sticker) { wobble(sticker); sound.tap(); say(cap(sticker.dataset.name)); } };
+  $('stickers').onclick = e => { const sticker = e.target.closest('[data-name]'); if (sticker) { wobble(sticker); sound.tap(); speak(KIT.name(sticker.dataset.name)); } };
   $('winNext').onclick = () => { $('win').close(); startStop($('winNext').dataset.stop); };
   $('winAgain').onclick = () => { $('win').close(); startStop(stop.id); };
   $('winMap').onclick = () => { $('win').close(); toMap(); };

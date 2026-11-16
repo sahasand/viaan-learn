@@ -1,7 +1,7 @@
 // Story Garden rules: one stop for each week of the phonics course, and the tasks a visit
 // sets from that week's sounds and words. Plain data only, so everything runs in Node tests.
-import { WEEKS, PHASES } from './words.js?v=3';
-import { between, pick, shuffle } from '../play-kit/progress.js?v=3';
+import { WEEKS, PHASES } from './words.js?v=4';
+import { between, pick, shuffle } from '../play-kit/progress.js?v=4';
 export const SAVE_KEY = 'viaan-story-v1';
 const LAND_NAMES = ['Listening Lawn', 'First Letters', 'Sound Teams', 'Blending Bridge', 'More Sounds', 'Story Hill'];
 export const STOPS = WEEKS.map(week => ({ id: 'w' + week.w, title: week.title, week: week.w, phase: week.ph }));
@@ -77,4 +77,23 @@ export function makeRound(stop, rng = Math.random, friends = ['bear'], pictured 
     asked.add(key(task)); tasks.push(task);
   }
   return shuffle(rng, tasks);
+}
+
+/* ---------- what the games say ---------- */
+// Spoken lines as parts (see ../play-kit/progress.js). A sentence with its gap is spoken
+// with the word "blank" where the gap is.
+export const V = {
+  hearAsk: t => [t.kind === 'start' ? 'What sound does it start with?' : t.kind === 'word' ? 'Which word says…' : 'Which one says…'],
+  readAsk: () => ['Read the word. Tap its picture!'],
+  buildAsk: () => ['Build the word…'],
+  rhymeAsk: () => ['What rhymes with…'],
+  rhymeWrong: () => ['Listen to the endings. Tap each one to hear it.'],
+  storyAsk: t => ['Finish the sentence.', t.text],
+  storyWrong: t => ['Try each word. Which one makes sense?', t.text],
+  storyRight: t => [t.text.replace('___', t.answer)]
+};
+export function lines() {
+  const out = new Set(['What sound does it start with?', 'Which word says…', 'Which one says…', 'Read the word. Tap its picture!', 'Build the word…', 'What rhymes with…', 'Listen to the endings. Tap each one to hear it.', 'Finish the sentence.', 'Try each word. Which one makes sense?']);
+  for (const week of WEEKS) for (const [text, answer] of week.sentences) { out.add(text); out.add(text.replace('___', answer)); }
+  return [...out];
 }

@@ -1,7 +1,7 @@
 // Little Detective rules: twelve cases, each a mixed visit of thinking puzzles drawn from
 // cases.js, with patterns made fresh every time. Plain data only, so it runs in Node tests.
-import { ODD, GOES, NEXT, SILLY, NORMAL, ORDER } from './cases.js?v=3';
-import { between, pick, shuffle } from '../play-kit/progress.js?v=3';
+import { ODD, GOES, NEXT, SILLY, NORMAL, ORDER } from './cases.js?v=4';
+import { between, pick, shuffle, cap } from '../play-kit/progress.js?v=4';
 export const SAVE_KEY = 'viaan-detective-v1';
 // Clay things that patterns are made of.
 export const PATTERN_THINGS = ['apple', 'cookie', 'ball', 'car', 'fish', 'flower', 'hat', 'cup', 'egg', 'tree', 'book', 'cloud'];
@@ -51,4 +51,37 @@ export function makeRound(stop, rng = Math.random) {
     tasks.push(makeTask(kind, left[kind].pop(), rng));
   }
   return tasks;
+}
+
+/* ---------- what the games say ---------- */
+// Spoken lines as parts (see ../play-kit/progress.js).
+const storyOf = t => t.story.replace(/ What might (happen|appear)\?$/, '');
+export const V = {
+  oddAsk: () => ['Which one does not belong?'],
+  oddWrong: t => [`Three of them are ${t.group}.`, 'Which one is left over?'],
+  oddRight: t => [`The others are ${t.group}.`, `The ${t.answer} is different.`],
+  patternAsk: () => ['What comes next?'],
+  patternWrong: () => ['Say the pictures in order. Listen for the part that repeats.'],
+  patternRight: t => [`${cap(t.answer)} comes next!`],
+  goesAsk: t => [`What goes with the ${t.thing}?`],
+  goesWrong: () => ['Think about what we use together, or find together.'],
+  nextAsk: t => [storyOf(t), 'What happens next?'],
+  nextWrong: () => ['Listen to the story again. What could change?'],
+  sillyAsk: () => ['Tap each picture to hear its story. Which one is silly?'],
+  sillyWrong: () => ['That could really happen. Listen to the others.'],
+  orderAsk: () => ['What happens first? Tap them in order.'],
+  orderWrong: placed => [placed ? 'What happens after that?' : 'Which one happens first?'],
+  orderRight: t => [`First ${t.order[0]}, then ${t.order.slice(1).join(', then ')}.`]
+};
+export function lines() {
+  const out = new Set(['Which one does not belong?', 'Which one is left over?', 'What comes next?', 'Say the pictures in order. Listen for the part that repeats.', 'Think about what we use together, or find together.', 'What happens next?',
+    'Listen to the story again. What could change?', 'Tap each picture to hear its story. Which one is silly?', 'That could really happen. Listen to the others.', 'What happens first? Tap them in order.', 'What happens after that?', 'Which one happens first?']);
+  for (const o of ODD) { out.add(`Three of them are ${o.group}.`); out.add(`The others are ${o.group}.`); out.add(`The ${o.odd} is different.`); }
+  for (const thing of PATTERN_THINGS) out.add(`${cap(thing)} comes next!`);
+  for (const g of GOES) { out.add(`What goes with the ${g.thing}?`); out.add(g.why); }
+  for (const n of NEXT) { out.add(storyOf(n)); out.add(n.why); }
+  for (const s of [...SILLY, ...NORMAL]) out.add(s.story);
+  for (const s of SILLY) out.add(s.why);
+  for (const o of ORDER) out.add(`First ${o[0]}, then ${o.slice(1).join(', then ')}.`);
+  return [...out];
 }

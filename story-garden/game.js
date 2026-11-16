@@ -1,9 +1,9 @@
 // Story Garden: five reading games played through the phonics course, one stop a week.
 // The map, stars, eggs and stickers come from ../play-kit; the course is in words.js.
-import { SAVE_KEY, LANDS, STOPS, makeRound, soundClip, wordClip } from './rules.js?v=3';
-import { PICTURES } from './words.js?v=3';
-import { ANIMALS, TOYS } from '../play-kit/progress.js?v=3';
-import { $, art, later, wobble, playClips, ask, miss, solved, sound, busy, startPlayground } from '../play-kit/kit.js?v=3';
+import { SAVE_KEY, LANDS, STOPS, makeRound, soundClip, wordClip, V } from './rules.js?v=4';
+import { PICTURES } from './words.js?v=4';
+import { ANIMALS, TOYS } from '../play-kit/progress.js?v=4';
+import { $, art, later, wobble, playClips, ask, miss, solved, sound, busy, startPlayground } from '../play-kit/kit.js?v=4';
 
 const pictured = word => ANIMALS.includes(word) || TOYS.includes(word) || !!PICTURES[word];
 const show = sound => sound.replace('_', '·');          // a_e is written a·e on a tile
@@ -15,7 +15,7 @@ const GAMES = {
     const start = task.kind === 'start';
     stage.innerHTML = (start ? `<div class="shown">${art(task.picture)}</div>` : '<button class="speaker" id="again" aria-label="Hear it again">🔊</button>')
       + `<div class="bubbles ${task.kind}">${task.options.map((o, i) => `<button class="bubble-letter c${i}" data-o="${o}" style="--d:${i * .4}s">${show(o)}</button>`).join('')}</div>`;
-    ask(start ? 'What sound does it start with?' : task.kind === 'word' ? 'Which word says…' : 'Which one says…', 'owl', [task.clip]);
+    ask(V.hearAsk(task), 'owl', [task.clip]);
     stage.onclick = e => {
       if (busy) return;
       if (e.target.closest('#again')) { playClips([task.clip]); return; }
@@ -29,7 +29,7 @@ const GAMES = {
   read(task, stage) {
     stage.innerHTML = `<div class="word">${task.sounds.map(s => tile(s)).join('')}</div><button class="blend" id="blend">▶ Say the sounds</button>
       <div class="cards">${task.options.map(o => `<button class="card" data-o="${o}" aria-label="A picture">${art(o)}</button>`).join('')}</div>`;
-    ask('Read the word. Tap its picture!', 'owl');
+    ask(V.readAsk(), 'owl');
     const run = (then) => { let i = 0; const tiles = [...stage.querySelectorAll('.word .tile')]; const next = () => { tiles.forEach((t, n) => t.classList.toggle('lit', n === i)); if (i >= tiles.length) { then?.(); return; } playClips([soundClip(task.sounds[i++])], next); }; next(); };
     stage.onclick = e => {
       if (busy) return;
@@ -49,7 +49,7 @@ const GAMES = {
     stage.innerHTML = `<div class="shown">${pictured(task.word) ? art(task.word) : ''}<button class="speaker small" id="again" aria-label="Hear the word">🔊</button></div>
       <div class="caterpillar" id="slots"><span class="head" aria-hidden="true">🐛</span>${task.sounds.map(() => '<span class="part"></span>').join('')}</div>
       <div class="pool">${task.tiles.map(s => tile(s)).join('')}</div>`;
-    ask('Build the word…', 'owl', [wordClip(task.word)]);
+    ask(V.buildAsk(), 'owl', [wordClip(task.word)]);
     stage.onclick = e => {
       if (busy) return;
       if (e.target.closest('#again')) { playClips([wordClip(task.word)]); return; }
@@ -65,19 +65,19 @@ const GAMES = {
   story(task, stage) {
     const [before, after] = task.text.split('___');
     stage.innerHTML = `<p class="sentence">${before}<span class="gap" id="gap">?</span>${after}</p><div class="choices">${task.options.map(o => `<button class="choice" data-o="${o}">${o}</button>`).join('')}</div>`;
-    ask('Finish the sentence. ' + task.text, 'owl');
+    ask(V.storyAsk(task), 'owl');
     stage.onclick = e => {
       const choice = e.target.closest('.choice'); if (!choice || busy) return;
-      if (choice.dataset.o !== task.answer) { wobble(choice); miss('Try each word. Which one makes sense? ' + task.text); return; }
+      if (choice.dataset.o !== task.answer) { wobble(choice); miss(V.storyWrong(task)); return; }
       choice.classList.add('right'); $('gap').textContent = task.answer; $('gap').classList.add('full');
-      solved(task.text.replace('___', task.answer));
+      solved(V.storyRight(task));
     };
   },
   // Tap a card to hear it; choose the one that rhymes.
   rhyme(task, stage) {
     stage.innerHTML = `<div class="shown">${pictured(task.word) ? art(task.word) : ''}<b>${task.word}</b><button class="speaker small" id="again" aria-label="Hear ${task.word}">🔊</button></div>
       <div class="cards">${task.options.map(o => `<button class="card" data-o="${o}">${pictured(o) ? art(o) : ''}<b>${o}</b></button>`).join('')}</div><button class="go" id="pick" disabled>That one rhymes!</button>`;
-    ask('What rhymes with…', 'owl', [wordClip(task.word)]);
+    ask(V.rhymeAsk(), 'owl', [wordClip(task.word)]);
     let chosen = null;
     stage.onclick = e => {
       if (busy) return;
@@ -85,7 +85,7 @@ const GAMES = {
       const card = e.target.closest('.card');
       if (card) { chosen = card; stage.querySelectorAll('.card').forEach(c => c.classList.toggle('chosen', c === card)); $('pick').disabled = false; playClips([wordClip(card.dataset.o)]); return; }
       if (!e.target.closest('#pick') || !chosen) return;
-      if (chosen.dataset.o !== task.answer) { wobble(chosen); miss('Listen to the endings. Tap each one to hear it.'); return; }
+      if (chosen.dataset.o !== task.answer) { wobble(chosen); miss(V.rhymeWrong()); return; }
       chosen.classList.add('right'); solved(`${task.word} · ${task.answer}`, [wordClip(task.word), wordClip(task.answer)]);
     };
   }

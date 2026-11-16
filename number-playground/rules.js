@@ -1,7 +1,7 @@
 // Number Playground rules: the path of stops and the tasks each game sets. Plain data and
 // numbers only, so everything here runs in Node tests. Stars, stickers and which stops
 // are open are kept by ../play-kit/progress.js.
-import { between, pick, shuffle } from '../play-kit/progress.js?v=3';
+import { between, pick, shuffle, cap, ANIMALS } from '../play-kit/progress.js?v=4';
 export const SAVE_KEY = 'viaan-numbers-v1';
 const FOODS = { bear: 'apple', cat: 'fish', penguin: 'fish', dog: 'cookie', panda: 'apple', elephant: 'apple', giraffe: 'apple' };
 
@@ -98,3 +98,53 @@ export function makeRound(stop, rng = Math.random, friends = ['bear']) {
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 export function judgeFeed(task, count) { return count === task.want ? 'right' : count < task.want ? 'few' : 'many'; }
 export const moreAnswer = task => (task.ask === 'more') === (task.left > task.right) ? 'left' : 'right';
+
+/* ---------- what the games say ---------- */
+// Every spoken line is built here, as parts (see ../play-kit/progress.js), so the list of
+// lines to record can be made from the same code that speaks them.
+const foods = (food, n) => n === 1 || food === 'fish' ? food : food + 's';
+export const sumLine = (a, b) => `${a} and ${b} make ${a + b}.`;
+export const takeLine = (n, k) => `${n} take away ${k} is ${n - k}.`;
+const stepOf = t => Math.abs(t.sequence[1] - t.sequence[0]);
+const moreWord = t => t.numerals ? (t.ask === 'more' ? 'bigger' : 'smaller') : t.ask;
+const moreQuestion = t => t.numerals ? `Which number is ${moreWord(t)}?` : `Who has ${t.ask} ${foods(t.food, 2)}?`;
+export const V = {
+  feedAsk: t => [`${cap(t.animal)} wants`, t.want, foods(t.food, t.want), '.', 'Put them on the plate!'],
+  feedEmpty: () => ['Tap the food to put it on the plate.'],
+  feedWrong: (t, n) => ['That is', n, '.', `${cap(t.animal)} wants`, t.want, '.', n < t.want ? 'Add some more!' : 'Take some back!'],
+  feedRight: t => ['Yum!', t.want, foods(t.food, t.want), '.', 'Thank you!'],
+  popFind: t => ['Pop number', t.target, '!'],
+  popFindWrong: (t, n) => ['That is', n, '.', 'Find', t.target, '!'],
+  popFound: t => ['Pop! Number', t.target, '!'],
+  popOrder: t => t.launch ? ['Count down from', t.sequence[0], 'to blast off!'] : stepOf(t) > 1 ? [`Count by ${stepOf(t)}s. Start at`, t.sequence[0], '!'] : ['Pop them in order. Start at', t.sequence[0], '!'],
+  popNotYet: n => ['Not yet.', 'Find', n, '!'],
+  popDone: t => t.launch ? ['Blast off!'] : stepOf(t) > 1 ? [`You counted by ${stepOf(t)}s to`, t.sequence.at(-1), '!'] : ['You counted to', t.sequence.at(-1), '!'],
+  moreAsk: t => [moreQuestion(t)],
+  moreWrong: t => [t.numerals ? 'Look again.' : 'Count them.', moreQuestion(t)],
+  moreRight: t => { const [win, lose] = moreAnswer(t) === 'left' ? [t.left, t.right] : [t.right, t.left]; return [win, `is ${moreWord(t)} than`, lose, '.']; },
+  dotsAsk: () => ['How many dots altogether? Tap the dots to count them.'],
+  dotsWrong: () => ['Count every dot. Tap them one by one.'],
+  dotsRight: t => [sumLine(t.a, t.b)],
+  hopAsk: t => t.ask === 'hops' ? ['Frog is on', t.start, '.', 'How many hops to the fly on', t.start + t.by, '?'] : ['Frog is on', t.start, '.', 'Hop', Math.abs(t.by), t.by < 0 ? 'back.' : 'forward.', 'Where does he land?'],
+  hopWrong: t => ['Count', Math.abs(t.by), Math.abs(t.by) === 1 ? 'hop from' : 'hops from', t.start, '.'],
+  hopOff: short => [short ? 'Not there yet! Try more hops.' : 'Too far! Try fewer hops.'],
+  hopRight: t => [t.by < 0 ? takeLine(t.start, -t.by) : sumLine(t.start, t.by)],
+  bowlAsk: t => [t.pins, 'pins! Tap the ball to roll it.'],
+  bowlCount: () => ['Crash! How many pins are still standing?'],
+  bowlWrong: () => ['Count the pins still standing. Tap each one.'],
+  bowlRight: t => t.answer === 0 ? ['Strike!', takeLine(t.pins, t.down), 'None left!'] : [takeLine(t.pins, t.down)]
+};
+// Every line of text the game can say (numbers and punctuation are separate parts).
+export function lines() {
+  const out = new Set(['Put them on the plate!', 'Tap the food to put it on the plate.', 'That is', 'Add some more!', 'Take some back!', 'Yum!', 'Thank you!', 'apple', 'apples', 'cookie', 'cookies', 'fish',
+    'Pop number', 'Find', 'Pop! Number', 'Count down from', 'to blast off!', 'Pop them in order. Start at', 'Not yet.', 'Blast off!', 'You counted to', 'Look again.', 'Count them.', 'Which number is bigger?', 'Which number is smaller?',
+    'How many dots altogether? Tap the dots to count them.', 'Count every dot. Tap them one by one.', 'Frog is on', 'How many hops to the fly on', 'Hop', 'back.', 'forward.', 'Where does he land?', 'Count', 'hop from', 'hops from',
+    'Not there yet! Try more hops.', 'Too far! Try fewer hops.', 'pins! Tap the ball to roll it.', 'Crash! How many pins are still standing?', 'Count the pins still standing. Tap each one.', 'Strike!', 'None left!']);
+  for (const animal of ANIMALS) out.add(`${cap(animal)} wants`);
+  for (const step of [2, 5, 10]) { out.add(`Count by ${step}s. Start at`); out.add(`You counted by ${step}s to`); }
+  for (const ask of ['more', 'fewer']) for (const food of ['cookies', 'apples']) out.add(`Who has ${ask} ${food}?`);
+  for (const word of ['more', 'fewer', 'bigger', 'smaller']) out.add(`is ${word} than`);
+  for (let a = 0; a <= 9; a++) for (let b = 1; b <= 6 && a + b <= 10; b++) out.add(sumLine(a, b));
+  for (let n = 1; n <= 10; n++) for (let k = 1; k <= n; k++) out.add(takeLine(n, k));
+  return [...out];
+}

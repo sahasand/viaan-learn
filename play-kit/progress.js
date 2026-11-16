@@ -65,3 +65,32 @@ export function shuffle(rng, list) {
   for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
   return out;
 }
+
+/* ---------- spoken lines ---------- */
+// What a game says is a list of parts: numbers, lines of text, and names of clips already
+// recorded (sounds, words, numbers, cheers). Each line of text has its own recording,
+// named from the text, so the same sentence always finds the same file.
+export const isClip = part => typeof part === 'string' && /^(phon|word|num|cheer|praise|say)_[A-Za-z0-9_]+$/.test(part);
+export function lineId(text) {
+  let h = 5381; for (const ch of text) h = (h * 33 ^ ch.codePointAt(0)) >>> 0;
+  return 'say_' + text.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 36) + '_' + h.toString(36);
+}
+// The words shown on screen for a list of parts.
+export const textOf = parts => (Array.isArray(parts) ? parts : [parts]).filter(p => !isClip(p)).join(' ').replace(/ ([.!?,])/g, '$1');
+export const cap = word => word[0].toUpperCase() + word.slice(1);
+// Numbers the games can say aloud: counting to 20, then the skip-counting steps.
+export const SPOKEN_NUMBERS = [...Array.from({ length: 21 }, (_, n) => n), 25, 30, 40, 50, 60, 70, 80, 90, 100];
+// The kit's own lines: eggs, stickers and the end of a visit.
+export const KIT = {
+  needStars: n => ['You need', n, 'more stars. Play a game!'],
+  allFound: () => ['You found every sticker!'],
+  tapEgg: () => ['Tap the egg!'],
+  surprise: name => ['Surprise! It’s', cap(name) + '!'],
+  name: name => [cap(name) + '!'],
+  newStars: n => [n, 'new stars!']
+};
+export function kitLines() {
+  const out = new Set(['You need', 'more stars. Play a game!', 'You found every sticker!', 'Tap the egg!', 'Surprise! It’s', 'new stars!']);
+  for (const name of ['bear', ...STICKERS]) out.add(cap(name) + '!');
+  return [...out];
+}

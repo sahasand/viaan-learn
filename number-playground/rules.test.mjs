@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as R from './rules.js';
-import { TOYS } from '../play-kit/progress.js';
+import { TOYS, SPOKEN_NUMBERS, ANIMALS } from '../play-kit/progress.js';
 
 // A repeatable stream of random numbers, so a failing seed can be found again.
 const seeded = seed => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -89,4 +89,19 @@ test('dominoes, hops and bowling are all true sums inside their range', () => {
     }
   });
   assert.ok(seen.zero > 0 && seen.back > 0 && seen.hops > 0, 'strikes, hops back and counting hops all come up');
+});
+
+test('every line a task can speak is in the list to record, and every number it says can be spoken', () => {
+  const known = new Set(R.lines()), check = (parts, where) => { for (const part of parts) { if (/^[.!?,]$/.test(part)) continue; if (typeof part === 'number') assert.ok(SPOKEN_NUMBERS.includes(part), `${where}: number ${part}`); else assert.ok(known.has(part), `${where}: "${part}"`); } };
+  everyTask((task, stop) => {
+    const V = R.V, at = stop.id;
+    if (task.game === 'feed') { check(V.feedAsk(task), at); check(V.feedEmpty(), at); check(V.feedRight(task), at); for (let n = 1; n <= task.pile; n++) if (n !== task.want) check(V.feedWrong(task, n), at); }
+    if (task.game === 'pop' && task.mode === 'find') { check(V.popFind(task), at); check(V.popFound(task), at); for (const n of task.numbers) check(V.popFindWrong(task, n), at); }
+    if (task.game === 'pop' && task.mode === 'order') { check(V.popOrder(task), at); check(V.popDone(task), at); for (const n of task.sequence) check(V.popNotYet(n), at); }
+    if (task.game === 'more') { check(V.moreAsk(task), at); check(V.moreWrong(task), at); check(V.moreRight(task), at); }
+    if (task.game === 'domino') { check(V.dotsAsk(), at); check(V.dotsWrong(), at); check(V.dotsRight(task), at); }
+    if (task.game === 'hop') { check(V.hopAsk(task), at); check(V.hopWrong(task), at); check(V.hopOff(true), at); check(V.hopOff(false), at); check(V.hopRight(task), at); }
+    if (task.game === 'bowl') { check(V.bowlAsk(task), at); check(V.bowlCount(), at); check(V.bowlWrong(), at); check(V.bowlRight(task), at); }
+  }, ANIMALS);
+  assert.equal(R.sumLine(3, 4), '3 and 4 make 7.'); assert.equal(R.takeLine(10, 4), '10 take away 4 is 6.');
 });

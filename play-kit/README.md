@@ -16,13 +16,31 @@ its own task screens and a few styles; everything else comes from here.
   `games` has one function per kind of task, `kind(task, stage)`. Task screens use the
   exported helpers: `ask`, `miss`, `solved`, `say`, `playClips`, `art`, `later`, `wobble`,
   `countOne`, `pad`, `sound` and the live flag `busy`.
-- `audio.js`: synthesized music and effects. Words, sounds, numbers and cheers are
-  recorded clips in `../audio`; sentences are spoken by the device voice.
+- `audio.js`: synthesized music and effects.
+- `voice.js`: which spoken lines and numbers have a recording. Written by
+  `../tools/record-voice.mjs`; never edited by hand.
 - `kit.css`: the shared look: a backdrop of sky, sun, drifting clouds and hills behind
   everything (each game sets its own mood through `body[data-game]` colours), lands with
   ribbon titles, and a winding dotted path of round stops in rows of three. Class names
   here are shared with every game's own styles, so keep them distinct (`backdrop`, not
   `scene`; `across`/`below` for path links).
+
+## Speech
+
+Everything the games say is a list of parts: numbers, lines of text, punctuation that is
+shown but not spoken, and names of clips (`phon_`, `word_`, `num_`, `cheer_`). Each
+game builds its lines in the `V` object of its `rules.js` and lists them all in
+`lines()`; the kit's own are `KIT` and `kitLines()` in `progress.js`. A line's recording
+is named from its text by `lineId`. `speak(parts)` plays the recordings in order when
+every part has one, and otherwise lets the device voice read the words, so a new line
+works before it is recorded.
+
+`node tools/record-voice.mjs --dry` lists what is missing and spends nothing. Without
+`--dry` it records the missing lines with OpenAI text-to-speech (`gpt-4o-mini-tts`,
+voice `marin`), using `OPENAI_API_KEY` from the environment or `.env`, and rewrites
+`voice.js`. `--redo=num,word,cheer,praise,phon` re-records the older clips in the same
+voice. After changing any spoken line, add it to that game's `lines()` (a test checks
+every line a task can speak is listed) and run the script again.
 
 ## Rules every game keeps
 

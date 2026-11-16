@@ -68,3 +68,12 @@ test('listening choices never set two spellings of one sound against each other,
   assert.deepEqual(R.planFor(1), ['rhyme', 'rhyme', 'rhyme', 'rhyme', 'rhyme']);
   assert.ok(R.planFor(25).includes('story') && R.planFor(25).includes('read') && R.planFor(25).includes('build'));
 });
+
+test('every line a task can speak is in the list to record', () => {
+  const known = new Set(R.lines());
+  everyTask(task => {
+    const parts = task.game === 'hear' ? R.V.hearAsk(task) : task.game === 'read' ? R.V.readAsk() : task.game === 'build' ? R.V.buildAsk() : task.game === 'rhyme' ? [...R.V.rhymeAsk(), ...R.V.rhymeWrong()] : [...R.V.storyAsk(task), ...R.V.storyWrong(task), ...R.V.storyRight(task)];
+    for (const part of parts) assert.ok(known.has(part), `"${part}"`);
+  });
+  assert.ok(known.size > 150 && [...known].some(l => l.includes('___')), 'sentences are listed with their gap and complete');
+});

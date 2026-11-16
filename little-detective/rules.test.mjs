@@ -54,3 +54,12 @@ test('a case is five puzzles from its own kinds, with no puzzle twice and every 
     }
   }
 });
+
+test('every line a puzzle can speak is in the list to record', () => {
+  const known = new Set(R.lines()), V = R.V;
+  for (const stop of R.STOPS) for (let seed = 1; seed <= 60; seed++) for (const t of R.makeRound(stop, seeded(seed))) {
+    const parts = t.game === 'odd' ? [...V.oddAsk(), ...V.oddWrong(t), ...V.oddRight(t)] : t.game === 'pattern' ? [...V.patternAsk(), ...V.patternWrong(), ...V.patternRight(t)] : t.game === 'goes' ? [...V.goesAsk(t), ...V.goesWrong(), t.why]
+      : t.game === 'next' ? [...V.nextAsk(t), ...V.nextWrong(), t.why] : t.game === 'silly' ? [...V.sillyAsk(), ...V.sillyWrong(), t.why, ...t.scenes.map(s => s.story)] : [...V.orderAsk(), ...V.orderWrong(0), ...V.orderWrong(1), ...V.orderRight(t)];
+    for (const part of parts) assert.ok(known.has(part), `${stop.id}: "${part}"`);
+  }
+});

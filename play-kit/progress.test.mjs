@@ -62,3 +62,21 @@ test('every clay sticker has its picture, and every game file shares one version
   // No module is loaded without a version, which would let an old copy mix with a new one.
   for (const file of files) for (const [, spec] of readFileSync(new URL(file, root), 'utf8').matchAll(/from '(\.[^']+)'/g)) assert.match(spec, /\?v=\d+$/, `${file} imports ${spec}`);
 });
+
+test('every spoken line finds its own recording by name, and the recordings listed all exist', async () => {
+  const { lines: mathLines } = await import('../number-playground/rules.js'), { lines: storyLines } = await import('../story-garden/rules.js'), { lines: caseLines } = await import('../little-detective/rules.js');
+  const { VOICED, NUMBERS } = await import('./voice.js');
+  const all = [...new Set([...P.kitLines(), ...mathLines(), ...storyLines(), ...caseLines()])], ids = all.map(P.lineId);
+  assert.equal(new Set(ids).size, all.length, 'no two lines share a recording');
+  for (const id of ids) assert.match(id, /^say_[a-z0-9_]+$/);
+  assert.equal(P.lineId('Tap the egg!'), P.lineId('Tap the egg!'));
+  assert.notEqual(P.lineId('Tap the egg!'), P.lineId('Tap the egg?'));
+  const root = new URL('../audio/', import.meta.url);
+  for (const id of VOICED) { assert.ok(ids.includes(id), `${id} is not a line any game speaks`); assert.ok(existsSync(new URL(id + '.mp3', root)), id); }
+  for (const n of NUMBERS) { assert.ok(P.SPOKEN_NUMBERS.includes(n)); assert.ok(existsSync(new URL(`num_${n}.mp3`, root)), `num_${n}`); }
+  // Parts: numbers, lines, punctuation that is shown but not spoken, and named clips that are spoken but not shown.
+  assert.equal(P.textOf(['That is', 3, '.', 'Bear wants', 4, '.', 'word_cat']), 'That is 3. Bear wants 4.');
+  assert.deepEqual([P.isClip('phon_S'), P.isClip('num_4'), P.isClip('say_x_1'), P.isClip('Pop number'), P.isClip(4)], [true, true, true, false, false]);
+  for (const name of ['bear', ...P.STICKERS]) assert.ok(P.kitLines().includes(P.cap(name) + '!'));
+  for (const parts of [P.KIT.needStars(3), P.KIT.allFound(), P.KIT.tapEgg(), P.KIT.surprise('cat'), P.KIT.name('rocket'), P.KIT.newStars(8)]) for (const part of parts) assert.ok(typeof part === 'number' || P.kitLines().includes(part), `"${part}"`);
+});
