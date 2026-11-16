@@ -26,7 +26,7 @@
       <div class="daily-card"><div class="daily-copy"><small>YOUR LITTLE ADVENTURE</small><button class="adventure-start" id="advB"><span id="advLabel">Start my adventure</span><b aria-hidden="true">→</b></button><p id="advSub"></p></div><div class="adventure-trail" id="adventureTrail" aria-label="Adventure progress"></div></div>
       <div class="section-title"><h2>Pick a place to explore</h2><span>Learn through play</span></div>
       <div class="learning-worlds">
-        <button class="world-card math-card" id="wM"><span class="world-visual"><img src="curriculum-assets/apple.png" alt=""><span class="number-sticker">1 2 3</span><img class="small-prop" src="curriculum-assets/blocks.png" alt=""></span><span class="world-info"><small>MATH</small><strong>Number Playground</strong><span>Count, collect, and play with numbers.</span><span class="world-next" id="next-math"></span><span class="world-progress" id="progress-math"></span></span><b class="world-arrow" aria-hidden="true">↗</b></button>
+        <button class="world-card math-card" id="wM"><span class="world-visual"><img src="curriculum-assets/apple.png" alt=""><span class="number-sticker">1 2 3</span><img class="small-prop" src="curriculum-assets/blocks.png" alt=""></span><span class="world-info"><small>MATH</small><strong>Number Playground</strong><span>Six number games. Win stars, hatch eggs, collect stickers.</span><span class="world-next" id="next-math"></span><span class="world-progress" id="progress-math"></span></span><b class="world-arrow" aria-hidden="true">↗</b></button>
         <button class="world-card english-card" id="wE"><span class="world-visual"><img src="memory-assets/owl.png" alt=""><span class="letter-sticker">a b c</span><img class="small-prop" src="curriculum-assets/book.png" alt=""></span><span class="world-info"><small>ENGLISH</small><strong>Story Garden</strong><span>Listen to sounds. Grow a little story.</span><span class="world-next" id="next-eng"></span><span class="world-progress" id="progress-eng"></span></span><b class="world-arrow" aria-hidden="true">↗</b></button>
         <button class="world-card thinking-card" id="wC"><span class="world-visual"><img src="memory-assets/frog.png" alt=""><span class="clue-sticker">?</span><img class="small-prop" src="curriculum-assets/car.png" alt=""></span><span class="world-info"><small>THINKING</small><strong>Little Detective</strong><span>Spot a pattern. Follow a tiny clue.</span><span class="world-next" id="next-crit"></span><span class="world-progress" id="progress-crit"></span></span><b class="world-arrow" aria-hidden="true">↗</b></button>
       </div>
@@ -184,144 +184,6 @@
         4: ['said', 'have', 'like', 'so', 'do', 'some', 'come', 'were', 'there', 'little', 'one', 'when', 'out', 'what'],
         5: ['oh', 'their', 'people', 'Mr', 'Mrs', 'looked', 'called', 'asked', 'could', 'water', 'where', 'who', 'many', 'because']
       };
-
-      /* ============================================
-         MATH CURRICULUM — 4 weeks
-         ============================================ */
-      var MATH = [
-        // W1
-        {
-          id: 'm1a', w: 1, title: 'Count 0-5', color: '#0D9488', emoji: '\uD83D\uDD22', q: [
-            { t: 'c', p: 'How many dots?', d: 3, ch: [1, 2, 3], a: 3, dc: '#8B5CF6' },
-            { t: 'c', p: 'How many dots?', d: 5, ch: [3, 4, 5], a: 5, dc: '#0D9488' },
-            { t: 'c', p: 'How many dots?', d: 2, ch: [0, 1, 2], a: 2, dc: '#EC4899' },
-            { t: 'c', p: 'How many dots?', d: 1, ch: [0, 1, 2], a: 1, dc: '#F97316' },
-            { t: 'c', p: 'How many dots?', d: 4, ch: [3, 4, 5], a: 4, dc: '#3B82F6' }]
-        },
-        {
-          id: 'm1b', w: 1, title: 'Count 6-10', color: '#3B82F6', emoji: '\uD83D\uDD1F', q: [
-            { t: 'c', p: 'How many dots?', d: 6, ch: [5, 6, 7], a: 6, dc: '#3B82F6' },
-            { t: 'c', p: 'How many dots?', d: 8, ch: [7, 8, 9], a: 8, dc: '#10B981' },
-            { t: 'c', p: 'How many dots?', d: 10, ch: [8, 9, 10], a: 10, dc: '#8B5CF6' },
-            { t: 'c', p: 'How many dots?', d: 7, ch: [6, 7, 8], a: 7, dc: '#F97316' },
-            { t: 'c', p: 'How many dots?', d: 9, ch: [8, 9, 10], a: 9, dc: '#EC4899' }]
-        },
-        {
-          id: 'm1c', w: 1, title: 'More or Less', color: '#EC4899', emoji: '\u2696\uFE0F', q: [
-            { t: 'cm', p: 'Tap the group with MORE!', l: 5, r: 3, a: 'l', lc: '#0D9488', rc: '#F97316' },
-            { t: 'cm', p: 'Tap the group with MORE!', l: 4, r: 9, a: 'r', lc: '#8B5CF6', rc: '#EC4899' },
-            { t: 'cm', p: 'Tap the group with MORE!', l: 7, r: 5, a: 'l', lc: '#3B82F6', rc: '#10B981' },
-            { t: 'b', p: 'Which number is BIGGER?', x: 3, y: 5, ch: [3, 5], a: 5 },
-            { t: 'b', p: 'Which number is BIGGER?', x: 9, y: 10, ch: [9, 10], a: 10 }]
-        },
-        {
-          id: 'm1d', w: 1, title: 'Missing Numbers', color: '#10B981', emoji: '\uD83E\uDDE9', q: [
-            { t: 'm', p: 'What number is missing?', s: [0, 1, null, 3, 4], a: 2, ch: [1, 2, 3] },
-            { t: 'm', p: 'What number is missing?', s: [5, null, 7, 8, 9], a: 6, ch: [5, 6, 7] },
-            { t: 'm', p: 'What number is missing?', s: [null, 2, 3], a: 1, ch: [0, 1, 2] },
-            { t: 'm', p: 'What number is missing?', s: [6, 7, null], a: 8, ch: [7, 8, 9] },
-            { t: 'm', p: 'What number is missing?', s: [3, null, 5, 6], a: 4, ch: [3, 4, 5] }]
-        },
-        // W2
-        {
-          id: 'm2a', w: 2, title: 'Number Order', color: '#8B5CF6', emoji: '\uD83D\uDD22', q: [
-            { t: 'm', p: 'Fill in the gap!', s: [0, 1, null, 3, 4, 5], a: 2, ch: [1, 2, 3] },
-            { t: 'm', p: 'Fill in the gap!', s: [2, 3, null, 5], a: 4, ch: [3, 4, 5] },
-            { t: 'm', p: 'Fill in the gap!', s: [6, 7, null, 9, 10], a: 8, ch: [7, 8, 9] },
-            { t: 'm', p: 'What comes next?', s: [7, 8, 9, null], a: 10, ch: [9, 10, 0] },
-            { t: 'm', p: 'What comes first?', s: [null, 1, 2, 3], a: 0, ch: [0, 1, 2] }]
-        },
-        {
-          id: 'm2b', w: 2, title: 'Comparing', color: '#EC4899', emoji: '\u2696\uFE0F', q: [
-            { t: 'b', p: 'Which is BIGGER?', x: 2, y: 5, ch: [2, 5], a: 5 },
-            { t: 'b', p: 'Which is BIGGER?', x: 8, y: 6, ch: [8, 6], a: 8 },
-            { t: 'b', p: 'Which is BIGGER?', x: 4, y: 9, ch: [4, 9], a: 9 },
-            { t: 'cl', p: 'Tap the group with LESS!', l: 6, r: 4, a: 'r', lc: '#0D9488', rc: '#F97316' },
-            { t: 'cl', p: 'Tap the group with LESS!', l: 3, r: 7, a: 'l', lc: '#8B5CF6', rc: '#EC4899' }]
-        },
-        {
-          id: 'm2c', w: 2, title: 'Addition', color: '#F97316', emoji: '\u2795', q: [
-            { t: 'ad', p: 'Count all the dots!', x: 2, y: 1, a: 3, ch: [2, 3, 4] },
-            { t: 'ad', p: 'Count all the dots!', x: 3, y: 1, a: 4, ch: [3, 4, 5] },
-            { t: 'ad', p: 'Count all the dots!', x: 1, y: 2, a: 3, ch: [2, 3, 4] },
-            { t: 'ad', p: 'How many together?', x: 2, y: 2, a: 4, ch: [3, 4, 5] },
-            { t: 'ad', p: 'How many together?', x: 1, y: 4, a: 5, ch: [4, 5, 6] }]
-        },
-        {
-          id: 'm2d', w: 2, title: 'Mix It Up', color: '#10B981', emoji: '\uD83C\uDF1F', q: [
-            { t: 'eq', p: 'Solve it!', eq: '3 + 1 = ?', a: 4, ch: [3, 4, 5] },
-            { t: 'eq', p: 'Solve it!', eq: '5 - 1 = ?', a: 4, ch: [3, 4, 5] },
-            { t: 'm', p: 'What is missing?', s: [null, 3, 4], a: 2, ch: [1, 2, 3] },
-            { t: 'm', p: 'What is missing?', s: [7, null, 9], a: 8, ch: [7, 8, 9] },
-            { t: 'eq', p: 'Solve it!', eq: '2 + 2 = ?', a: 4, ch: [3, 4, 5] }]
-        },
-        // W3
-        {
-          id: 'm3a', w: 3, title: 'Take Away', color: '#EF4444', emoji: '\u2796', q: [
-            { t: 'eq', p: 'Solve it!', eq: '3 - 1 = ?', a: 2, ch: [1, 2, 3] },
-            { t: 'eq', p: 'Solve it!', eq: '5 - 2 = ?', a: 3, ch: [2, 3, 4] },
-            { t: 'eq', p: 'Solve it!', eq: '4 - 1 = ?', a: 3, ch: [2, 3, 4] },
-            { t: 'eq', p: 'Solve it!', eq: '5 - 3 = ?', a: 2, ch: [1, 2, 3] },
-            { t: 'eq', p: 'Solve it!', eq: '4 - 2 = ?', a: 2, ch: [1, 2, 3] }]
-        },
-        {
-          id: 'm3b', w: 3, title: 'Add to 10', color: '#0D9488', emoji: '\u2795', q: [
-            { t: 'ad', p: 'Count all together!', x: 3, y: 2, a: 5, ch: [4, 5, 6] },
-            { t: 'ad', p: 'Count all together!', x: 4, y: 3, a: 7, ch: [6, 7, 8] },
-            { t: 'ad', p: 'Count all together!', x: 5, y: 2, a: 7, ch: [6, 7, 8] },
-            { t: 'ad', p: 'Count all together!', x: 3, y: 4, a: 7, ch: [6, 7, 8] },
-            { t: 'ad', p: 'Count all together!', x: 5, y: 5, a: 10, ch: [9, 10, 8] }]
-        },
-        {
-          id: 'm3c', w: 3, title: 'Count Back', color: '#8B5CF6', emoji: '\u23EA', q: [
-            { t: 'm', p: 'Count backwards!', s: [5, 4, null, 2, 1], a: 3, ch: [2, 3, 4] },
-            { t: 'm', p: 'Count backwards!', s: [10, 9, null, 7], a: 8, ch: [7, 8, 9] },
-            { t: 'm', p: 'Count backwards!', s: [8, null, 6, 5], a: 7, ch: [6, 7, 8] },
-            { t: 'm', p: 'Count backwards!', s: [4, 3, null, 1, 0], a: 2, ch: [1, 2, 3] },
-            { t: 'm', p: 'Count backwards!', s: [7, 6, 5, null], a: 4, ch: [3, 4, 5] }]
-        },
-        {
-          id: 'm3d', w: 3, title: 'Number Bonds', color: '#F97316', emoji: '\uD83E\uDDE9', q: [
-            { t: 'eq', p: 'What + 1 = 3?', eq: '? + 1 = 3', a: 2, ch: [1, 2, 3] },
-            { t: 'eq', p: 'What + 2 = 5?', eq: '? + 2 = 5', a: 3, ch: [2, 3, 4] },
-            { t: 'eq', p: 'What + 3 = 4?', eq: '? + 3 = 4', a: 1, ch: [0, 1, 2] },
-            { t: 'eq', p: 'What + 1 = 5?', eq: '? + 1 = 5', a: 4, ch: [3, 4, 5] },
-            { t: 'eq', p: 'What + 2 = 4?', eq: '? + 2 = 4', a: 2, ch: [1, 2, 3] }]
-        },
-        // W4
-        {
-          id: 'm4a', w: 4, title: 'Skip by 2s', color: '#3B82F6', emoji: '\u23E9', q: [
-            { t: 'm', p: 'Count by 2s!', s: [2, 4, null, 8, 10], a: 6, ch: [5, 6, 7] },
-            { t: 'm', p: 'Count by 2s!', s: [4, 6, 8, null], a: 10, ch: [9, 10, 11] },
-            { t: 'm', p: 'Count by 2s!', s: [null, 4, 6, 8], a: 2, ch: [1, 2, 3] },
-            { t: 'm', p: 'Count by 2s!', s: [6, null, 10], a: 8, ch: [7, 8, 9] },
-            { t: 'm', p: 'Count by 2s!', s: [2, null, 6, 8], a: 4, ch: [3, 4, 5] }]
-        },
-        {
-          id: 'm4b', w: 4, title: 'Skip by 5s', color: '#EC4899', emoji: '\u23E9', q: [
-            { t: 'm', p: 'Count by 5s!', s: [5, 10, null, 20], a: 15, ch: [12, 15, 18] },
-            { t: 'm', p: 'Count by 5s!', s: [5, null, 15, 20], a: 10, ch: [8, 10, 12] },
-            { t: 'm', p: 'Count by 5s!', s: [10, 15, 20, null], a: 25, ch: [22, 25, 30] },
-            { t: 'm', p: 'Count by 5s!', s: [null, 10, 15, 20], a: 5, ch: [3, 5, 7] },
-            { t: 'm', p: 'Count by 5s!', s: [15, null, 25, 30], a: 20, ch: [18, 20, 22] }]
-        },
-        {
-          id: 'm4c', w: 4, title: 'Doubles', color: '#10B981', emoji: '\uD83D\uDC6F', q: [
-            { t: 'eq', p: 'Solve it!', eq: '1 + 1 = ?', a: 2, ch: [1, 2, 3] },
-            { t: 'eq', p: 'Solve it!', eq: '2 + 2 = ?', a: 4, ch: [3, 4, 5] },
-            { t: 'eq', p: 'Solve it!', eq: '3 + 3 = ?', a: 6, ch: [5, 6, 7] },
-            { t: 'eq', p: 'Solve it!', eq: '4 + 4 = ?', a: 8, ch: [7, 8, 9] },
-            { t: 'eq', p: 'Solve it!', eq: '5 + 5 = ?', a: 10, ch: [9, 10, 11] }]
-        },
-        {
-          id: 'm4d', w: 4, title: 'Big Review', color: '#8B5CF6', emoji: '\uD83C\uDFC6', q: [
-            { t: 'eq', p: 'Solve it!', eq: '6 + 3 = ?', a: 9, ch: [8, 9, 10] },
-            { t: 'eq', p: 'Solve it!', eq: '7 - 2 = ?', a: 5, ch: [4, 5, 6] },
-            { t: 'b', p: 'Which is BIGGER?', x: 15, y: 12, ch: [15, 12], a: 15 },
-            { t: 'm', p: 'What comes next?', s: [8, 9, 10, null], a: 11, ch: [10, 11, 12] },
-            { t: 'eq', p: 'Solve it!', eq: '4 + 5 = ?', a: 9, ch: [8, 9, 10] }]
-        }
-      ];
 
       /* ============================================
          ENGLISH CURRICULUM — 4 weeks
@@ -1816,7 +1678,7 @@
       ];
 
       /* CURRICULUM_END */
-      LearningApp.start({ MATH, ENG, CRIT, PHON, EM, WPH, PHASES });
+      LearningApp.start({ ENG, CRIT, PHON, EM, WPH, PHASES });
     })();
   </script>
 </body>

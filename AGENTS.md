@@ -2,24 +2,41 @@
 
 ## Project and checks
 
-Viaan is a static learning app for a young child, hosted on GitHub Pages. `index.html` contains the curriculum data and HTML shell; `curriculum-assets/learning.js`, `experience.js`, and `experience.css` provide rules, interactions, and design. No build step. Serve the repository over HTTP, for example `python3 -m http.server 8765`.
+Viaan is a static learning app for a young child, hosted on GitHub Pages. `index.html` contains the English and Thinking curriculum data and HTML shell; `curriculum-assets/learning.js`, `experience.js`, and `experience.css` provide rules, interactions, and design. No build step. Serve the repository over HTTP, for example `python3 -m http.server 8765`.
 
-Run `node --test curriculum.test.mjs chess.test.mjs memory.test.mjs sky-playground/*.test.mjs little-racer/*.test.mjs little-dominoes/*.test.mjs`. For curriculum changes, also verify a complete lesson with a wrong answer, a clue, a correct retry, manual Next, completion, and saved-progress reload. Check a phone viewport for overflow and usable controls.
+Run `node --test curriculum.test.mjs chess.test.mjs memory.test.mjs sky-playground/*.test.mjs little-racer/*.test.mjs little-dominoes/*.test.mjs number-playground/*.test.mjs`. For curriculum changes, also verify a complete lesson with a wrong answer, a clue, a correct retry, manual Next, completion, and saved-progress reload. Check a phone viewport for overflow and usable controls.
 
 ## Curriculum
 
 Read `curriculum-assets/README.md` before changing lesson flow, progress, sound, art, or content corrections.
 
-- Preserve the `CURRICULUM_START` / `CURRICULUM_END` markers in `index.html`; tests extract the existing `MATH`, `ENG`, `CRIT`, `WPH`, and `EM` maps from them. There are 196 stable lesson IDs and 980 questions: Math 16/80, English 160/800, Thinking 20/100.
-- `learning.js` exports the browser global `Learning` and also runs in Node VM tests. It owns content preparation, explanations, hints, shuffle, progress normalization, completion rules, and next-lesson selection. `experience.js` exports `LearningApp.start(source)`, owns the DOM, audio lifecycle, and the 23 active question renderers. Add question types to its switch and test their data/interaction semantics.
-- World names: Number Playground (math), Story Garden (eng), Little Detective (crit). English keeps the original six phonics phases and 40 weeks, with child-facing Listen/Build/Read cards and full lesson browsing in a grown-up disclosure. Thinking keeps five units: grouping, associations, cause/effect, silly stories, patterns/order.
+- Preserve the `CURRICULUM_START` / `CURRICULUM_END` markers in `index.html`; tests extract the existing `ENG`, `CRIT`, `WPH`, and `EM` maps from them. There are 180 stable lesson IDs and 900 questions: English 160/800, Thinking 20/100. Math is no longer a set of lessons here; it is the Number Playground game (below).
+- `learning.js` exports the browser global `Learning` and also runs in Node VM tests. It owns content preparation, explanations, hints, shuffle, progress normalization, completion rules, and next-lesson selection. `experience.js` exports `LearningApp.start(source)`, owns the DOM, audio lifecycle, and the 16 active question renderers. Add question types to its switch and test their data/interaction semantics.
+- World names: Story Garden (eng), Little Detective (crit); the Number Playground card on the home page opens the math game. English keeps the original six phonics phases and 40 weeks, with child-facing Listen/Build/Read cards and full lesson browsing in a grown-up disclosure. Thinking keeps five units: grouping, associations, cause/effect, silly stories, patterns/order.
 - Shared flow: example → try → optional clue/retry → explanation → manual Next → completion badge. A wrong answer never advances. Used build tiles cannot be selected twice. No speed scoring, perfection threshold, or badge loss.
 - Keep existing `vla4` localStorage values. New data lives in `__learning.levels[id]`: completion, latest independent/assisted counts and misses, play count, best independent count. Legacy numeric scores remain max-preserved; an older positive score means completed, with no fabricated assistance history. A completed round with help earns a badge even when its numeric score is zero. Parent summaries describe the latest recorded attempt per lesson.
-- Daily Adventure retains `__adv={d,n,g,s}` and its four English/Math/English/Thinking stops. Validate date, cursor, game, world and level IDs before use. Completion increments the cursor only once; replaying the same stop cannot skip ahead. All three games remain freely available from home.
+- Daily Adventure retains `__adv={d,n,g,s}` and its four English/Math/English/Thinking stops. The math stop opens `number-playground/?adventure=1`, and a finished visit there moves the cursor on. Validate date, cursor, game, world and level IDs before use. Completion increments the cursor only once; replaying the same stop cannot skip ahead. All three games remain freely available from home.
 - New instructions/explanations use on-demand device speech. Phonemes and words reuse local recorded clips; never substitute general TTS for isolated phonics. `stopAudio` cancels the media singleton, delayed sequence callback, and device speech; a token rejects stale callbacks. Call it on question changes, navigation, examples, replay, and page hide.
 - Clip IDs: `phon_A` for a single letter (uppercase, including on case-sensitive Pages hosting), `phon_ch` for a digraph, `word_` plus nonletters replaced with underscores. The `eer` spelling in deer uses the existing `phon_ear` sound. Number clips exist for 0–12, 15, 18, 20, 25, 30; other number-line labels use device speech. Existing `generate-audio.js` remains available for intentional recording work and reads `OPENAI_API_KEY`; no audio generation is needed to build or run the app.
-- Math uses complete ten-frames, count-once objects, grouping trays, subtraction counters, and number trails. Do not cap displayed quantities at ten. Thinking story choices need explicit actions/captions and a concrete explanation; paired symbols alone do not establish an absurdity.
+- Thinking story choices need explicit actions/captions and a concrete explanation; paired symbols alone do not establish an absurdity.
 - Preserve original local PNGs and the Blender source/generator under `curriculum-assets/`; existing animal renders are shared from `memory-assets/`. Remaining vocabulary uses the `EM` symbol map inside consistent cards. Do not imply every vocabulary item has a Blender render.
+
+## Number Playground (math, standalone game)
+
+The home Number Playground card and the Daily Adventure's math stop open `number-playground/`,
+which replaced the old math lessons. A path of 26 stops in three lands; each stop is one of
+six games (Feed, Pop, More, Domino, Hop, Bowl) at one difficulty, and every visit sets fresh
+numbers. Read `number-playground/README.md` when changing the games, the path, rewards or
+saving. `rules.js` holds the path, task makers, checks and the save and runs in Node;
+`game.js` owns the DOM, speech, eggs and sticker book; `audio.js` synthesizes sound. The
+playing must be the maths: counting things out, hopping a number line, knocking pins down,
+not a quiz with a skin. Every task is answered by doing, a wrong try only gets a hint, and
+there is no timer, lost star or failure. Stars come from finished tasks and hatch surprise
+eggs holding stickers; hatched animals join the games. Progress persists in
+`viaan-numbers-v1`, validated by `normalizeSave`. Files load with a `?v=` number; raise it
+everywhere whenever code or styles change (a test checks they match). Run
+`node --test number-playground/*.test.mjs` after changes and play a visit of each game, an
+egg, the sticker book and the adventure hand-off on a phone both ways up.
 
 ## Chess (standalone game)
 

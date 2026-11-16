@@ -2,7 +2,8 @@
 (function (root) {
   'use strict';
   const worlds = {
-    math: { title: 'Number Playground', short: 'Math', art: 'apple', buddy: 'bear', intro: 'Little objects. Big discoveries.', color: '#28775f', groups: ['Count & compare', 'Add & explore', 'Take away', 'Number patterns'] },
+    // Math is its own game in ../number-playground; the home page only needs its name.
+    math: { title: 'Number Playground', short: 'Math' },
     eng: { title: 'Story Garden', short: 'English', art: 'book', buddy: 'owl', intro: 'Listen, build, and grow a story.', color: '#536b9b', groups: ['Listen', 'First sounds', 'Sound teams', 'Blend', 'More sounds', 'Read stories'] },
     crit: { title: 'Little Detective', short: 'Thinking', art: 'car', buddy: 'frog', intro: 'Look closely. Find the little clues.', color: '#8c607c', groups: ['Spot the odd one', 'Find a partner', 'What happens next?', 'Silly stories', 'Patterns & order'] }
   };
@@ -88,12 +89,6 @@
     if (q.t === 'odd') return 'The others are ' + q.group + '. The ' + q.a + ' belongs to a different group.';
     if (q.t === 'pat') return 'The pictures repeat: ' + q.seq.join(', ') + '. Next comes ' + q.a + '.';
     if (q.t === 'seq') return 'First ' + q.order[0] + ', then ' + q.order[1] + ', and later ' + q.order[2] + '.';
-    if (q.t === 'c') return 'You counted ' + q.d + ' objects, each one once!';
-    if (q.t === 'ad') return q.x + ' and ' + q.y + ' together make ' + q.a + '.';
-    if (q.t === 'eq') return q.eq.replace('?', q.a) + '.';
-    if (q.t === 'b') return q.a + ' is bigger. It has more counters.';
-    if (q.t === 'cm' || q.t === 'cl') return (q.a === 'l' ? q.l : q.r) + ' is the group with ' + (q.t === 'cl' ? 'fewer' : 'more') + ' counters.';
-    if (q.t === 'm') return 'The number trail is ' + q.s.map(n => n == null ? q.a : n).join(', ') + '.';
     if (q.t === 'rhy') return q.word.toLowerCase() + ' and ' + q.a + ' rhyme. Listen to their endings!';
     if (q.t === 'fw') return q.p.replace(/_+/, q.a);
     if (q.t === 'ul') return q.upper + ' and ' + q.a + ' are the same letter, big and small.';
@@ -108,11 +103,6 @@
     if (q.t === 'silly') return 'Listen to each story. Which action could not really happen?';
     if (q.t === 'pat') return 'Say the pictures in order. Listen for the part that repeats.';
     if (q.t === 'seq') return 'Start with what happens first. Then look for the next step.';
-    if (q.t === 'c') return 'Tap each object once. The last number tells you how many.';
-    if (q.t === 'ad') return 'Join the two groups. Then count all the objects.';
-    if (q.t === 'eq') return q.eq.includes('-') ? 'Tap the counters to take some away. Count what is left.' : 'Use the counters or hop along the number line.';
-    if (['b','cm','cl'].includes(q.t)) return 'Compare the rows. Each full frame has ten counters.';
-    if (q.t === 'm') return 'Follow the jumps on the number trail.';
     if (q.t === 'rhy') return 'Hear each word. Which ending sounds the same?';
     if (q.t === 'fw') return 'Read the sentence with each choice. Which one makes sense?';
     if (q.t === 'wb') return 'Say the word slowly. Find the next sound tile.';
