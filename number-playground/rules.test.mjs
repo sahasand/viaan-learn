@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
 import * as R from './rules.js';
+import { TOYS } from '../play-kit/progress.js';
 
 // A repeatable stream of random numbers, so a failing seed can be found again.
 const seeded = seed => () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
@@ -29,7 +29,7 @@ test('feeding asks for an amount in range, from a friend the player has met, wit
   everyTask((task, stop) => {
     if (task.game !== 'feed') return;
     assert.ok(task.want >= stop.min && task.want <= stop.max && task.pile > task.want && task.pile <= task.want + 3, stop.id);
-    assert.ok(['bear', 'cat', 'penguin', 'lion'].includes(task.animal) && R.TOYS.includes(task.food));
+    assert.ok(['bear', 'cat', 'penguin', 'lion'].includes(task.animal) && TOYS.includes(task.food));
     assert.deepEqual([R.judgeFeed(task, task.want), R.judgeFeed(task, task.want - 1), R.judgeFeed(task, task.want + 1)], ['right', 'few', 'many']);
   });
   assert.equal(R.makeTask(R.STOPS[0], seeded(3)).animal, 'bear', 'with nobody else met, bear is fed');
@@ -89,68 +89,4 @@ test('dominoes, hops and bowling are all true sums inside their range', () => {
     }
   });
   assert.ok(seen.zero > 0 && seen.back > 0 && seen.hops > 0, 'strikes, hops back and counting hops all come up');
-});
-
-test('the saved player is validated before use', () => {
-  const fresh = { stars: 0, done: {}, stickers: [], sound: true, next: 'Feed the bear' };
-  for (const bad of [null, undefined, '', 'nonsense', '[]', 42, '{"stars":-3,"done":"x","stickers":"cat"}']) assert.deepEqual(R.normalizeSave(bad), fresh);
-  const save = R.normalizeSave('{"stars":12,"done":{"feed3":2,"cheat":5,"find5":-1},"stickers":["cat","cat","dragon","egg"],"sound":false}');
-  assert.deepEqual(save, { stars: 12, done: { feed3: 2 }, stickers: ['cat', 'egg'], sound: false, next: 'Pop the number' });
-  assert.equal(R.normalizeSave({ stars: 2.5 }).stars, 0);
-  assert.equal(R.normalizeSave({ stars: 1e9 }).stars, 99999);
-  assert.deepEqual(R.friendsOf(save), ['bear', 'cat']);
-});
-
-test('stops open one after another, stars are only ever added, and a finished path stays open', () => {
-  let save = R.normalizeSave(null);
-  assert.equal(R.reached(save), 0);
-  const first = R.finishRound(save, 'feed3', [true, false, true, true, false]);
-  assert.equal(first.earned, 8);
-  save = first.save;
-  assert.deepEqual([save.stars, save.done.feed3, R.reached(save), R.nextStop(save).id], [8, 1, 1, 'find5']);
-  save = R.finishRound(save, 'feed3', [false]).save;
-  assert.deepEqual([save.stars, save.done.feed3, R.reached(save)], [9, 2, 1], 'a replay still earns');
-  assert.equal(R.finishRound(save, 'nonsense', [true]).earned, 0);
-  assert.equal(R.finishRound(save, 'feed3', []).earned, 0);
-  for (const stop of R.STOPS) save = R.finishRound(save, stop.id, [true]).save;
-  assert.equal(R.reached(save), R.STOPS.length - 1);
-});
-
-test('an egg costs stars and always holds a new sticker, until every sticker is found', () => {
-  assert.equal(R.hatchEgg({ stars: R.EGG_COST - 1 }), null);
-  let save = R.normalizeSave({ stars: R.EGG_COST * (R.STICKERS.length + 2) });
-  const found = [];
-  for (let i = 0; i < R.STICKERS.length; i++) {
-    const egg = R.hatchEgg(save, seeded(i + 1));
-    assert.ok(egg && !found.includes(egg.sticker) && R.STICKERS.includes(egg.sticker));
-    assert.equal(egg.save.stars, save.stars - R.EGG_COST);
-    found.push(egg.sticker); save = egg.save;
-  }
-  assert.equal(save.stickers.length, R.STICKERS.length);
-  assert.equal(R.canHatch(save), false);
-  assert.equal(R.hatchEgg(save), null);
-  assert.ok(!R.STICKERS.includes('bear') && R.STICKERS.length === 27);
-});
-
-test('a finished visit moves today’s Daily Adventure on only when it is waiting at its math stop', () => {
-  const adv = n => ({ m1a: 4, __adv: { d: '2026-11-15', n, g: 'plane', s: [{ w: 'eng', id: 'e1a' }, { w: 'math', id: 'play' }, { w: 'eng', id: 'e1b' }, { w: 'crit', id: 'c1a' }] } });
-  const moved = R.advanceAdventure(JSON.stringify(adv(1)), '2026-11-15');
-  assert.equal(moved.__adv.n, 2);
-  assert.equal(moved.m1a, 4, 'everything else in the save is kept');
-  assert.equal(R.advanceAdventure(adv(0), '2026-11-15'), null, 'waiting at an English stop');
-  assert.equal(R.advanceAdventure(adv(1), '2026-11-16'), null, 'yesterday’s adventure');
-  for (const bad of [null, '', 'nonsense', '{}', { __adv: { d: '2026-11-15', n: 9, s: [] } }]) assert.equal(R.advanceAdventure(bad, '2026-11-15'), null);
-  assert.equal(R.dayStamp(new Date(2026, 10, 5)), '2026-11-5');
-});
-
-test('every picture and number clip the game uses is in the repository, and files share one version number', () => {
-  const root = new URL('../', import.meta.url);
-  for (const name of R.ANIMALS) assert.ok(existsSync(new URL(`memory-assets/${name}.png`, root)), name);
-  for (const name of R.TOYS) assert.ok(existsSync(new URL(`curriculum-assets/${name}.png`, root)), name);
-  const game = readFileSync(new URL('./game.js', import.meta.url), 'utf8'), page = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-  const clips = JSON.parse(game.match(/const CLIPS = (\[[^\]]+\])/)[1]);
-  for (const n of clips) assert.ok(existsSync(new URL(`audio/num_${n}.mp3`, root)), `num_${n}`);
-  const versions = new Set([...page.matchAll(/(?:style\.css|game\.js)\?v=(\d+)/g), ...game.matchAll(/\.js\?v=(\d+)/g)].map(m => m[1]));
-  assert.equal(versions.size, 1, `one version everywhere, found ${[...versions]}`);
-  assert.equal([...page.matchAll(/(?:style\.css|game\.js)\?v=\d+/g)].length, 2);
 });

@@ -39,23 +39,18 @@ hatched take turns in the Feed and More games.
 
 ## Files
 
-- `rules.js`: the path (`LANDS`, `STOPS`), task makers for every game, answer checks,
-  the saved player, eggs, and the Daily Adventure hand-off. Plain data, runs in Node.
-- `game.js`: the map, the six games, speech, eggs and the sticker book.
-- `audio.js`: synthesized music and effects. Numbers are spoken from the recorded clips
-  in `../audio/num_*.mp3` when one exists, otherwise by the device voice, which also
-  reads every prompt. Sound is on unless switched off, and starts with the first tap.
-- `style.css`, `index.html`. Art is shared from `../memory-assets` and
-  `../curriculum-assets`.
-
-`index.html` and `game.js` load their files with a `?v=` number; raise it everywhere
-whenever code or styles change (a test checks they match).
+- `rules.js`: the path (`LANDS`, `STOPS`), task makers for every game and answer checks.
+  Plain data, runs in Node.
+- `game.js`, `style.css`: the six task screens.
+- The map, stars, eggs, sticker book, speech and sound are shared with the other
+  learning games: see `../play-kit/README.md`. Numbers are spoken from the recorded clips
+  in `../audio/num_*.mp3` when one exists, otherwise by the device voice.
 
 ## Saving
 
-`viaan-numbers-v1` holds `{ stars, done: { stopId: visits }, stickers, sound, next }`,
-validated by `normalizeSave`. `next` is the title of the next stop, which the home page
-shows without loading the game. When the page is opened with `?adventure=1` and today's
+`viaan-numbers-v1` holds `{ done: { stopId: visits }, next }`. Stars and stickers are
+shared with the other learning games in `viaan-rewards-v1`. `next` is the title of the
+next stop, which the home page shows without loading the game. When the page is opened with `?adventure=1` and today's
 Daily Adventure (kept in the curriculum's `vla4`) is waiting at its math stop, finishing
 a visit moves the adventure on by one.
 
@@ -66,7 +61,7 @@ node --test number-playground/*.test.mjs
 ```
 
 Tests make hundreds of rounds for every stop and check ranges, answers, sequences, no
-ties, no repeated task, the save, stars, eggs, the adventure hand-off, and that every
-picture and number clip exists. In a browser, play one visit of each game with a wrong
+ties and no repeated task. Stars, eggs and the adventure hand-off are tested in
+`../play-kit`. In a browser, play one visit of each game with a wrong
 try and a right one, hatch an egg, open the sticker book, and check a phone both ways up.
-`window.numberPlayground` exposes the save, the current task and `startStop(id)`.
+`window.playground` exposes the rewards, visits, current task and `startStop(id)`.

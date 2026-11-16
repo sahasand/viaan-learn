@@ -1,11 +1,8 @@
-// Number Playground rules: the path of stops, the tasks each game sets, and the saved
-// player. Plain data and numbers only, so everything here runs in Node tests.
+// Number Playground rules: the path of stops and the tasks each game sets. Plain data and
+// numbers only, so everything here runs in Node tests. Stars, stickers and which stops
+// are open are kept by ../play-kit/progress.js.
+import { between, pick, shuffle } from '../play-kit/progress.js?v=2';
 export const SAVE_KEY = 'viaan-numbers-v1';
-export const EGG_COST = 10;              // stars that hatch one surprise egg
-export const ANIMALS = ['bear', 'cat', 'dog', 'duck', 'elephant', 'frog', 'giraffe', 'lion', 'owl', 'panda', 'penguin', 'turtle'];
-export const TOYS = ['apple', 'car', 'fish', 'seed', 'sprout', 'flower', 'tree', 'cup', 'ball', 'cookie', 'book', 'blocks', 'hat', 'ice', 'cloud', 'egg'];
-// Bear is there from the start; every other friend and toy hatches from an egg.
-export const STICKERS = [...ANIMALS.filter(a => a !== 'bear'), ...TOYS];
 const FOODS = { bear: 'apple', cat: 'fish', penguin: 'fish', dog: 'cookie', panda: 'apple', elephant: 'apple', giraffe: 'apple' };
 
 // The path. Each stop is one game at one difficulty; a visit sets a fresh handful of tasks.
@@ -44,13 +41,6 @@ export const STOPS = [
 ];
 export const stopById = id => STOPS.find(s => s.id === id) || null;
 
-const between = (rng, lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
-const pick = (rng, list) => list[Math.floor(rng() * list.length)];
-function shuffle(rng, list) {
-  const out = list.slice();
-  for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
-  return out;
-}
 export function sequenceOf(stop) {
   const out = [];
   for (let n = stop.from; stop.step > 0 ? n <= stop.to : n >= stop.to; n += stop.step) out.push(n);
@@ -108,44 +98,3 @@ export function makeRound(stop, rng = Math.random, friends = ['bear']) {
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 export function judgeFeed(task, count) { return count === task.want ? 'right' : count < task.want ? 'few' : 'many'; }
 export const moreAnswer = task => (task.ask === 'more') === (task.left > task.right) ? 'left' : 'right';
-
-/* ---------- the saved player ---------- */
-export function normalizeSave(raw) {
-  let saved = raw;
-  if (typeof raw === 'string') { try { saved = JSON.parse(raw); } catch { saved = null; } }
-  if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
-  const done = {};
-  if (saved.done && typeof saved.done === 'object') for (const stop of STOPS) if (Number.isInteger(saved.done[stop.id]) && saved.done[stop.id] > 0) done[stop.id] = Math.min(saved.done[stop.id], 9999);
-  const stickers = Array.isArray(saved.stickers) ? STICKERS.filter(s => saved.stickers.includes(s)) : [];
-  const save = { stars: Number.isInteger(saved.stars) && saved.stars > 0 ? Math.min(saved.stars, 99999) : 0, done, stickers, sound: saved.sound !== false };
-  save.next = nextStop(save).title;      // the home page shows this without loading the game
-  return save;
-}
-// Stops open one after another; every stop already reached stays open for replay.
-export const reached = save => { const first = STOPS.findIndex(s => !save.done[s.id]); return first < 0 ? STOPS.length - 1 : first; };
-export const nextStop = save => STOPS[reached(save)];
-export const friendsOf = save => ['bear', ...save.stickers.filter(s => ANIMALS.includes(s))];
-// Every finished task earns a star, and one more when it was right first time. Nothing is ever taken away.
-export function finishRound(save, stopId, firsts) {
-  const current = normalizeSave(save);
-  if (!stopById(stopId) || !Array.isArray(firsts) || !firsts.length) return { save: current, earned: 0 };
-  const earned = firsts.reduce((n, first) => n + (first ? 2 : 1), 0);
-  return { save: normalizeSave({ ...current, stars: current.stars + earned, done: { ...current.done, [stopId]: (current.done[stopId] || 0) + 1 } }), earned };
-}
-export const canHatch = save => save.stars >= EGG_COST && save.stickers.length < STICKERS.length;
-// An egg costs stars and always holds a sticker the player does not have yet.
-export function hatchEgg(save, rng = Math.random) {
-  const current = normalizeSave(save);
-  if (!canHatch(current)) return null;
-  const sticker = pick(rng, STICKERS.filter(s => !current.stickers.includes(s)));
-  return { sticker, save: normalizeSave({ ...current, stars: current.stars - EGG_COST, stickers: [...current.stickers, sticker] }) };
-}
-// The home page's Daily Adventure keeps its place in the curriculum's own save. When
-// today's adventure is waiting at its math stop, a finished visit here moves it on.
-export function advanceAdventure(raw, today) {
-  let progress; try { progress = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
-  const a = progress?.__adv;
-  if (!a || a.d !== today || !Array.isArray(a.s) || !Number.isInteger(a.n) || a.s[a.n]?.w !== 'math') return null;
-  return { ...progress, __adv: { ...a, n: a.n + 1 } };
-}
-export const dayStamp = (d = new Date()) => d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();

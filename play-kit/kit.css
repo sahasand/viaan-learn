@@ -1,0 +1,103 @@
+/* The look the learning games share: bright sky, cream cards, big round buttons for small hands. */
+:root{--ink:#17403c;--cream:#fffaf0;--gold:#ffc93c;--coral:#ff7a59;--mint:#3fb98f;--sky:#bfe9f7;--shadow:0 6px 0 #0000001a,0 10px 24px #1740401f}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{font-family:'Baloo 2',system-ui,sans-serif;color:var(--ink);background:linear-gradient(#bfe9f7,#dff5e6 55%,#f4f8d8) fixed;-webkit-user-select:none;user-select:none;touch-action:manipulation;overflow-x:hidden}
+button,a{font:inherit;color:inherit;border:0;cursor:pointer;text-decoration:none}
+button:focus-visible,a:focus-visible{outline:4px solid #17403c;outline-offset:3px}
+img{display:block;max-width:100%;pointer-events:none}
+[hidden]{display:none!important}
+
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 8px;background:linear-gradient(#bfe9f7,#bfe9f7e6 70%,#bfe9f700)}
+.round{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-weight:800;background:var(--cream);box-shadow:var(--shadow)}
+#sound[aria-pressed=true]{background:var(--gold)}
+#sound[aria-pressed=false]{opacity:.7}
+.brand{font-weight:800;font-size:22px;letter-spacing:-.5px;white-space:nowrap}
+.brand span{color:var(--coral)}
+.steps{display:flex;gap:6px;margin-left:auto}
+.steps i{width:16px;height:16px;border-radius:50%;background:#ffffffb0;box-shadow:inset 0 0 0 2px #17403c22}
+.steps .now{background:#fff;box-shadow:inset 0 0 0 3px var(--coral)}
+.steps .done{background:var(--mint)}
+.steps .gold{background:var(--gold);box-shadow:0 0 0 2px #fff,0 0 10px #ffc93c}
+.bank{margin-left:auto;display:flex;align-items:center;gap:5px;padding:5px 14px 5px 10px;border-radius:24px;background:#fff3c4;font-weight:800;font-size:22px;box-shadow:inset 0 0 0 2px #ffd866,var(--shadow)}
+.steps:not([hidden])+.bank{margin-left:0}
+body[data-screen=play] .brand{display:none}
+.screen{max-width:860px;margin:0 auto;padding:6px 14px calc(28px + env(safe-area-inset-bottom))}
+
+/* ---------- the map ---------- */
+.shelf{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:6px 0 16px}
+.prize{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:22px;background:var(--cream);box-shadow:var(--shadow);text-align:left;min-height:72px}
+.prize img{width:52px;height:52px;object-fit:contain}
+.prize b{display:block;font-size:17px;line-height:1.1}
+.prize small{display:block;font-size:13px;line-height:1.2;font-weight:700;color:#5b7772}
+.prize.ready{background:#fff3c4;animation:nudge 1.2s ease-in-out infinite}
+.prize.ready small{color:#b3600c}
+.land{margin:0 0 18px;padding:14px 14px 18px;border-radius:28px;box-shadow:var(--shadow)}
+.land-0{background:#d9f3c8}.land-1{background:#c9ecf5}.land-2{background:#ffe3c2}
+.land h2{margin:0 0 10px 4px;font-size:22px}
+.stops{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.stop{position:relative;display:grid;justify-items:center;align-content:start;gap:4px;padding:12px 6px 10px;border-radius:22px;background:var(--cream);box-shadow:0 5px 0 #0000001f;min-height:118px}
+.stop .icon{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:32px;background:#fff;box-shadow:inset 0 0 0 3px #17403c14}
+.stop b{font-size:14px;line-height:1.1;text-align:center}
+.stop i{position:absolute;top:6px;right:8px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:14px;font-weight:800;color:#fff;background:var(--mint)}
+.stop.locked{opacity:.55;box-shadow:none}
+.stop.next{background:#fff3c4;box-shadow:0 5px 0 #e0a82e,0 0 0 4px #ffc93c;animation:nudge 1.4s ease-in-out infinite}
+.stop .here{position:absolute;left:-6px;top:-14px;width:46px}
+.stop:active:not(:disabled),.prize:active{transform:translateY(4px);box-shadow:0 1px 0 #0000001f}
+
+/* ---------- playing ---------- */
+.ask{display:flex;align-items:center;gap:10px;width:100%;padding:8px 14px 8px 8px;border-radius:26px;background:var(--cream);box-shadow:var(--shadow);text-align:left;min-height:76px}
+.buddy{flex:none;width:60px}
+.bubble{flex:1;font-size:20px;font-weight:700;line-height:1.15}
+.again{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:20px;background:#e3f4ec}
+.stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:16px}
+.sum{margin:0;font-size:44px;font-weight:800;line-height:1;letter-spacing:1px}
+.pad{display:flex;flex-wrap:wrap;justify-content:center;gap:9px;max-width:460px}
+.pad button,.go{min-width:56px;height:56px;padding:0 14px;border-radius:18px;font-size:26px;font-weight:800;background:var(--cream);box-shadow:0 5px 0 #c9c3ad}
+.pad button:active,.go:active{transform:translateY(4px);box-shadow:0 1px 0 #c9c3ad}
+.pad .right{background:var(--gold);box-shadow:0 5px 0 #d39b22}
+.go{background:var(--coral);color:#fff;box-shadow:0 5px 0 #c9502f;font-size:22px;padding:0 26px}
+.wobble{animation:wobble .4s}
+.happy{animation:happy .5s 3}
+
+/* ---------- dialogs ---------- */
+dialog{width:min(92vw,420px);max-height:92svh;padding:22px 20px;border:0;border-radius:32px;background:var(--cream);color:var(--ink);text-align:center;box-shadow:0 20px 60px #17403c55}
+dialog::backdrop{background:#17403c66;backdrop-filter:blur(3px)}
+dialog h2{margin:4px 0 6px;font-size:30px;line-height:1.05}
+dialog p{margin:4px 0 10px;font-size:17px;font-weight:700}
+.burst{font-size:60px;line-height:1}
+.earned{font-size:26px!important}
+.primary,.secondary,.text{display:block;width:100%;min-height:54px;margin-top:10px;padding:10px 16px;border-radius:20px;font-size:20px;font-weight:800}
+.primary{background:var(--coral);color:#fff;box-shadow:0 5px 0 #c9502f}
+.secondary{background:#e3f4ec;box-shadow:0 5px 0 #b9d9c9}
+.text{min-height:44px;background:none;font-size:16px;text-decoration:underline}
+.egg{width:170px;height:190px;margin:6px auto;padding:0;background:none}
+.egg.crack1{transform:rotate(-6deg)}.egg.crack2{transform:rotate(7deg) scale(1.06)}.egg.crack3{transform:scale(1.15)}
+.hatched{width:190px;margin:0 auto;animation:hatch .6s cubic-bezier(.3,1.6,.6,1)}
+.stickers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-height:60svh;overflow:auto;padding:4px}
+.sticker{display:grid;justify-items:center;padding:6px 2px;border-radius:16px;background:#fff}
+.sticker img{width:58px;height:58px;object-fit:contain}
+.sticker small{font-size:12px;font-weight:800}
+.sticker.missing img{filter:brightness(0);opacity:.12}
+.noscript{padding:30px;text-align:center}
+
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:9;overflow:hidden}
+.confetti i{position:absolute;top:22%;width:11px;height:15px;border-radius:3px;animation:confetti var(--t) ease-out forwards}
+@keyframes confetti{from{transform:translate(0,0) rotate(0)}to{transform:translate(calc(var(--x)*160px),70vh) rotate(var(--r));opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes pop{to{transform:scale(1.5);opacity:0;visibility:hidden}}
+@keyframes wobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+@keyframes happy{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+@keyframes nudge{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+@keyframes leap{0%{transform:translateY(0) scale(1)}50%{transform:translateY(-26px) scale(1.1)}100%{transform:translateY(0) scale(1)}}
+@keyframes topple{0%{transform:rotate(0)}60%{transform:rotate(-14deg)}100%{transform:rotate(-8deg) translateY(4px)}}
+@keyframes roll{to{transform:translateY(-190px) scale(.5) rotate(540deg);opacity:0}}
+@keyframes hatch{from{transform:scale(.2) rotate(-20deg);opacity:0}}
+
+@media(max-width:420px){.bubble{font-size:18px}.brand{font-size:19px}.sum{font-size:38px}}
+@media(max-height:520px){.stage{gap:8px;padding-top:8px}.ask{min-height:60px}.buddy{width:46px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.emoji{display:block;font-size:44px;line-height:1.15;text-align:center}
+.stop .icon img{width:46px}.stop .here .emoji{font-size:34px}
+.sticker .emoji{font-size:46px;height:58px}.sticker.missing .emoji{filter:grayscale(1) brightness(0);opacity:.12}
+.hatched .emoji{font-size:130px}

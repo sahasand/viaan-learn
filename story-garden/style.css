@@ -1,0 +1,44 @@
+/* Story Garden's five games. The shared look is in ../play-kit/kit.css. */
+.shown{position:relative;display:grid;justify-items:center;gap:2px;min-height:60px}
+.shown>img{width:150px;margin:-10px 0 -14px}
+.shown>.emoji{font-size:96px}
+.shown>b{font-size:34px;line-height:1}
+.speaker{width:96px;height:96px;border-radius:50%;font-size:44px;background:var(--gold);box-shadow:0 6px 0 #d39b22,var(--shadow)}
+.speaker.small{width:56px;height:56px;font-size:26px}
+.shown .speaker.small{position:absolute;right:-70px;top:8px}
+.speaker:active{transform:translateY(4px);box-shadow:0 2px 0 #d39b22}
+.bubbles{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;padding:10px 0}
+.bubble-letter{min-width:104px;height:104px;padding:0 16px;border-radius:52px;font-size:50px;font-weight:800;color:#fff;text-shadow:0 2px 0 #0003;box-shadow:inset -8px -10px 0 #0000001c,inset 6px 8px 0 #ffffff55;animation:bob 2.6s ease-in-out var(--d) infinite}
+.bubbles.word .bubble-letter{font-size:36px;height:84px}
+.c0{background:#ff6b6b}.c1{background:#4ecdc4}.c2{background:#6c8cff}
+.bubble-letter.right,.card.right,.choice.right{outline:6px solid var(--gold);outline-offset:3px}
+.word,.pool{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.tile{min-width:64px;height:68px;padding:0 12px;border-radius:18px;font-size:38px;font-weight:800;background:var(--cream);box-shadow:0 5px 0 #c9c3ad}
+.tile:active{transform:translateY(4px);box-shadow:0 1px 0 #c9c3ad}
+.tile:disabled{opacity:.25;box-shadow:none}
+.tile.lit{background:var(--gold);box-shadow:0 5px 0 #d39b22}
+.word .tile{background:#e3f4ec;box-shadow:0 5px 0 #b9d9c9}
+.word.joined{gap:0}
+.word.joined .tile{border-radius:0;min-width:0;padding:0 5px;background:var(--gold);box-shadow:none}
+.blend{min-height:48px;padding:6px 20px;border-radius:24px;font-size:18px;font-weight:800;background:var(--cream);box-shadow:0 4px 0 #c9c3ad}
+.cards{display:flex;justify-content:center;gap:10px;width:100%}
+.card{flex:1;max-width:150px;min-height:118px;display:grid;place-items:center;align-content:center;gap:2px;padding:8px 4px;border-radius:24px;background:var(--cream);box-shadow:var(--shadow)}
+.card img{width:104px;margin:-6px 0}
+.card .emoji{font-size:64px}
+.card b{font-size:22px;line-height:1}
+.card.chosen{background:#fff3c4;box-shadow:0 0 0 4px var(--gold),var(--shadow)}
+.card:active{transform:scale(.96)}
+.go:disabled{opacity:.4}
+.caterpillar{display:flex;align-items:center;gap:4px}
+.caterpillar .head{font-size:50px;transform:scaleX(-1)}
+.part{min-width:62px;height:62px;padding:0 8px;border-radius:50%;display:grid;place-items:center;font-size:32px;font-weight:800;background:#ffffff90;box-shadow:inset 0 0 0 3px #17403c26}
+.part.full{background:#8ad66b;box-shadow:inset 0 -6px 0 #5fae42;color:#fff;text-shadow:0 2px 0 #0003;animation:happy .35s}
+.sentence{margin:8px 0;font-size:34px;font-weight:800;line-height:1.35;text-align:center}
+.gap{display:inline-block;min-width:92px;margin:0 6px;padding:0 10px;border-radius:14px;background:#fff;box-shadow:inset 0 0 0 3px #17403c33;color:#17403c66}
+.gap.full{background:var(--gold);box-shadow:none;color:var(--ink)}
+.choices{display:flex;flex-wrap:wrap;justify-content:center;gap:12px}
+.choice{min-width:104px;height:70px;padding:0 18px;border-radius:22px;font-size:32px;font-weight:800;background:var(--cream);box-shadow:0 5px 0 #c9c3ad}
+.choice:active{transform:translateY(4px);box-shadow:0 1px 0 #c9c3ad}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@media(max-width:420px){.bubble-letter{min-width:92px;height:92px;font-size:44px}.tile{min-width:56px;height:62px;font-size:34px}.part{min-width:52px;height:52px;font-size:27px}.caterpillar .head{font-size:40px}.sentence{font-size:28px}.card img{width:88px}.shown .speaker.small{right:-62px}}
+@media(max-height:520px){.shown>img{width:96px}.shown>.emoji{font-size:60px}.speaker{width:70px;height:70px;font-size:32px}.bubble-letter{height:76px;min-width:76px;font-size:36px}.card{min-height:90px}.card img{width:70px}.card .emoji{font-size:44px}}

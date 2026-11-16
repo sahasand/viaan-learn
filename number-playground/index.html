@@ -8,58 +8,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap">
-  <link rel="stylesheet" href="style.css?v=1">
+  <link rel="stylesheet" href="../play-kit/kit.css?v=2">
+  <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
-  <header class="top">
-    <a class="round" id="home" href="../index.html" aria-label="Back to Viaan">⌂</a>
-    <button class="round" id="back" aria-label="Back to the map" hidden>←</button>
-    <div class="brand">number playground<span>.</span></div>
-    <div class="steps" id="steps" aria-hidden="true"></div>
-    <div class="bank" id="bank" aria-label="Stars"><span aria-hidden="true">⭐</span><b id="stars">0</b></div>
-    <button class="round" id="sound" aria-label="Turn sound off" aria-pressed="true">♫</button>
-  </header>
-
-  <main class="screen" id="map" aria-label="The path of games">
-    <div class="shelf">
-      <button class="prize" id="eggButton"><img src="../curriculum-assets/egg.png" alt=""><span><b>Surprise egg</b><small id="eggNote">10 stars</small></span></button>
-      <button class="prize" id="bookButton"><img src="../memory-assets/panda.png" alt=""><span><b>My stickers</b><small id="bookNote">0 of 27</small></span></button>
-    </div>
-    <div id="path"></div>
-  </main>
-
-  <main class="screen" id="play" aria-label="The game" hidden>
-    <button class="ask" id="ask" aria-label="Hear it again"><span class="buddy" id="buddy"></span><span class="bubble" id="askText" role="status" aria-live="polite"></span><span class="again" aria-hidden="true">♪</span></button>
-    <div class="stage" id="stage"></div>
-  </main>
-
-  <dialog id="win" aria-labelledby="winTitle">
-    <div class="burst" aria-hidden="true">🎉</div>
-    <h2 id="winTitle">You did it!</h2>
-    <p class="earned"><span aria-hidden="true">⭐</span> <b id="winStars">0</b> new stars</p>
-    <p id="winNote"></p>
-    <button class="primary" id="winNext">Next game →</button>
-    <button class="secondary" id="winEgg">Open a surprise egg 🥚</button>
-    <button class="secondary" id="winAgain">Play this one again</button>
-    <a class="secondary" id="winAdventure" href="../index.html" hidden>Back to my adventure →</a>
-    <button class="text" id="winMap">Back to the map</button>
-  </dialog>
-
-  <dialog id="egg" aria-labelledby="eggTitle">
-    <h2 id="eggTitle">Tap the egg!</h2>
-    <button class="egg" id="eggTap" aria-label="Tap the egg to crack it"><img src="../curriculum-assets/egg.png" alt=""></button>
-    <div class="hatched" id="hatched" hidden></div>
-    <p id="eggText">Tap, tap, tap…</p>
-    <button class="primary" id="eggDone" hidden>Hooray!</button>
-  </dialog>
-
-  <dialog id="book" aria-labelledby="bookTitle">
-    <h2 id="bookTitle">My stickers</h2>
-    <div class="stickers" id="stickers"></div>
-    <button class="primary" id="bookDone" autofocus>Done</button>
-  </dialog>
-
   <noscript><p class="noscript">Please enable JavaScript to play. <a href="../index.html">Back to Viaan</a></p></noscript>
-  <script type="module" src="game.js?v=1"></script>
+  <script type="module" src="game.js?v=2"></script>
 </body>
 </html>
