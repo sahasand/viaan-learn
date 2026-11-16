@@ -1,7 +1,7 @@
 // Little Detective rules: twelve cases, each a mixed visit of thinking puzzles drawn from
 // cases.js, with patterns made fresh every time. Plain data only, so it runs in Node tests.
-import { ODD, GOES, NEXT, SILLY, NORMAL, ORDER } from './cases.js?v=2';
-import { between, pick, shuffle } from '../play-kit/progress.js?v=2';
+import { ODD, GOES, NEXT, SILLY, NORMAL, ORDER } from './cases.js?v=3';
+import { between, pick, shuffle } from '../play-kit/progress.js?v=3';
 export const SAVE_KEY = 'viaan-detective-v1';
 // Clay things that patterns are made of.
 export const PATTERN_THINGS = ['apple', 'cookie', 'ball', 'car', 'fish', 'flower', 'hat', 'cup', 'egg', 'tree', 'book', 'cloud'];

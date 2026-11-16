@@ -1,8 +1,8 @@
 // Little Detective: six kinds of thinking puzzle, mixed into cases. The map, stars, eggs
 // and stickers come from ../play-kit; the puzzles are in cases.js and rules.js.
-import { SAVE_KEY, LANDS, STOPS, makeRound } from './rules.js?v=2';
-import { PICTURES } from './cases.js?v=2';
-import { $, art, wobble, say, ask, miss, solved, sound, busy, startPlayground } from '../play-kit/kit.js?v=2';
+import { SAVE_KEY, LANDS, STOPS, makeRound } from './rules.js?v=3';
+import { PICTURES } from './cases.js?v=3';
+import { $, art, wobble, say, ask, miss, solved, sound, busy, startPlayground } from '../play-kit/kit.js?v=3';
 
 const card = (name, extra = '') => `<button class="card" data-o="${name}" aria-label="${name}" ${extra}>${art(name)}</button>`;
 // The usual way to answer: tap the right picture card.

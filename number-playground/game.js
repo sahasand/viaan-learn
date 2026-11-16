@@ -1,7 +1,7 @@
 // Number Playground: six games where the playing is the maths. The map, stars, eggs and
 // stickers come from ../play-kit; every rule about the numbers lives in rules.js.
-import { SAVE_KEY, LANDS, STOPS, makeRound, judgeFeed, moreAnswer } from './rules.js?v=2';
-import { $, art, cap, later, wobble, pad, sayNumber, ask, miss, solved, countOne, sound, busy, reduced, startPlayground } from '../play-kit/kit.js?v=2';
+import { SAVE_KEY, LANDS, STOPS, makeRound, judgeFeed, moreAnswer } from './rules.js?v=3';
+import { $, art, cap, later, wobble, pad, sayNumber, ask, miss, solved, countOne, sound, busy, reduced, startPlayground } from '../play-kit/kit.js?v=3';
 
 const PIPS = [[], [5], [1, 9], [1, 5, 9], [1, 3, 7, 9], [1, 3, 5, 7, 9], [1, 3, 4, 6, 7, 9]];
 const many = (food, n) => n === 1 || food === 'fish' ? food : food + 's';

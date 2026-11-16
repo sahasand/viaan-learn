@@ -1,8 +1,8 @@
 // The shell the three learning games share: the map of stops, a visit of tasks, speech,
 // the win card, surprise eggs and the sticker book. A game supplies its stops, a round
 // maker and one function per kind of task, then calls startPlayground. One page, one game.
-import { REWARDS_KEY, EGG_COST, ANIMALS, TOYS, TREATS, STICKERS, normalizeRewards, normalizeVisits, reached, friendsOf, finishRound, canHatch, hatchEgg, advanceAdventure, dayStamp } from './progress.js?v=2';
-import { createSound } from './audio.js?v=2';
+import { REWARDS_KEY, EGG_COST, ANIMALS, TOYS, TREATS, STICKERS, normalizeRewards, normalizeVisits, reached, friendsOf, finishRound, canHatch, hatchEgg, advanceAdventure, dayStamp } from './progress.js?v=3';
+import { createSound } from './audio.js?v=3';
 
 export const $ = id => document.getElementById(id);
 export const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -73,10 +73,15 @@ function show(screen) {
 }
 function drawMap() {
   const open = reached(visits, game.stops);
-  $('path').innerHTML = game.lands.map((land, l) => `<section class="land land-${l % 3}"><h2>${land.title}</h2><div class="stops">${land.stops.map(id => {
-    const i = game.stops.findIndex(s => s.id === id), s = game.stops[i], seen = visits.done[id] || 0, state = seen ? 'done' : i === open ? 'next' : 'locked';
-    return `<button class="stop ${state}" data-stop="${id}" ${state === 'locked' ? 'disabled' : ''} aria-label="${s.title}${state === 'locked' ? ', locked' : state === 'done' ? ', played' : ', new'}"><span class="icon" aria-hidden="true">${state === 'locked' ? '🔒' : game.stopArt ? game.stopArt(s, seen) : s.icon}</span><b>${s.title}</b>${state === 'done' ? '<i aria-hidden="true">✓</i>' : ''}${state === 'next' ? `<span class="here">${art(game.buddy)}</span>` : ''}</button>`;
-  }).join('')}</div></section>`).join('');
+  // Each land is a winding path: rows of three stops that run one way, then back.
+  $('path').innerHTML = game.lands.map((land, l) => {
+    const rows = []; for (let i = 0; i < land.stops.length; i += 3) rows.push(land.stops.slice(i, i + 3));
+    return `<section class="land land-${l % 3}"><h2>${land.title}</h2>${rows.map((row, r) => `<div class="row ${r % 2 ? 'rev' : ''}">${row.map((id, c) => {
+      const i = game.stops.findIndex(s => s.id === id), s = game.stops[i], seen = visits.done[id] || 0, state = seen ? 'done' : i === open ? 'next' : 'locked';
+      const link = c < row.length - 1 ? 'across' : r < rows.length - 1 ? 'below' : '';
+      return `<div class="node ${state}"><button class="stop ${state}" data-stop="${id}" ${state === 'locked' ? 'disabled' : ''} aria-label="${s.title}${state === 'locked' ? ', locked' : state === 'done' ? ', played' : ', new'}"><span class="icon" aria-hidden="true">${state === 'locked' ? '🔒' : game.stopArt ? game.stopArt(s, seen) : s.icon}</span><b>${s.title}</b>${state === 'done' ? '<i aria-hidden="true">★</i>' : ''}${state === 'next' ? `<span class="here">${art(game.buddy)}</span>` : ''}</button>${link ? `<i class="link ${link}"></i>` : ''}</div>`;
+    }).join('')}</div>`).join('')}</section>`;
+  }).join('');
   const ready = canHatch(rewards), all = rewards.stickers.length === STICKERS.length;
   $('eggButton').classList.toggle('ready', ready);
   $('eggNote').textContent = all ? 'All found!' : ready ? 'Ready to hatch!' : `${EGG_COST - rewards.stars} more stars`;
@@ -99,11 +104,11 @@ function runTask() {
   drawSteps(); game.games[task.game](task, stage);
 }
 // A wrong try is never punished: a boing, a hint, and the task stays open.
-export function miss(text) { clean = false; sound.boing(); if (text) tell(text); }
+export function miss(text) { clean = false; sound.boing(); react('no'); if (text) tell(text); }
 // `clips` are recorded sounds to play in place of speaking the text (which is still shown).
 export function solved(text, clips = null) {
   if (busy) return; busy = true;
-  firsts.push(clean); sound.yay(); confetti(); drawSteps();
+  firsts.push(clean); sound.yay(); confetti(); drawSteps(); react('yes'); flyStar();
   if (clips) { $('askText').textContent = text; playClips(clips); } else tell(text);
   later(() => { at++; if (at < tasks.length) runTask(); else finish(); }, 2600);
 }
@@ -123,6 +128,16 @@ function finish() {
   if (advanced) { $('winNext').before($('winAdventure')); $('winAdventure').className = 'primary'; $('winNext').className = 'secondary'; }
   sound.win(); confetti(40); playClips([CHEERS[Math.floor(Math.random() * CHEERS.length)]], () => say(`${result.earned} new stars!`));
   drawMap(); $('win').showModal();
+}
+// The buddy nods or shakes its head, and each solved task sends a star up to the bank.
+function react(how) { const buddy = $('buddy'); buddy.classList.remove('yes', 'no'); void buddy.offsetWidth; buddy.classList.add(how); }
+function flyStar() {
+  if (reduced) return;
+  const star = document.createElement('div'), to = $('stars').getBoundingClientRect();
+  star.className = 'fly-star'; star.textContent = '⭐'; star.style.left = innerWidth / 2 - 20 + 'px'; star.style.top = innerHeight * .45 + 'px';
+  document.body.append(star);
+  requestAnimationFrame(() => requestAnimationFrame(() => { star.style.transform = `translate(${to.left - innerWidth / 2 + 10}px, ${to.top - innerHeight * .45}px) scale(.5) rotate(360deg)`; }));
+  setTimeout(() => { star.remove(); wobble($('stars').parentNode); }, 760);
 }
 function confetti(count = 16) {
   if (reduced) return;
@@ -158,7 +173,9 @@ function openBook() {
 }
 
 /* ---------- the page ---------- */
-const PAGE = title => `<header class="top">
+const PAGE = title => `<div class="backdrop" aria-hidden="true"><i class="sun"></i><i class="cloud k1"></i><i class="cloud k2"></i><i class="cloud k3"></i>
+  <svg class="hills" viewBox="0 0 1200 300" preserveAspectRatio="none"><path d="M0 160C200 60 400 220 600 130S1000 60 1200 150V300H0Z"/><path d="M0 210C250 120 450 260 700 180S1050 130 1200 200V300H0Z"/><path d="M0 250C200 200 500 290 800 230S1100 220 1200 250V300H0Z"/></svg><i class="blooms"></i></div>
+<header class="top">
   <a class="round" id="home" href="../index.html" aria-label="Back to Viaan">⌂</a>
   <button class="round" id="back" aria-label="Back to the map" hidden>←</button>
   <div class="brand">${title}<span>.</span></div>
@@ -198,6 +215,7 @@ export function startPlayground(config) {
   game = { buddy: 'bear', ...config };
   // Stars and stickers are shared; Number Playground's first saves kept their own, read once.
   rewards = normalizeRewards(read(REWARDS_KEY), read('viaan-numbers-v1')); visits = normalizeVisits(read(game.key), game.stops);
+  document.body.dataset.game = game.world;
   document.body.insertAdjacentHTML('afterbegin', PAGE(game.title));
   // Browsers only allow sound after a tap, so it starts with the first one.
   const firstTap = e => { if (rewards.sound && !sound.on && !e.target.closest?.('#sound')) sound.set(true).catch(() => {}); };

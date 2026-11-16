@@ -42,3 +42,30 @@
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
 @media(max-width:420px){.bubble-letter{min-width:92px;height:92px;font-size:44px}.tile{min-width:56px;height:62px;font-size:34px}.part{min-width:52px;height:52px;font-size:27px}.caterpillar .head{font-size:40px}.sentence{font-size:28px}.card img{width:88px}.shown .speaker.small{right:-62px}}
 @media(max-height:520px){.shown>img{width:96px}.shown>.emoji{font-size:60px}.speaker{width:70px;height:70px;font-size:32px}.bubble-letter{height:76px;min-width:76px;font-size:36px}.card{min-height:90px}.card img{width:70px}.card .emoji{font-size:44px}}
+
+/* ---------- richer art for the five games ---------- */
+.shown>img,.card img{filter:drop-shadow(0 6px 5px #0003)}
+.shown>img{width:min(46vw,26vh,190px)}
+.shown>.emoji{font-size:min(30vw,112px)}
+.speaker{border:4px solid #fff;background:radial-gradient(circle at 34% 28%,#fff3b8,#ffc93c 70%)}
+.bubble-letter{border:4px solid #ffffff90;background-image:radial-gradient(circle at 30% 24%,#ffffffa8 0 10%,#fff0 28%)}
+.tile{border:3px solid #fff;background:linear-gradient(#fff9e8,#f3dfb0);box-shadow:0 6px 0 #c9a868,0 12px 12px #0002;color:#5a3d12}
+.tile:active{box-shadow:0 2px 0 #c9a868}
+.word .tile{background:linear-gradient(#edfff4,#bfeccd);box-shadow:0 6px 0 #7fc39a,0 12px 12px #0002;color:#17403c}
+.tile.lit,.word.joined .tile{background:linear-gradient(#fff1a8,#ffc93c);box-shadow:0 6px 0 #d39b22;color:#5a3d12}
+.word.joined .tile{border-width:3px 0;box-shadow:0 6px 0 #d39b22}
+.blend{border:3px solid #fff}
+.card{position:relative;border:4px solid #fff;background:linear-gradient(#fff,#fff6e0);box-shadow:0 8px 0 #d9c9a0,0 16px 20px #0003;min-height:min(32vw,140px)}
+.card:nth-child(odd){rotate:-2deg}.card:nth-child(even){rotate:2deg}
+.card img{width:min(26vw,120px)}.card .emoji{font-size:min(17vw,72px)}
+.caterpillar{gap:3px;padding:6px 0 12px}
+.caterpillar .head{position:relative;width:66px;height:66px;border-radius:50%;font-size:0;transform:none;background:radial-gradient(circle at 34% 40%,#17403c 0 4px,#fff 5px 10px,#fff0 11px),radial-gradient(circle at 66% 40%,#17403c 0 4px,#fff 5px 10px,#fff0 11px),#74d45c;box-shadow:inset 0 -7px 0 #4fae3c,0 6px 6px #0002}
+.caterpillar .head::before{content:'';position:absolute;left:15px;top:-13px;width:30px;height:15px;border:4px solid #4fae3c;border-bottom:0;border-radius:18px 18px 0 0}
+.caterpillar .head::after{content:'';position:absolute;left:22px;top:39px;width:16px;height:8px;border:3px solid #17403c;border-top:0;border-radius:0 0 14px 14px}
+.part{position:relative;border:3px dashed #ffffffd0;box-shadow:none;background:#ffffff70}
+.part.full{border:0;background:radial-gradient(circle at 35% 28%,#b6f09c,#74d45c 65%);box-shadow:inset 0 -7px 0 #4fae3c,0 6px 6px #0002}
+.part.full::after{content:'';position:absolute;left:28%;bottom:-9px;width:44%;height:9px;border-radius:0 0 7px 7px;background:#4fae3c}
+.sentence{width:min(100%,470px);padding:20px 14px;border:4px solid #fff;border-radius:24px;background:linear-gradient(#fffef8,#fff3d6);box-shadow:0 8px 0 #d9c9a0,0 16px 20px #0003}
+.choice{border:3px solid #fff;background:linear-gradient(#fff9e8,#f3dfb0);box-shadow:0 6px 0 #c9a868;color:#5a3d12}
+@media(max-width:420px){.caterpillar .head{width:54px;height:54px}.caterpillar .head::after{left:17px;top:32px}.caterpillar .head::before{left:10px}}
+@media(max-height:520px){.shown>img{width:92px}.shown>.emoji{font-size:56px}.card{min-height:86px}.card img{width:68px}.card .emoji{font-size:42px}}

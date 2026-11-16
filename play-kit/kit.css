@@ -2,13 +2,13 @@
 :root{--ink:#17403c;--cream:#fffaf0;--gold:#ffc93c;--coral:#ff7a59;--mint:#3fb98f;--sky:#bfe9f7;--shadow:0 6px 0 #0000001a,0 10px 24px #1740401f}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;min-height:100%}
-body{font-family:'Baloo 2',system-ui,sans-serif;color:var(--ink);background:linear-gradient(#bfe9f7,#dff5e6 55%,#f4f8d8) fixed;-webkit-user-select:none;user-select:none;touch-action:manipulation;overflow-x:hidden}
+body{font-family:'Baloo 2',system-ui,sans-serif;color:var(--ink);background:linear-gradient(var(--sky1),var(--sky2) 62%) fixed;-webkit-user-select:none;user-select:none;touch-action:manipulation;overflow-x:hidden}
 button,a{font:inherit;color:inherit;border:0;cursor:pointer;text-decoration:none}
 button:focus-visible,a:focus-visible{outline:4px solid #17403c;outline-offset:3px}
 img{display:block;max-width:100%;pointer-events:none}
 [hidden]{display:none!important}
 
-.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 8px;background:linear-gradient(#bfe9f7,#bfe9f7e6 70%,#bfe9f700)}
+.top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 8px}
 .round{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-weight:800;background:var(--cream);box-shadow:var(--shadow)}
 #sound[aria-pressed=true]{background:var(--gold)}
 #sound[aria-pressed=false]{opacity:.7}
@@ -32,22 +32,9 @@ body[data-screen=play] .brand{display:none}
 .prize small{display:block;font-size:13px;line-height:1.2;font-weight:700;color:#5b7772}
 .prize.ready{background:#fff3c4;animation:nudge 1.2s ease-in-out infinite}
 .prize.ready small{color:#b3600c}
-.land{margin:0 0 18px;padding:14px 14px 18px;border-radius:28px;box-shadow:var(--shadow)}
-.land-0{background:#d9f3c8}.land-1{background:#c9ecf5}.land-2{background:#ffe3c2}
-.land h2{margin:0 0 10px 4px;font-size:22px}
-.stops{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
-.stop{position:relative;display:grid;justify-items:center;align-content:start;gap:4px;padding:12px 6px 10px;border-radius:22px;background:var(--cream);box-shadow:0 5px 0 #0000001f;min-height:118px}
-.stop .icon{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:32px;background:#fff;box-shadow:inset 0 0 0 3px #17403c14}
-.stop b{font-size:14px;line-height:1.1;text-align:center}
-.stop i{position:absolute;top:6px;right:8px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:14px;font-weight:800;color:#fff;background:var(--mint)}
-.stop.locked{opacity:.55;box-shadow:none}
-.stop.next{background:#fff3c4;box-shadow:0 5px 0 #e0a82e,0 0 0 4px #ffc93c;animation:nudge 1.4s ease-in-out infinite}
-.stop .here{position:absolute;left:-6px;top:-14px;width:46px}
 .stop:active:not(:disabled),.prize:active{transform:translateY(4px);box-shadow:0 1px 0 #0000001f}
 
 /* ---------- playing ---------- */
-.ask{display:flex;align-items:center;gap:10px;width:100%;padding:8px 14px 8px 8px;border-radius:26px;background:var(--cream);box-shadow:var(--shadow);text-align:left;min-height:76px}
-.buddy{flex:none;width:60px}
 .bubble{flex:1;font-size:20px;font-weight:700;line-height:1.15}
 .again{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:20px;background:#e3f4ec}
 .stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:16px}
@@ -95,9 +82,62 @@ dialog p{margin:4px 0 10px;font-size:17px;font-weight:700}
 @keyframes hatch{from{transform:scale(.2) rotate(-20deg);opacity:0}}
 
 @media(max-width:420px){.bubble{font-size:18px}.brand{font-size:19px}.sum{font-size:38px}}
-@media(max-height:520px){.stage{gap:8px;padding-top:8px}.ask{min-height:60px}.buddy{width:46px}}
+@media(max-height:520px){.stage{gap:8px;padding-top:8px}.ask{min-height:58px}.buddy{width:64px}.hills{height:46vh}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 .emoji{display:block;font-size:44px;line-height:1.15;text-align:center}
-.stop .icon img{width:46px}.stop .here .emoji{font-size:34px}
 .sticker .emoji{font-size:46px;height:58px}.sticker.missing .emoji{filter:grayscale(1) brightness(0);opacity:.12}
 .hatched .emoji{font-size:130px}
+
+/* ---------- the world behind everything: sky, sun, drifting clouds and hills, in each game's own mood ---------- */
+body{--sky1:#7fcdf5;--sky2:#d9f5ff;--hill1:#6cc56a;--hill2:#93d77a;--hill3:#bfe9a0;--bloom:#fff}
+body[data-game=eng]{--sky1:#ffc98f;--sky2:#fff1d8;--hill1:#55b873;--hill2:#84d08a;--hill3:#b7e6a6;--bloom:#ff8fb8}
+body[data-game=crit]{--sky1:#7a86ee;--sky2:#e9d9ff;--hill1:#5868cf;--hill2:#7d8de6;--hill3:#a9b6f7;--bloom:#ffe27a}
+.backdrop{position:fixed;inset:0;z-index:-1;overflow:hidden;pointer-events:none}
+.sun{position:absolute;right:9%;top:11%;width:104px;height:104px;border-radius:50%;background:radial-gradient(circle,#fffbd0 0 40%,#ffd84d 70%);box-shadow:0 0 0 18px #ffe98a55,0 0 0 42px #ffe98a2b;animation:glow 5s ease-in-out infinite}
+body[data-game=crit] .sun{background:radial-gradient(circle at 38% 36%,#fff 0 30%,#f4ecff 75%);box-shadow:0 0 0 16px #ffffff33,0 0 0 38px #ffffff1c}
+.cloud{position:absolute;left:-220px;width:150px;height:46px;border-radius:40px;background:#fff;opacity:.92;animation:drift 80s linear infinite}
+.cloud::before,.cloud::after{content:'';position:absolute;border-radius:50%;background:#fff}
+.cloud::before{width:64px;height:64px;left:20px;top:-30px}.cloud::after{width:86px;height:86px;left:58px;top:-46px}
+.k1{top:16%;animation-delay:-20s}.k2{top:33%;scale:.66;animation-duration:110s;animation-delay:-70s}.k3{top:7%;scale:.5;animation-duration:140s;animation-delay:-100s}
+.hills{position:absolute;left:0;bottom:0;width:100%;height:36vh}
+.hills path:nth-child(1){fill:var(--hill3)}.hills path:nth-child(2){fill:var(--hill2)}.hills path:nth-child(3){fill:var(--hill1)}
+/* Little flowers scattered over the nearest hill. */
+.blooms{position:absolute;left:0;right:0;bottom:0;height:9vh;background:radial-gradient(circle,#ffd84d 0 3px,var(--bloom) 3.5px 8px,#fff0 9px) 14px 10px/150px 56px,radial-gradient(circle,#ffd84d 0 2.5px,#fff 3px 7px,#fff0 8px) 90px 34px/190px 62px}
+@keyframes drift{to{translate:calc(100vw + 440px) 0}}
+@keyframes glow{0%,100%{scale:1}50%{scale:1.06}}
+
+/* ---------- the map: lands with a ribbon title and a winding dotted path of round stops ---------- */
+.land{margin:26px 0 30px;padding:8px 6px 22px;border-radius:32px;background:#ffffffa8;border:4px solid #fff;box-shadow:0 10px 0 #17403c14,0 18px 30px #17403c1f;backdrop-filter:blur(5px)}
+.land h2{display:inline-block;margin:-26px 0 2px 14px;padding:5px 20px 3px;border-radius:16px 16px 16px 5px;font-size:22px;color:#fff;background:var(--coral);box-shadow:0 5px 0 #c9502f;transform:rotate(-2deg)}
+.land-1 h2{background:#3f9ae6;box-shadow:0 5px 0 #2a6fb3}.land-2 h2{background:#9a6be0;box-shadow:0 5px 0 #6c43b0}
+.row{display:flex;margin-top:22px}.row.rev{flex-direction:row-reverse}
+.node{position:relative;flex:0 0 33.333%;display:grid;justify-items:center}
+.stop{position:relative;display:grid;justify-items:center;gap:8px;width:100%;padding:0 3px;background:none}
+.stop .icon{width:88px;height:88px;border-radius:50%;border:4px solid #fff;display:grid;place-items:center;font-size:42px;background:radial-gradient(circle at 34% 26%,#fff 0 28%,#f6edd6 72%);box-shadow:0 8px 0 #d6c69c,0 14px 18px #17403c33}
+.stop .icon img{width:62px}
+.stop b{max-width:100%;padding:3px 10px;border-radius:12px;font-size:14px;line-height:1.15;text-align:center;background:#fff;box-shadow:0 2px 0 #0000001a}
+.stop i{position:absolute;top:-6px;left:calc(50% + 20px);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:19px;color:#fff;background:var(--gold);border:3px solid #fff;box-shadow:0 3px 0 #d39b22;text-shadow:0 1px 0 #a36d00}
+.stop.done .icon{background:radial-gradient(circle at 34% 26%,#fffdf0 0 28%,#ffe99a 75%);box-shadow:0 8px 0 #e0a82e,0 14px 18px #17403c33}
+.stop.next .icon{background:radial-gradient(circle at 34% 26%,#fff 0 28%,#ffe27a 78%);box-shadow:0 8px 0 #e0a82e,0 0 0 9px #ffc93c70,0 14px 18px #17403c33;animation:nudge 1.3s ease-in-out infinite}
+.stop.locked .icon{background:#e3e9e6;box-shadow:0 6px 0 #bcc8c3;font-size:32px;filter:grayscale(1);opacity:.8}
+.stop.locked b{opacity:.55}
+.stop:active:not(:disabled) .icon{transform:translateY(5px);box-shadow:0 3px 0 #d6c69c}
+.stop .here{position:absolute;left:calc(50% + 18px);top:-30px;width:70px;animation:bob 1.8s ease-in-out infinite;filter:drop-shadow(0 4px 4px #0003)}
+.stop .here .emoji{font-size:34px}
+.link{position:absolute;pointer-events:none}
+.link.across{top:45px;left:calc(50% + 52px);width:calc(100% - 104px);border-top:7px dotted #fff}
+.row.rev .link.across{left:auto;right:calc(50% + 52px)}
+.link.below{left:calc(50% - 3px);bottom:-19px;height:15px;border-left:7px dotted #fff}
+.node.done .link{border-color:var(--gold)}
+.prize{border:3px solid #fff}
+
+/* ---------- the buddy and the question ---------- */
+.ask{position:relative;display:flex;align-items:center;gap:10px;width:calc(100% - 40px);margin-left:40px;padding:10px 12px 10px 52px;border-radius:26px;background:var(--cream);border:3px solid #fff;box-shadow:var(--shadow);text-align:left;min-height:76px}
+.buddy{position:absolute;left:-44px;bottom:-8px;width:92px;animation:bob 2.4s ease-in-out infinite;filter:drop-shadow(0 4px 4px #0003)}
+.buddy.yes{animation:happy .42s 2}.buddy.no{animation:wobble .4s}
+.fly-star{position:fixed;z-index:9;font-size:40px;pointer-events:none;transition:transform .72s cubic-bezier(.4,0,.2,1)}
+.bank.wobble{animation:happy .3s}
+@media(max-width:420px){.stop .icon{width:80px;height:80px;font-size:38px}.stop .icon img{width:56px}.link.across{top:41px;left:calc(50% + 48px);width:calc(100% - 96px)}.row.rev .link.across{right:calc(50% + 48px)}.stop b{font-size:13px}}
+/* A task sits in the middle of the space under the question, not pinned to the top. */
+.stage{min-height:calc(100svh - 215px);justify-content:center;padding-bottom:5vh}
+@media(max-height:520px){.stage{min-height:0;justify-content:flex-start;padding-bottom:0}}

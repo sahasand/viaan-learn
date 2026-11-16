@@ -1,9 +1,9 @@
 // Story Garden: five reading games played through the phonics course, one stop a week.
 // The map, stars, eggs and stickers come from ../play-kit; the course is in words.js.
-import { SAVE_KEY, LANDS, STOPS, makeRound, soundClip, wordClip } from './rules.js?v=2';
-import { PICTURES } from './words.js?v=2';
-import { ANIMALS, TOYS } from '../play-kit/progress.js?v=2';
-import { $, art, later, wobble, playClips, ask, miss, solved, sound, busy, startPlayground } from '../play-kit/kit.js?v=2';
+import { SAVE_KEY, LANDS, STOPS, makeRound, soundClip, wordClip } from './rules.js?v=3';
+import { PICTURES } from './words.js?v=3';
+import { ANIMALS, TOYS } from '../play-kit/progress.js?v=3';
+import { $, art, later, wobble, playClips, ask, miss, solved, sound, busy, startPlayground } from '../play-kit/kit.js?v=3';
 
 const pictured = word => ANIMALS.includes(word) || TOYS.includes(word) || !!PICTURES[word];
 const show = sound => sound.replace('_', '·');          // a_e is written a·e on a tile

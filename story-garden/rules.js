@@ -1,7 +1,7 @@
 // Story Garden rules: one stop for each week of the phonics course, and the tasks a visit
 // sets from that week's sounds and words. Plain data only, so everything runs in Node tests.
-import { WEEKS, PHASES } from './words.js?v=2';
-import { between, pick, shuffle } from '../play-kit/progress.js?v=2';
+import { WEEKS, PHASES } from './words.js?v=3';
+import { between, pick, shuffle } from '../play-kit/progress.js?v=3';
 export const SAVE_KEY = 'viaan-story-v1';
 const LAND_NAMES = ['Listening Lawn', 'First Letters', 'Sound Teams', 'Blending Bridge', 'More Sounds', 'Story Hill'];
 export const STOPS = WEEKS.map(week => ({ id: 'w' + week.w, title: week.title, week: week.w, phase: week.ph }));

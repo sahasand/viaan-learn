@@ -70,3 +70,36 @@
 @media(max-width:420px){.half{grid-template:repeat(3,42px)/repeat(3,42px)}.pip{width:32px;height:32px}.eater{width:150px}}
 @media(max-height:520px){.eater{width:92px}.balloon{width:64px;height:74px;font-size:28px}.sky{grid-template-columns:repeat(6,1fr);width:100%}}
 @media(prefers-reduced-motion:reduce){.balloon.popped,.ball.roll{visibility:hidden}.domino.fall{transform:rotate(-8deg)}}
+
+/* ---------- richer art for the six games ---------- */
+.eater{width:min(52vw,26vh,240px);margin:-12px 0 -24px}
+.eater img,.side>img,.food img,.ball img,.frog img{filter:drop-shadow(0 6px 5px #0003)}
+.want{right:-40px;top:26px;padding:6px 14px;border:3px solid #fff;border-radius:22px 22px 22px 5px}
+.want b{font-size:46px}
+.plate{width:min(100%,440px);min-height:112px;padding:20px 44px;border-radius:50%;background:radial-gradient(ellipse at center,#fff 0 56%,#e8eef2 57% 70%,#fff 71%);box-shadow:0 8px 0 #cfd8dd,0 16px 20px #0003}
+.basket{padding:14px 12px 16px;border:5px solid #a8743a;border-radius:20px 20px 36px 36px;background:repeating-linear-gradient(45deg,#dba867 0 10px,#c9914b 10px 20px);box-shadow:inset 0 8px 0 #ffffff40,0 8px 0 #8a5d2c,0 16px 20px #0003}
+.balloon{width:min(24vw,96px);height:min(28vw,112px);background-image:radial-gradient(circle at 32% 26%,#ffffffb8 0 9%,#fff0 27%)}
+.balloon::before{content:'';position:absolute;left:50%;top:97%;margin-left:-7px;border:7px solid #0000;border-bottom-color:var(--b)}
+.c0{--b:#ff6b6b}.c1{--b:#ffb02e}.c2{--b:#4ecdc4}.c3{--b:#6c8cff}.c4{--b:#ff8fd0}.c5{--b:#8ad66b}
+.balloon::after{top:calc(100% + 12px);height:22px}
+.sky.n10 .balloon,.sky.n11 .balloon{width:min(20vw,78px);height:min(23vw,90px)}
+.trail span{border:3px solid #fff;background:#ffffffb0}
+.side{border:4px solid #fff;background:linear-gradient(#fff,#fff6e0);box-shadow:0 8px 0 #d9c9a0,0 16px 20px #0003}
+.side>img{width:min(30vw,130px)}
+.pile{min-height:74px;padding:10px 12px;border-radius:26px;background:#fff;box-shadow:inset 0 0 0 4px #eef3f6}
+.card{border:4px solid #fff}
+.domino{background:linear-gradient(160deg,#fffef8,#f1e7cf);box-shadow:inset 0 0 0 4px #17403c,0 10px 0 #17403c66,0 20px 22px #0003}
+.pip{background:radial-gradient(circle at 35% 30%,#3f6f69,#17403c 62%);box-shadow:inset 0 -3px 0 #0006}
+.pip.counted,.pin.counted{background:var(--gold);box-shadow:inset 0 -3px 0 #d39b22}
+.pond{border-radius:44px;background:radial-gradient(ellipse at 18% 28%,#ffffff45 0 11%,#fff0 12%),radial-gradient(ellipse at 78% 72%,#ffffff38 0 9%,#fff0 10%),linear-gradient(#74d4ec,#3fb0d6);box-shadow:inset 0 0 0 6px #ffffff70,inset 0 0 0 13px #7fdaa2,0 10px 0 #2f8fb3,0 18px 22px #0003}
+.lily{height:52px;background:conic-gradient(from 205deg,#0000 0 34deg,#56c478 0);box-shadow:none;filter:drop-shadow(0 5px 0 #2f8f52)}
+.frog{width:86px;margin-left:-43px;bottom:42%}
+.lane{border:6px solid #b98548;background:repeating-linear-gradient(90deg,#f5dcab 0 34px,#e8c88c 34px 36px);box-shadow:inset 0 0 34px #b9854866,0 10px 0 #8a5d2c,0 18px 22px #0003}
+.pins{gap:22px}
+.pin{background:linear-gradient(#fff 0 16%,#ff5b5b 16% 24%,#fff 24% 30%,#ff5b5b 30% 38%,#fff 38%);box-shadow:inset 0 0 0 3px #17403c22,0 4px 0 #0002}
+.pin::before{content:'';position:absolute;left:50%;top:-15px;width:22px;height:22px;margin-left:-11px;border-radius:50%;background:#fff;box-shadow:inset 0 0 0 3px #17403c22}
+.pin.counted::before{background:var(--gold)}
+.rocket{filter:drop-shadow(0 8px 6px #0003)}
+@media(max-height:520px){.eater{width:96px}.plate{min-height:74px;padding:10px 36px}.balloon{width:64px;height:74px}.side>img{width:80px}}
+.pond{grid-template-columns:repeat(6,minmax(0,1fr));padding:60px 20px 22px}
+@media(min-width:720px){.pond.m10{grid-template-columns:repeat(11,minmax(0,1fr))}}

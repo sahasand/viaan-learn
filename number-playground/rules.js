@@ -1,7 +1,7 @@
 // Number Playground rules: the path of stops and the tasks each game sets. Plain data and
 // numbers only, so everything here runs in Node tests. Stars, stickers and which stops
 // are open are kept by ../play-kit/progress.js.
-import { between, pick, shuffle } from '../play-kit/progress.js?v=2';
+import { between, pick, shuffle } from '../play-kit/progress.js?v=3';
 export const SAVE_KEY = 'viaan-numbers-v1';
 const FOODS = { bear: 'apple', cat: 'fish', penguin: 'fish', dog: 'cookie', panda: 'apple', elephant: 'apple', giraffe: 'apple' };
 

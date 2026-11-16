@@ -28,3 +28,20 @@
 .slot img{width:84px}.slot .emoji{font-size:54px}
 @media(max-width:420px){.card img{width:88px}.line span{width:48px;height:48px}.line img{width:44px}.scene{min-height:92px}.scene img{width:78px}}
 @media(max-height:520px){.shown>img{width:92px}.shown>.emoji{font-size:56px}.card{min-height:88px}.cards.four{grid-template-columns:repeat(4,1fr)}.cards.four .card{min-height:88px}.card img{width:70px}.card .emoji{font-size:44px}.scenes{grid-template-columns:repeat(3,1fr);width:100%}}
+
+/* ---------- richer art: puzzles as evidence cards pinned with tape ---------- */
+.shown>img,.card img,.scene img,.line img,.slot img{filter:drop-shadow(0 6px 5px #0003)}
+.shown>img{width:min(46vw,26vh,190px)}
+.shown>.emoji{font-size:min(30vw,112px)}
+.shown>b{padding:2px 14px;border-radius:12px;background:#fff;box-shadow:0 3px 0 #0000001a}
+.card,.scene{position:relative;border:4px solid #fff;background:linear-gradient(#fff,#f6f1ff);box-shadow:0 8px 0 #b9aee0,0 16px 20px #0004}
+.card{min-height:min(32vw,140px)}
+.cards.four .card{min-height:min(38vw,160px)}
+.card::before,.scene::before{content:'';position:absolute;top:-10px;left:50%;width:48px;height:18px;margin-left:-24px;border-radius:3px;background:#ffe27ad9;rotate:-4deg;box-shadow:0 1px 2px #0002}
+.card:nth-child(odd),.scene:nth-child(odd){rotate:-2deg}.card:nth-child(even),.scene:nth-child(even){rotate:2deg}
+.card img{width:min(26vw,120px)}.card .emoji{font-size:min(17vw,72px)}
+.line{border:4px solid #fff;background:#ffffffc4;box-shadow:0 8px 0 #b9aee0,0 16px 20px #0003}
+.line span{border:3px solid #fff;box-shadow:0 3px 0 #d9d2f0}
+.slot{border:4px dashed #fff;box-shadow:none;background:#ffffff66;color:#fff}
+.slot.full{border-style:solid;background:linear-gradient(#fff1a8,#ffc93c);box-shadow:0 6px 0 #d39b22}
+@media(max-height:520px){.shown>img{width:92px}.shown>.emoji{font-size:56px}.card,.cards.four .card{min-height:86px}.card img{width:68px}.card .emoji{font-size:42px}}

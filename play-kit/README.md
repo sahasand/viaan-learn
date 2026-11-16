@@ -18,7 +18,11 @@ its own task screens and a few styles; everything else comes from here.
   `countOne`, `pad`, `sound` and the live flag `busy`.
 - `audio.js`: synthesized music and effects. Words, sounds, numbers and cheers are
   recorded clips in `../audio`; sentences are spoken by the device voice.
-- `kit.css`: the shared look.
+- `kit.css`: the shared look: a backdrop of sky, sun, drifting clouds and hills behind
+  everything (each game sets its own mood through `body[data-game]` colours), lands with
+  ribbon titles, and a winding dotted path of round stops in rows of three. Class names
+  here are shared with every game's own styles, so keep them distinct (`backdrop`, not
+  `scene`; `across`/`below` for path links).
 
 ## Rules every game keeps
 

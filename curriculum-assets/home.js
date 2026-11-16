@@ -1,9 +1,9 @@
 // The home page: three learning games, the Daily Adventure that visits them in turn, and
 // a summary for grown-ups. The games keep their own saves; this page only reads them.
-import { REWARDS_KEY, STICKERS, normalizeRewards, normalizeVisits, dayStamp } from '../play-kit/progress.js?v=2';
-import { STOPS as MATH, SAVE_KEY as MATH_KEY } from '../number-playground/rules.js?v=2';
-import { STOPS as ENG, SAVE_KEY as ENG_KEY } from '../story-garden/rules.js?v=2';
-import { STOPS as CRIT, SAVE_KEY as CRIT_KEY } from '../little-detective/rules.js?v=2';
+import { REWARDS_KEY, STICKERS, normalizeRewards, normalizeVisits, dayStamp } from '../play-kit/progress.js?v=3';
+import { STOPS as MATH, SAVE_KEY as MATH_KEY } from '../number-playground/rules.js?v=3';
+import { STOPS as ENG, SAVE_KEY as ENG_KEY } from '../story-garden/rules.js?v=3';
+import { STOPS as CRIT, SAVE_KEY as CRIT_KEY } from '../little-detective/rules.js?v=3';
 
 export const WORLDS = {
   math: { short: 'Math', title: 'Number Playground', href: 'number-playground/', key: MATH_KEY, stops: MATH, card: 'wM' },
