@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#7fc8f8">
+  <title>City Swinger · Viaan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap">
+  <link rel="stylesheet" href="style.css?v=1">
+  <script type="importmap">{"imports":{"three":"../sky-playground/vendor/three.module.js"}}</script>
+</head>
+<body data-theme="day">
+  <canvas id="world" aria-label="Super Viaan swings between the towers of a city. Hold the screen or the space bar to throw a rope and swing; let go to fly."></canvas>
+  <header class="topbar">
+    <a class="round" href="../index.html" aria-label="Back to Viaan">⌂</a>
+    <div class="wordmark">city swinger<span>.</span></div>
+    <div class="top-actions">
+      <button class="round" id="sound" aria-label="Turn sound on" aria-pressed="false">♫</button>
+      <button class="round" id="pause" aria-label="Pause">Ⅱ</button>
+    </div>
+  </header>
+  <div class="hud" aria-live="off">
+    <div class="pill stars" id="starPill" aria-label="Stars"><span aria-hidden="true">⭐</span><b id="stars">0</b></div>
+    <div class="pill friends" id="friendSlots" aria-label="Friends to rescue"></div>
+  </div>
+  <div class="hint" id="hint"><span aria-hidden="true">👆</span> Hold to swing!</div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="veil" id="loading"><div class="loading-hero">🦸</div><p id="loadText">Getting the city ready…</p><a href="../index.html">Back to Viaan</a></div>
+
+  <dialog id="startCard" aria-labelledby="startTitle">
+    <span class="eyebrow" id="startKicker">MISSION 1</span>
+    <h1 id="startTitle">Super Viaan to the rescue!</h1>
+    <p id="startText">Three friends need help.</p>
+    <div class="who" id="startFriends" aria-hidden="true"></div>
+    <div class="how"><span><b>👆 Hold</b> to throw your rope and swing</span><span><b>✋ Let go</b> to fly</span></div>
+    <button class="primary" id="play">Let’s go! <span aria-hidden="true">🦸</span></button>
+    <div class="suits-top"><span>My suit</span><span class="bank" aria-label="Stars saved">⭐ <b id="bank">0</b></span></div>
+    <div class="suits" id="suits" role="group" aria-label="Suit colour"></div>
+    <p class="note" id="suitNote" role="status"></p>
+    <a class="text-link" href="../index.html">Home</a>
+  </dialog>
+  <dialog id="finishCard" aria-labelledby="finishTitle">
+    <div class="medal" aria-hidden="true">🏅</div>
+    <span class="eyebrow" id="finishKicker">MISSION 1 DONE</span>
+    <h1 id="finishTitle">You saved the day!</h1>
+    <div class="who" id="finishFriends"></div>
+    <p class="reward" id="finishStars"></p>
+    <p class="note" id="finishNote"></p>
+    <button class="primary" id="next">Next mission <span aria-hidden="true">→</span></button>
+    <a class="text-link" href="../index.html">Home</a>
+  </dialog>
+  <dialog id="menu" aria-labelledby="menuTitle">
+    <h1 id="menuTitle">Taking a breather</h1>
+    <p>Super Viaan is waiting on the rooftops.</p>
+    <button class="primary" id="resume">Keep swinging <span aria-hidden="true">↗</span></button>
+    <button class="secondary" id="restart">Start this mission again</button>
+    <a class="text-link" href="../index.html">Home</a>
+  </dialog>
+  <noscript><p class="noscript">Please enable JavaScript to play. <a href="../index.html">Back to Viaan</a></p></noscript>
+  <script type="module" src="game.js?v=1"></script>
+</body>
+</html>

@@ -4,7 +4,7 @@
 
 Viaan is a static learning app for a young child, hosted on GitHub Pages. `index.html` is a home page that launches games; it holds no lessons. Math, English and Thinking are three learning games built on a shared kit, and the rest are just-for-fun games in their own folders. No build step. Serve the repository over HTTP, for example `python3 -m http.server 8765`.
 
-Run `node --test home.test.mjs play-kit/*.test.mjs number-playground/*.test.mjs story-garden/*.test.mjs little-detective/*.test.mjs chess.test.mjs memory.test.mjs sky-playground/*.test.mjs little-racer/*.test.mjs little-dominoes/*.test.mjs`. Check a phone viewport for overflow and usable controls.
+Run `node --test home.test.mjs play-kit/*.test.mjs number-playground/*.test.mjs story-garden/*.test.mjs little-detective/*.test.mjs chess.test.mjs memory.test.mjs sky-playground/*.test.mjs little-racer/*.test.mjs little-dominoes/*.test.mjs city-swinger/*.test.mjs`. Check a phone viewport for overflow and usable controls.
 
 ## Learning games (Number Playground, Story Garden, Little Detective)
 
@@ -98,6 +98,24 @@ holds at most 500 dominoes. `index.html` and `game.js` load their files with a `
 everywhere whenever code or styles change (a test checks they match). Run
 `node --test little-dominoes/*.test.mjs` after changes and verify a drawn line, a gap, a branch, each
 toy, each run, Stand up, a reload, and the layout on a wide screen and a phone both ways up.
+
+## City Swinger (standalone game)
+
+The home City Swinger link opens `city-swinger/`, a static Three.js side-on swinging game. Super Viaan,
+an original kid hero in a mask and cape, throws a rope to golden hooks, swings over the gaps between
+buildings and rescues three friends each mission. He is our own character: never give him or the game
+the name, suit, emblem, web or look of an existing superhero (a test checks for borrowed names). Read
+`city-swinger/README.md` when changing the swinging, missions, hero or sound. `swing.js` holds every
+rule in plain numbers and runs in Node; `game.js` owns the scene, hero, rope, input and screens;
+`audio.js` synthesizes sound. It imports Three.js from `sky-playground/vendor` and crowd pictures from
+`memory-assets`. One control: hold to throw the rope, let go to fly. Keep it impossible to fail: doing
+nothing at all must still reach the finish and rescue everyone (leap, trampoline, stick to the wall,
+climb), and holding the screen must swing across every gap by itself. Stars are saved as they are
+caught, suits unlock at star totals without spending them, and nothing is ever taken away
+(`viaan-swinger-v1`, validated by `normalizeSave`). `index.html` and `game.js` load their files with a
+`?v=` number; raise it everywhere whenever code or styles change (a test checks they match). Run
+`node --test city-swinger/*.test.mjs` after changes and verify a mission held, tapped and untouched, a
+rescue, the finish card, a suit change, pause, and a phone both ways up.
 
 ## Shared conventions
 
