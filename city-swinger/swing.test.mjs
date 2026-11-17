@@ -109,8 +109,9 @@ test('the page and its modules load one another with one version number, and the
   const read = name => readFileSync(new URL(name, import.meta.url), 'utf8'), page = read('./index.html'), game = read('./game.js');
   const version = page.match(/game\.js\?v=(\d+)/)[1];
   assert.ok(page.includes(`style.css?v=${version}`));
-  assert.ok(game.includes(`./swing.js?v=${version}`) && game.includes(`./audio.js?v=${version}`), 'one version number everywhere');
+  for (const file of ['swing', 'hero', 'scenery', 'audio']) assert.ok(game.includes(`./${file}.js?v=${version}`), `${file} is loaded at version ${version}`);
+  assert.ok(read('./scenery.js').includes(`./hero.js?v=${version}`), 'one version number everywhere');
   assert.ok(read('../index.html').includes('href="city-swinger/"'));
-  for (const id of ['world', 'sound', 'pause', 'stars', 'friendSlots', 'hint', 'toast', 'startCard', 'play', 'suits', 'finishCard', 'next', 'menu', 'resume', 'restart']) assert.ok(page.includes(`id="${id}"`), id);
-  assert.ok(!/spider|web-?sling|marvel/i.test(page + game + read('./swing.js')), 'an original hero: no borrowed names');
+  for (const id of ['world', 'sound', 'pause', 'stars', 'track', 'trackHero', 'trackMarks', 'combo', 'pops', 'teach', 'hint', 'startCard', 'play', 'suits', 'finishCard', 'finishStars', 'next', 'menu', 'resume', 'restart']) assert.ok(page.includes(`id="${id}"`), id);
+  assert.ok(!/spider|web-?sling|marvel/i.test(page + game + read('./swing.js') + read('./hero.js') + read('./scenery.js')), 'an original hero: no borrowed names');
 });

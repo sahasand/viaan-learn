@@ -106,8 +106,9 @@ an original kid hero in a mask and cape, throws a rope to golden hooks, swings o
 buildings and rescues three friends each mission. He is our own character: never give him or the game
 the name, suit, emblem, web or look of an existing superhero (a test checks for borrowed names). Read
 `city-swinger/README.md` when changing the swinging, missions, hero or sound. `swing.js` holds every
-rule in plain numbers and runs in Node; `game.js` owns the scene, hero, rope, input and screens;
-`audio.js` synthesizes sound. It imports Three.js from `sky-playground/vendor` and crowd pictures from
+rule in plain numbers and runs in Node; `hero.js` builds and poses the hero; `scenery.js` draws the
+city for a mission; `game.js` owns the loop, camera, input, screens and feel (rope, aim line, pop-up
+words, streaks, the first-swing lesson); `audio.js` synthesizes sound. It imports Three.js from `sky-playground/vendor` and crowd pictures from
 `memory-assets`. One control: hold to throw the rope, let go to fly. Keep it impossible to fail: doing
 nothing at all must still reach the finish and rescue everyone (leap, trampoline, stick to the wall,
 climb), and holding the screen must swing across every gap by itself. Stars are saved as they are
