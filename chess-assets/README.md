@@ -35,3 +35,14 @@ browser speech synthesis on explicit request, when supported.
 Run `node --test chess.test.mjs` from the repository root. Verify a full three-step
 lesson, badge persistence, practice/undo, promotion and phone layout when changing
 these flows. Arrow keys move focus within the board; Enter/Space activates a square.
+
+## Look and feel
+
+`chess.html` holds the page and all styles; `game.mjs` only toggles classes and attributes.
+Square classes: `mover` (the lesson piece to tap), `selected`, `legal` (+`occupied` for a
+capture), `target` (the star), `arrive` (a piece sliding in; `--dx`/`--dy` are set from
+`S.slide`), `success`, `nope-a`/`nope-b` (a shake, alternated so it restarts), `last`,
+`hint`, `danger`, `check`. `#play` carries `data-mode` (`lesson` or `practice`, which sizes
+the board on a phone) and `data-mood` (`think`, `happy`, `oops`) for Teddy. Sounds are short
+synthesized tunes in `SOUNDS`, off until the sound button is tapped; nothing is scheduled
+for them, so the timer and epoch rules above are unchanged.

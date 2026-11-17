@@ -142,7 +142,7 @@ test('UI: loads without error and startGame builds the right number of cards', (
 
 test('UI: starting a new game cancels the pending compare timer (no stale callback)', () => {
   const sb = makeUiSandbox();
-  sb.startGame();
+  sb.startGame(); flushTimers(sb);               // the opening look at the cards is over
   const cards = sb.M.game.cards;
   let a = 0, b = 1;                              // find two non-matching cards
   for (let j=1;j<cards.length;j++){ if (cards[j].val !== cards[0].val){ a=0; b=j; break; } }
@@ -150,8 +150,9 @@ test('UI: starting a new game cancels the pending compare timer (no stale callba
   assert.equal(sb.timers.length, 1);
   assert.equal(Object.keys(sb.__pending).length, 1);
   sb.startGame();                               // "New" mid-compare
-  assert.equal(sb.timers.length, 0);            // tracked timer cancelled
-  assert.equal(Object.keys(sb.__pending).length, 0);
+  assert.equal(sb.timers.length, 1);            // the compare timer is cancelled; only the new round's opening look is waiting
+  assert.equal(Object.keys(sb.__pending).length, 1);
+  flushTimers(sb); assert.equal(sb.M.lock, false); assert.equal(sb.M.flipped.length, 0);
 });
 
 test('UI: winGame does nothing when not on the game screen (no overlay over setup)', () => {
@@ -167,7 +168,7 @@ function flushTimers(sb){
 }
 
 test('UI: hidden card accessible names never expose faces and reset after a mismatch', () => {
-  const sb=makeUiSandbox();sb.startGame();
+  const sb=makeUiSandbox();sb.startGame();flushTimers(sb);
   sb.boardCards.forEach((b,i)=>assert.equal(b.getAttribute('aria-label'),'Face-down card '+(i+1)));
   const other=sb.M.game.cards.findIndex(c=>c.val!==sb.M.game.cards[0].val);
   sb.onCardTap(0);assert.match(sb.boardCards[0].getAttribute('aria-label'),/card 1$/);
@@ -177,7 +178,7 @@ test('UI: hidden card accessible names never expose faces and reset after a mism
 });
 
 test('UI: each pair counts once, collection is awarded only after finishing, all moves rewarded equally', () => {
-  const sb=makeUiSandbox();sb.startGame();sb.M.moves=99;
+  const sb=makeUiSandbox();sb.startGame();flushTimers(sb);sb.M.moves=99;
   const vals=[...new Set(sb.M.game.cards.map(c=>c.val))];
   vals.forEach((v,i)=>{
     const pair=sb.M.game.cards.filter(c=>c.val===v);
@@ -194,7 +195,7 @@ test('UI: each pair counts once, collection is awarded only after finishing, all
 });
 
 test('UI: leaving a round cancels comparison and cannot award an unfinished collection', () => {
-  const sb=makeUiSandbox();sb.startGame();
+  const sb=makeUiSandbox();sb.startGame();flushTimers(sb);
   const pair=sb.M.game.cards.filter(c=>c.val===sb.M.game.cards[0].val);
   sb.onCardTap(pair[0].i);sb.onCardTap(pair[1].i);sb.toSetup();flushTimers(sb);
   assert.equal(sb.M.matched,0);assert.equal(sb.M.album.length,0);assert.equal(sb.__els.win.open,false);
@@ -205,4 +206,33 @@ test('every animal has an original PNG render on disk', () => {
     const bytes=readFileSync(new URL('./memory-assets/'+a.id+'.png',import.meta.url));
     assert.equal(bytes.subarray(1,4).toString(),'PNG');
   }
+});
+
+test('UI: every round opens with a look at all the cards, then turns them face down', () => {
+  const sb=makeUiSandbox();sb.startGame();
+  assert.equal(sb.M.lock,true,'no tapping during the look');
+  sb.boardCards.forEach((b,i)=>{assert.ok(b._cls.has('up'));assert.ok(!b.getAttribute('aria-label').includes('Face-down'));});
+  sb.onCardTap(0);assert.equal(sb.M.flipped.length,0);
+  flushTimers(sb);
+  assert.equal(sb.M.lock,false);sb.boardCards.forEach((b,i)=>{assert.ok(!b._cls.has('up'));assert.equal(b.getAttribute('aria-label'),'Face-down card '+(i+1));});
+  assert.ok(sb.peekTime(8)>sb.peekTime(3)&&sb.peekTime(3)>=1500,'longer when there is more to remember');
+});
+
+test('hintPair picks two matching cards that are still face down', () => {
+  const sb=makeUiSandbox(),cards=[{i:0,val:'a'},{i:1,val:'b'},{i:2,val:'a'},{i:3,val:'b'}];
+  assert.deepEqual(Array.from(sb.hintPair(cards,[])),[0,2]);assert.deepEqual(Array.from(sb.hintPair(cards,['a'])),[1,3]);assert.equal(sb.hintPair(cards,['a','b']),null);
+});
+
+test('UI: three misses in a row make a matching pair twinkle, and a match resets the count', () => {
+  const sb=makeUiSandbox();sb.startGame();flushTimers(sb);
+  const cards=sb.M.game.cards,other=cards.findIndex(c=>c.val!==cards[0].val),twinkling=()=>sb.boardCards.filter(b=>b._cls.has('hint')).length;
+  for(let n=0;n<2;n++){sb.onCardTap(0);sb.onCardTap(other);flushTimers(sb);}
+  assert.equal(twinkling(),0);assert.equal(sb.M.misses,2);
+  sb.onCardTap(0);sb.onCardTap(other);
+  const pending=Object.entries(sb.__pending);for(const [id,fn] of pending){delete sb.__pending[id];fn();}   // the flip back, which starts the twinkle
+  assert.equal(twinkling(),2);assert.equal(sb.M.misses,0);
+  const lit=sb.boardCards.map((b,i)=>b._cls.has('hint')?i:-1).filter(i=>i>=0);assert.equal(cards[lit[0]].val,cards[lit[1]].val);
+  flushTimers(sb);assert.equal(twinkling(),0);
+  sb.onCardTap(0);sb.onCardTap(other);flushTimers(sb);assert.equal(sb.M.misses,1);
+  const pair=cards.filter(c=>c.val===cards[0].val);sb.onCardTap(pair[0].i);sb.onCardTap(pair[1].i);assert.equal(sb.M.misses,0);
 });
