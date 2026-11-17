@@ -1,7 +1,7 @@
 // Things to find in the sky and the pilot's star bank, independent of rendering and storage.
-import { touchesTarget } from './flight.js?v=7';
-import { AIRPORTS, airportById, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=7';
-import { CROSS, PARK, RUN_OUT, GATE } from './city.js?v=7';
+import { touchesTarget } from './flight.js?v=8';
+import { AIRPORTS, airportById, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=8';
+import { CROSS, PARK, RUN_OUT, GATE } from './city.js?v=8';
 
 export const PILOT_KEY = 'viaan-pilot-v1';
 export const BOOST_SECONDS = 3;
@@ -11,7 +11,7 @@ export const BOOST_SPEED = 1.45;       // a rainbow hoop multiplies the chosen s
 // starts, and `view` how much further back the camera sits.
 export const PLANE_MODELS = [
   { id: 'toy', name: 'Little Prop', asset: 'toy-plane', seat: [0, .65, .83], tail: 2.2, view: 1, engine: 'prop' },
-  { id: 'jumbo', name: 'Big Jumbo', asset: 'jumbo-plane', seat: [0, .96, -.94], tail: 3.4, view: 1.32, engine: 'jet' },
+  { id: 'jumbo', name: 'Big Jumbo', asset: 'jumbo-plane', seat: [0, 1.15, -1.04], tail: 3.4, view: 1.2, engine: 'jet' },
   { id: 'zippy', name: 'Zippy Jet', asset: 'zippy-plane', seat: [0, .58, .21], tail: 2.7, view: 1, engine: 'jet' }
 ];
 // Paints and trails with a cost are unlocked with stars collected while flying.

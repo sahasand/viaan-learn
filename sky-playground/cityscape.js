@@ -2,8 +2,8 @@
 // towers, parks, the terminal, a Ferris wheel, cars and a blimp. Where things stand comes
 // from city.js; this file only draws.
 import * as THREE from 'three';
-import { CITY_GROUND } from './airline.js?v=7';
-import { cityPlan, TOWER, AVENUE, CROSS, PARK, COLUMNS, ROWS, WHEEL } from './city.js?v=7';
+import { CITY_GROUND } from './airline.js?v=8';
+import { cityPlan, TOWER, AVENUE, CROSS, PARK, COLUMNS, ROWS, WHEEL } from './city.js?v=8';
 
 const EDGE = { x: 96 * .9275, z: 78 * .9275 };      // where the flat ground ends and the beach begins
 const BODY = ['#f7b9a6', '#a8d3f4', '#f8e19c', '#b6e2c4', '#d6c1f1', '#f1f3f5'];

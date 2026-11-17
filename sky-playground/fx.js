@@ -1,7 +1,7 @@
 // The playful layer of Little Pilot: things to collect, sparkles, sea friends,
 // runway fans, plane paint and trails. Rules live in sky.js; this file only draws.
 import * as THREE from 'three';
-import { PLANE_PAINTS, inSky, reachOf } from './sky.js?v=7';
+import { PLANE_PAINTS, inSky, reachOf } from './sky.js?v=8';
 
 const PARTY = ['#eb6548', '#ffc44e', '#58c7b0', '#f2559c', '#5b8def', '#ffffff'];
 const BALLOONS = ['#f2559c', '#ffc44e', '#5b8def', '#58c7b0', '#eb6548', '#8a55e0'];

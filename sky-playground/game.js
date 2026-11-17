@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=7';
+import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=8';
 
-import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, SHOOTING_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_MODELS, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, tourFrom, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=7';
-import { createFun } from './fx.js?v=7';
-import { createTunes } from './tunes.js?v=7';
-import { createCity } from './cityscape.js?v=7';
-import { allObstacles } from './city.js?v=7';
-import { AIRPORTS, SPEEDS, WORLD, nightAt, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=7';
+import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, SHOOTING_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_MODELS, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, tourFrom, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=8';
+import { createFun } from './fx.js?v=8';
+import { createTunes } from './tunes.js?v=8';
+import { createCity } from './cityscape.js?v=8';
+import { allObstacles } from './city.js?v=8';
+import { AIRPORTS, SPEEDS, WORLD, nightAt, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=8';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');

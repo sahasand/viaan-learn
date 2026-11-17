@@ -68,8 +68,9 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 - A whale, dolphins, and puffy clouds to fly through are there to be discovered, and
   the passenger comments in a speech bubble.
 - At the airport, **My plane** starts with three planes to choose from, all free: Little
-  Prop (the toy propeller plane), Big Jumbo (a chunky passenger jet, seen from a little
-  further back) and Zippy Jet (small and pointed, with a flame that grows with speed and
+  Prop (the toy propeller plane), Big Jumbo (a chunky passenger jet with an upper deck,
+  four engines, winglets, rows of windows, doors and VIAAN AIR along its sides, seen from
+  a little further back) and Zippy Jet (small and pointed, with a flame that grows with speed and
   stretches when zooming). They fly the same way; the jets whine where the propeller
   buzzes. The chosen plane is saved and its picture shows on the My plane button. Below
   the planes are colours, trails and toys. Locked ones show their price
@@ -120,7 +121,8 @@ blender --background --factory-startup --python sky-playground/tools/build_plane
 ```
 
 The third script builds Big Jumbo and Zippy Jet in the toy plane's style and renders the
-three `plane-*.png` pictures for the chooser. A plane's paintable parts use the material
+three `plane-*.png` pictures for the chooser; names after `--` (`jumbo`, `zippy`, `toy`)
+build only those. A plane's paintable parts use the material
 named `Coral enamel`; a propeller is the object named `Propeller` and a jet flame `Flame`.
 A new plane also needs an entry in `PLANE_MODELS` in `sky.js` (passenger seat, trail
 start, camera distance, engine sound).

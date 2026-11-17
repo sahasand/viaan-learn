@@ -1,7 +1,7 @@
 // Where Big City's towers stand. Plain numbers only, so it runs in Node tests; cityscape.js draws them.
 // Main Avenue runs straight through the runway from shore to shore, and every star trail in or
 // out of the city follows it (see trailPath in sky.js), so the towers are never in a trail's way.
-import { airportById, worldObstacles } from './airline.js?v=7';
+import { airportById, worldObstacles } from './airline.js?v=8';
 
 export const TOWER = 5.5, BLOCK = 24;              // half a tower's width, and how far apart towers stand
 export const AVENUE = 22;                          // Main Avenue's line, the runway's own (in the city's coordinates)
