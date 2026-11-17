@@ -71,6 +71,15 @@ export function stepFlight(state, input, elapsed, target = null, obstacles = [],
   let floor = terrain(next.x, next.z) + 5.2;
   let aheadFloor = terrain(aheadX, aheadZ) + 5.2;
   for (const o of obstacles) {
+    // A wall is too tall to hop over: a plane below its top slides round it and is turned a little away.
+    if (o.wall && next.y < o.top + 2) {
+      const dx = next.x - o.x, dz = next.z - o.z, gap = Math.hypot(dx, dz), keep = o.radius + 2.8;
+      if (gap < keep && gap > 0) {
+        const right = Math.cos(next.heading) * -dx + Math.sin(next.heading) * -dz;   // the wall is to the plane's right when positive
+        next.x = o.x + dx / gap * keep; next.z = o.z + dz / gap * keep; next.heading += (right >= 0 ? -1 : 1) * 1.4 * dt;
+      }
+      continue;
+    }
     if (Math.hypot(next.x - o.x, next.z - o.z) < o.radius + 2.8) floor = Math.max(floor, o.top + 2);
     if (Math.hypot(aheadX - o.x, aheadZ - o.z) < o.radius + 3.5) aheadFloor = Math.max(aheadFloor, o.top + 3);
   }

@@ -1,16 +1,18 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=5';
+import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=6';
 
-import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, SHOOTING_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=5';
-import { createFun } from './fx.js?v=5';
-import { createTunes } from './tunes.js?v=5';
-import { AIRPORTS, SPEEDS, WORLD, nightAt, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=5';
+import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, SHOOTING_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, tourFrom, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=6';
+import { createFun } from './fx.js?v=6';
+import { createTunes } from './tunes.js?v=6';
+import { createCity } from './cityscape.js?v=6';
+import { allObstacles } from './city.js?v=6';
+import { AIRPORTS, SPEEDS, WORLD, nightAt, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=6';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let renderer, scene, camera, plane, propeller, water, sun, hemi, beacon;
+let renderer, scene, camera, plane, propeller, water, sun, hemi, beacon, city;
 let state = initialFlight(), phase = 'loading', collected = 0, guided = false;
 let paused = false, soundOn = false, pointer = null, toastUntil = 0, hintUntil = 12;
 let elapsed = 0, lastTime = 0, lastMap = 0, landingTime = 0, landingStart;
@@ -327,7 +329,7 @@ function leaveAirport(free = false) {
   if (free) { mode = 'free'; trip = null; }
   else { const next = prepareTrip(trip, 'depart'); if (next?.status !== 'flying') return; trip = next; mode = 'airline'; }
   $('airportBoard').close(); $('celebration').close();
-  paused = false; phase = 'takeoff'; landingTime = 0; landingStart = { ...state };
+  paused = false; phase = 'takeoff'; landingTime = 0; landingStart = { ...state }; airportLeg = -1;
   clearInput(); setGuided(false); updatePassenger(); newSky(); updateMission(); updateSound();
   lastTime = performance.now(); countShown = ''; boardView = 'pick';
   say(free ? 'Cleared for takeoff!' : 'Passenger ready. Bags ready. Cleared for takeoff!');
@@ -355,8 +357,8 @@ function updatePassenger() {
   if (!passengerModel) return;
   passengerModel.visible = trip?.boarded && trip.status !== 'arrived';
   const name = trip ? airportById(trip.destination).animal : 'panda';
-  passengerModel.getObjectByName('Passenger head').material.color.set(name === 'frog' ? '#92bb70' : name === 'penguin' ? '#374954' : name === 'owl' ? '#b98a5a' : '#ffefcf');
-  passengerModel.children.filter(o => o.name === 'Passenger ear').forEach(o => { o.visible = name !== 'penguin'; o.material.color.set(name === 'frog' ? '#92bb70' : name === 'owl' ? '#8a5f38' : '#374954'); });
+  passengerModel.getObjectByName('Passenger head').material.color.set(name === 'frog' ? '#92bb70' : name === 'penguin' ? '#374954' : name === 'owl' ? '#b98a5a' : name === 'giraffe' ? '#f2c14e' : '#ffefcf');
+  passengerModel.children.filter(o => o.name === 'Passenger ear').forEach(o => { o.visible = name !== 'penguin'; o.material.color.set(name === 'frog' ? '#92bb70' : name === 'owl' ? '#8a5f38' : name === 'giraffe' ? '#c98a2b' : '#374954'); });
 }
 function makePassenger() {
   passengerModel = new THREE.Group(); passengerModel.position.set(0,.65,.83);
@@ -409,7 +411,7 @@ function updateMission() {
     const dest=airportById(airportLeg>=0?landingAirport:tripAirport());
     $('missionIcon').innerHTML=trip?.boarded?`<img src="../memory-assets/${airportById(trip.destination).animal}.png" alt="">`:'✈';
     $('missionKicker').textContent=phase==='parked'?airportById(currentAirport).airport:airportLeg>=0?dest.airport:trip?'HAPPY PASSENGER FLIGHT':'FREE FLIGHT';
-    $('missionTitle').textContent=phase==='takeoff'?'Ready, set, fly!':phase==='landing'?(landingStyle==='hands'?'You’re landing the plane!':'A lovely gentle landing'):phase==='parked'?'Where shall we go?':trip?`${dest.passenger} → ${dest.name}`:'Explore our four islands';
+    $('missionTitle').textContent=phase==='takeoff'?'Ready, set, fly!':phase==='landing'?(landingStyle==='hands'?'You’re landing the plane!':'A lovely gentle landing'):phase==='parked'?'Where shall we go?':trip?`${dest.passenger} → ${dest.name}`:'Explore our five islands';
     $('missionSubtitle').textContent=phase==='landing'?(landingStyle==='hands'?'Steer gently. Helping wings keep you safe.':'Wheels down. Rolling to a stop.'):airportLeg>=0?'Follow the glowing runway gates':phase==='takeoff'?'Speeding up along the runway':autopilot?'You do the tricks! 🤖':trip?'Follow the stars! ⭐':'Find stars. Pop balloons. Land anywhere.';
     $('land').innerHTML=phase==='landing'&&landingStyle==='hands'?'Land for me':airportLeg>=0&&phase==='flying'?'Keep flying':'↘ Land';
     $('land').disabled=!(phase==='flying'||phase==='landing'&&landingStyle==='hands');
@@ -450,7 +452,8 @@ function getTarget() {
 // next treat. Something it cannot catch in a while is left alone for the rest of the flight.
 function guideTarget() {
   if (airportLeg >= 0 || mode === 'picnic') return getTarget();
-  const next = autoTarget(skyItems, skyRoute(), state, autoHeld, shy);
+  // On a trip the autopilot follows its trail; just flying, it follows the round-trip trail from this island to the next.
+  const next = autoTarget(skyItems, skyRoute() || (mode === 'free' ? tourFrom(currentAirport) : ''), state, autoHeld, shy);
   if (next !== autoHeld) { autoHeld = next; autoSince = elapsed; }
   else if (next && elapsed - autoSince > 12) { shy.add(next); autoHeld = null; }
   return next || getTarget();
@@ -595,11 +598,11 @@ function setCamera(immediate = false, dt = 0) {
   camera.position.copy(currentCamera); camera.lookAt(currentLook);
 }
 function drawMap() {
-  const c=map, airline=mode!=='picnic', scale=airline?.17:.54;
-  const toX=x=>80+x*scale,toY=z=>80+(z+(airline?165:0))*scale;
+  const c=map, airline=mode!=='picnic', scale=airline?.155:.54;
+  const toX=x=>80+(x-(airline?2:0))*scale,toY=z=>80+(z+(airline?65:0))*scale;
   c.clearRect(0,0,160,160);
   for(const a of airline?AIRPORTS:[AIRPORTS[0]]) {
-    c.fillStyle=a.id==='snowy'?'#e4edf0':a.id==='jungle'?'#6caa70':a.id==='starry'?'#7d76cf':'#a6c889';c.beginPath();c.ellipse(toX(a.x),toY(a.z),90*scale,72*scale,0,0,Math.PI*2);c.fill();
+    c.fillStyle=a.id==='snowy'?'#e4edf0':a.id==='jungle'?'#6caa70':a.id==='starry'?'#7d76cf':a.city?'#c3bfd0':'#a6c889';c.beginPath();c.ellipse(toX(a.x),toY(a.z),90*scale,72*scale,0,0,Math.PI*2);c.fill();
     c.strokeStyle='#fff2ce';c.lineWidth=3;c.beginPath();c.moveTo(toX(a.x+22),toY(a.z+16));c.lineTo(toX(a.x+22),toY(a.z+60));c.stroke();
     if(airline){c.fillStyle='#265552';c.font='bold 13px sans-serif';c.textAlign='center';c.fillText(a.icon,toX(a.x),toY(a.z)-2);}
   }
@@ -719,7 +722,7 @@ function animate(now) {
     plane.position.set(state.x, state.y, state.z);
     plane.rotation.set(state.climb * .19, -state.heading, -state.turn * .48 + (fun?.roll || 0), 'YXZ');
     if (propeller) propeller.rotation.z += dt * (phase==='parked'?0:22+state.speed*2);
-    water.material.uniforms.time.value = elapsed;
+    water.material.uniforms.time.value = elapsed; city?.update(dt, elapsed);
     clouds.forEach(c => { c.position.x += c.userData.speed * dt; if (c.position.x > 310) c.position.x = -310; });
     boats.forEach((b, i) => { b.position.y = .2 + Math.sin(elapsed + i) * .1; b.rotation.z = Math.sin(elapsed * .7 + i) * .025; });
     birds.forEach((b, i) => {
@@ -794,11 +797,12 @@ async function init() {
     makeOcean(); makeClouds(); makeExtras(); makeTrail();
     const loader = new GLTFLoader();
     const [islandAsset, planeAsset, obstacleData] = await Promise.all([loader.loadAsync('./assets/sunny-island.glb'), loader.loadAsync('./assets/toy-plane.glb'), fetch('./assets/obstacles.json').then(r => { if (!r.ok) throw new Error('Island data failed to load'); return r.json(); })]);
-    obstacles = worldObstacles(obstacleData); skyItems = buildSky(obstacles);
+    obstacles = allObstacles(obstacleData); skyItems = buildSky(obstacles);
     islandAsset.scene.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = true; } });
     scene.add(islandAsset.scene);
-    const otherIslands=await Promise.all(AIRPORTS.slice(1).map(async a=>({a,asset:await loader.loadAsync('./assets/'+a.asset+'.glb')})));
+    const otherIslands=await Promise.all(AIRPORTS.slice(1).filter(a=>!a.city).map(async a=>({a,asset:await loader.loadAsync('./assets/'+a.asset+'.glb')})));
     for(const {a,asset} of otherIslands){asset.scene.position.set(a.x,0,a.z);asset.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(asset.scene);}
+    city = createCity({ scene, airport: airportById('city'), reducedMotion });
     plane = planeAsset.scene;
     plane.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     propeller = plane.getObjectByName('Propeller'); scene.add(plane);makePassenger();makeAirportDetails();

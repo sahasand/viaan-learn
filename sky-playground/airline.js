@@ -1,11 +1,13 @@
 // Airline journeys and world coordinates, independent of rendering and storage.
-import { clamp, groundHeight, RUNWAY, AIRPORT_APPROACH, runwayLanding } from './flight.js?v=5';
+import { clamp, groundHeight, RUNWAY, AIRPORT_APPROACH, runwayLanding } from './flight.js?v=6';
 export const AIRPORTS = [
   { id:'sunny', name:'Sunny Island', airport:'Sunny Airport', x:0, z:0, icon:'☀', color:'#edd28b', animal:'panda', passenger:'Panda', wish:'a day at the beach', asset:'sunny-island' },
   { id:'snowy', name:'Snowy Mountain', airport:'Snowflake Airport', x:-235, z:-190, icon:'❄', color:'#c5deeb', animal:'penguin', passenger:'Penguin', wish:'a snowy holiday', asset:'snowy-island' },
   { id:'jungle', name:'Jungle Bay', airport:'Jungle Airport', x:235, z:-180, icon:'❀', color:'#b3d7a1', animal:'frog', passenger:'Frog', wish:'a jungle picnic', asset:'jungle-island' },
   // Starlight Island is always in the night: see nightAt.
-  { id:'starry', name:'Starlight Island', airport:'Moonbeam Airport', x:0, z:-420, icon:'☾', color:'#8f8ad6', animal:'owl', passenger:'Owl', wish:'a night full of stars', asset:'starry-island' }
+  { id:'starry', name:'Starlight Island', airport:'Moonbeam Airport', x:0, z:-420, icon:'☾', color:'#8f8ad6', animal:'owl', passenger:'Owl', wish:'a night full of stars', asset:'starry-island' },
+  // Big City is flat and built in code (city.js and cityscape.js), with towers to fly between.
+  { id:'city', name:'Big City', airport:'City Airport', x:240, z:240, icon:'🏙️', color:'#c9c4d6', animal:'giraffe', passenger:'Giraffe', wish:'to see the tall towers', city:true }
 ];
 // How dark the sky is at a place, from 0 (day) to 1 (night). It is always night over
 // Starlight Island and dusk on the way in.
@@ -14,8 +16,8 @@ export function nightAt(x, z) {
   const a=airportById('starry'), t=clamp((NIGHT.far-Math.hypot(x-a.x,z-a.z))/(NIGHT.far-NIGHT.near),0,1);
   return t*t*(3-2*t);
 }
-// The middle of the four islands, and how far from it the plane may go before it is turned back.
-export const WORLD = { x: 0, z: -170, radius: 440 };
+// The middle of the five islands, and how far from it the plane may go before it is turned back.
+export const WORLD = { x: 80, z: -60, radius: 530 };
 export const airportById = id => AIRPORTS.find(a=>a.id===id) || AIRPORTS[0];
 export const SPEEDS = { slow:8, cruise:13, fast:19 };
 export function airportRunway(id) {
@@ -23,8 +25,12 @@ export function airportRunway(id) {
 }
 export function approachFor(id) { const a=airportById(id);return AIRPORT_APPROACH.map(p=>({...p,x:p.x+a.x,z:p.z+a.z})); }
 export function parkedAt(id) { const r=airportRunway(id);return {x:r.x,y:r.parkedY,z:r.stopZ,heading:0,turn:0,climb:0,speed:0,returning:false}; }
-export function worldGroundHeight(x,z) { return Math.max(...AIRPORTS.map(a=>groundHeight(x-a.x,z-a.z))); }
-export function worldObstacles(local) {return AIRPORTS.flatMap(a=>local.map(o=>({...o,x:o.x+a.x,z:o.z+a.z})));}
+// Big City stands on a flat slab level with its runway, with a short beach round the edge.
+export const CITY_GROUND = 2.7;
+export function cityGround(x,z) { const r=Math.hypot(x/96,z/78); return r>=1.04?0:clamp((1.04-r)*24,0,CITY_GROUND); }
+export function worldGroundHeight(x,z) { return Math.max(...AIRPORTS.map(a=>a.city?cityGround(x-a.x,z-a.z):groundHeight(x-a.x,z-a.z))); }
+// Trees and houses mapped on the shared island model. Big City has none of them, only its terminal; its towers come from city.js.
+export function worldObstacles(local) {return AIRPORTS.flatMap(a=>(a.city?local.slice(0,1):local).map(o=>({...o,x:o.x+a.x,z:o.z+a.z})));}
 export function nearestAirport(state) {return AIRPORTS.reduce((best,a)=>Math.hypot(state.x-a.x,state.z-a.z)<Math.hypot(state.x-best.x,state.z-best.z)?a:best).id;}
 export function newTrip(origin,destination) {
   if(!AIRPORTS.some(a=>a.id===origin)||!AIRPORTS.some(a=>a.id===destination)||origin===destination)return null;

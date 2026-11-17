@@ -48,7 +48,7 @@ The home cards and the Daily Adventure open `number-playground/` (math), `story-
 
 The home Little Pilot link and Daily Adventure's `plane` reward open `sky-playground/`.
 This is a static Three.js flying playground with original Blender models, touch/keyboard
-steering, four island airports (one, Starlight Island, is always in the night: flying to it turns day to dusk to a starry sky), animal passenger boarding on an airport card that shows one step at a time, a 3-2-1 takeoff countdown, speed controls, assisted
+steering, five island airports (Starlight Island is always in the night: flying to it turns day to dusk to a starry sky; Big City is a flat island of towers, built in code by `city.js` and `cityscape.js`, where every star trail runs down Main Avenue and towers are walls the plane slides round), animal passenger boarding on an airport card that shows one step at a time, a 3-2-1 takeoff countdown, speed controls, assisted
 manual/automatic landings, an autopilot that flies and lands by itself while the child does the tricks its passenger asks for, and a locally saved pilot passport. The original picnic
 adventure and free flight remain available. Read `sky-playground/README.md` when changing flight behavior, mission
 flow, art, or local preview setup. `flight.js` holds flight rules; `airline.js` holds

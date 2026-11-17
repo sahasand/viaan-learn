@@ -4,16 +4,17 @@ import { readFileSync } from 'node:fs';
 import { stepFlight, touchesTarget } from './flight.js';
 import { AIRPORTS, WORLD, airportRunway, approachFor, worldGroundHeight, worldObstacles } from './airline.js';
 import * as S from './sky.js';
+import { allObstacles, cityPlan } from './city.js';
 
-const obstacles = worldObstacles(JSON.parse(readFileSync(new URL('./assets/obstacles.json', import.meta.url))));
+const obstacles = allObstacles(JSON.parse(readFileSync(new URL('./assets/obstacles.json', import.meta.url))));
 const afterTakeoff = id => { const r = airportRunway(id); return { x: r.x, y: r.parkedY + 14, z: r.stopZ - 50, heading: 0, turn: 0, climb: 0, speed: 13, returning: false }; };
 
 test('the sky holds stars, balloons and hoops that float clear of land, trees and the edge of the world', () => {
   const items = S.buildSky(obstacles);
   assert.ok(items.filter(i => i.kind === 'star').length > 150);
-  assert.equal(items.filter(i => i.kind === 'hoop').length, 24);
-  assert.equal(items.filter(i => i.kind === 'balloon').length, 4 * 4 + 12 * 3);
-  assert.equal(items.filter(i => i.big).length, 4 + 12 * 2, 'a big star over every island, and two on every trail');
+  assert.equal(items.filter(i => i.kind === 'hoop').length, 40);
+  assert.equal(items.filter(i => i.kind === 'balloon').length, 5 * 4 + 20 * 3);
+  assert.equal(items.filter(i => i.big).length, 5 + 20 * 2, 'a big star over every island, and two on every trail');
   for (const thing of items) {
     assert.ok(Math.hypot(thing.x - WORLD.x, thing.z - WORLD.z) < WORLD.radius - 60, 'well inside the turn-back boundary');
     assert.ok(thing.y - worldGroundHeight(thing.x, thing.z) >= 6.4 && thing.y <= 44, `${thing.kind} height ${thing.y}`);
@@ -59,7 +60,7 @@ test('every trail starts straight ahead of the takeoff and bends gently toward i
 test('only one star trail is in the sky at a time, and only what is in the sky can be collected', () => {
   const items = S.buildSky(obstacles), island = items.find(i => !i.route), routes = route => new Set(items.filter(i => S.inSky(i, route) && i.route).map(i => i.route));
   assert.deepEqual([...routes('sunny>jungle')], ['sunny>jungle']);
-  assert.deepEqual([...routes('')].sort(), ['jungle>sunny', 'snowy>starry', 'starry>jungle', 'sunny>snowy'], 'free flying shows one trail leaving each island');
+  assert.deepEqual([...routes('')].sort(), ['city>sunny', 'jungle>city', 'snowy>starry', 'starry>jungle', 'sunny>snowy'], 'free flying shows one trail leaving each island');
   assert.equal(routes('picnic').size, 0);
   for (const route of ['', 'picnic', 'snowy>sunny']) assert.equal(S.inSky(island, route), true);
   // A star from the middle of a trail, well away from where the two trails leaving Sunny Island part.
@@ -287,4 +288,26 @@ test('the page and every module load one another with the same version number', 
     }
   }
   assert.equal(versions.size, 1, `one version everywhere, found ${[...versions]}`);
+});
+
+test('trails in and out of Big City run down Main Avenue, clear of every tower', () => {
+  const city = AIRPORTS.find(a => a.city), { towers } = cityPlan(), avenue = airportRunway('city').x;
+  for (const other of AIRPORTS) {
+    if (other === city) continue;
+    for (const [from, to] of [[city.id, other.id], [other.id, city.id]]) {
+      const path = S.trailPath(from, to), items = S.routeItems(from, to, obstacles);
+      let inside = 0;
+      for (let d = 0; d <= path.length; d += 2) {
+        const p = path.at(d), q = path.at(Math.min(path.length, d + 2));
+        assert.ok(Math.hypot(q.x - p.x, q.z - p.z) < 2.01, `${from}>${to} has no jumps`);
+        if (Math.hypot((p.x - city.x) / 96, (p.z - city.z) / 78) < 1) { inside++; assert.ok(Math.abs(p.x - avenue) < .01, `${from}>${to} is on the avenue over the city`); }
+      }
+      assert.ok(inside > (from === city.id ? 20 : 60), `${from}>${to} flies a good length of the avenue`);
+      for (const thing of items) for (const t of towers) assert.ok(Math.hypot(thing.x - t.x, thing.z - t.z) > t.radius + 2.8 || thing.y > t.top + 2, `${from}>${to} ${thing.kind} is not inside a tower`);
+      assert.ok(items.every(i => i.y <= 44));
+    }
+  }
+  const own = S.islandItems(city, obstacles);
+  assert.equal(own.filter(i => i.street).length, 13, 'twelve stars down Cross Street and a big one over the park');
+  for (const thing of own) for (const t of towers) assert.ok(Math.hypot(thing.x - t.x, thing.z - t.z) > t.radius + 2.8, 'the city stars hang over streets');
 });

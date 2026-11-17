@@ -1,10 +1,11 @@
 # Little Pilot
 
-A forgiving 3D airline playground for Viaan, with original Blender models and four
+A forgiving 3D airline playground for Viaan, with original Blender models and five
 island airports. Choose a destination, load a suitcase, welcome an animal passenger,
 take off, and bring them safely to their holiday. Sunny Island welcomes Panda,
 Snowy Mountain welcomes Penguin, Jungle Bay welcomes Frog, and Starlight Island,
-where it is always night, welcomes Owl.
+where it is always night, welcomes Owl. Big City, an island of towers to fly between,
+welcomes Giraffe.
 
 ## Play locally
 
@@ -22,11 +23,19 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 ## Controls and journeys
 
 - The airport card shows one thing at a time. First a big ticket for each of the other
-  three islands (one not yet visited says **New!**), with **My plane** and **Just fly**
+  four islands (one not yet visited says **New!**), with **My plane** and **Just fly**
   beneath. A chosen ticket opens boarding, which shows a single big button: load the
   suitcase, welcome the passenger, then **Take off**. **Pick another place** goes back.
   **My plane** is a page of its own and glows when the stars can buy something.
 - Takeoff counts **3, 2, 1, Go!** as the plane rolls and lifts off.
+- Big City is flat, with 27 towers on a grid of streets, parks, cars, a Ferris wheel and
+  a blimp. Main Avenue runs through the runway from shore to shore. Every star trail in
+  or out of the city follows it: a departure flies the length of the avenue before it
+  bends, and an arrival bends onto it out at sea and flies down it, over the runway, to
+  the landing approach. The city's own stars hang along Cross Street, with the big one
+  over the park. A tower is a wall: a plane below its top slides round it and is turned
+  a little away, never bounced over it; towers under the flight ceiling can be flown
+  over. On a trip the autopilot keeps to the avenue and leaves the side streets alone.
 - Flying toward Starlight Island the day turns to dusk and then night (`nightAt` in
   `airline.js`): the lights dim, the sea darkens, and stars, a sleepy moon, northern
   lights and drifting lanterns fade in. The island's trees and houses glow. Now and
@@ -65,8 +74,9 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
 - **Autopilot** flies the plane by itself and stays on, flight after flight, until its
   button is tapped again. With a passenger it follows the star trail forwards (joining
   it where the plane is, never turning back for a star), detours for a balloon or island
-  star close ahead, then lines up and lands on its own. With nobody aboard it tours
-  whatever is nearest and lands at the island its trail leads to. It loops after a hoop
+  star close ahead, then lines up and lands on its own. With nobody aboard it follows the
+  round-trip trail from the island it left to the next one (Sunny, Snowy, Starlight,
+  Jungle, Big City, and back to Sunny) and lands there. It loops after a hoop
   or a big star and zooms when all three zooms are full. Steering takes the stick only
   while the pilot steers; a moment after letting go the autopilot carries on, and
   steering never interrupts a landing it has begun. Choosing to steer the landing, or
@@ -109,6 +119,9 @@ They share geometry and local obstacle coordinates, translated per airport. If
 moving buildings or trees, update `assets/obstacles.json` to match. The analytic
 terrain formula in `flight.js` matches the original asset generator.
 
+Big City is the one island built in code, not Blender: `city.js` says where its towers
+stand (plain numbers, tested in Node) and `cityscape.js` draws it.
+
 `game.js` owns the scene, input, mission, camera, sound, and lifecycle. `flight.js`
 contains flight rules. `sky.js` holds the rules for stars, balloons, hoops, the star
 trail the helping wing follows, and the saved pilot (stars, paints, trails). `fx.js`
@@ -132,7 +145,8 @@ state, saved pilot, sound module and sky items for checking by hand.
 node --test sky-playground/*.test.mjs
 ```
 
-Tests cover all twelve inter-airport routes at every speed, the islands and their
+Tests cover all twenty inter-airport routes at every speed, Big City's layout, tower
+walls and avenue trails, the islands and their
 approaches sitting inside the edge of the world (`WORLD` in `airline.js`), night and
 dusk, the airport card's pages, the takeoff countdown, runway alignment and
 rollout, takeoff, steering effects and safe touchdown at 20–120 Hz, world terrain

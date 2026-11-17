@@ -157,3 +157,14 @@ body[data-phase="parked"] .star-counter,body[data-phase="loading"] .star-counter
 @media(max-height:500px){#airportBoard{padding:12px 18px}.boarding-header{margin-bottom:8px}.boarding-header h2{font-size:21px}.ticket-mark{width:38px;height:38px;font-size:23px}.tickets{grid-template-columns:repeat(3,1fr);gap:8px}.ticket{min-height:74px;gap:8px;padding-right:8px;border-radius:18px}.ticket-sky{flex-basis:64px}.ticket-sky img{width:62px;height:62px;right:0}.ticket-sky i{display:none}.ticket>em{right:auto;left:5px;top:5px;z-index:2;font-size:10px;padding:1px 7px}.ticket strong{font-size:15px}.ticket small{font-size:11px}.ticket>b{display:none}.board-row{margin-top:8px}.chunky{min-height:46px}.pilot-passport{margin-top:6px;padding-top:4px}
   #airportBoard[data-view=board] .view-board{display:grid;grid-template-columns:1fr 1fr;column-gap:16px;align-items:center;text-align:center}.board-scene{grid-row:1 / span 5;height:170px}.board-dots{justify-content:center;margin:0}.view-board h3{font-size:20px;margin:4px 0 0}.view-board p{margin:2px 0 6px;font-size:13px}.boarding-actions .big-step{min-height:56px;font-size:18px}.boarding-actions .big-step.go{font-size:20px}.back-link{margin-top:2px}.countdown{font-size:90px}}
 @media(prefers-reduced-motion:reduce){.countdown.tick{opacity:1}}
+
+/* Big City's ticket and boarding sky: a little skyline. */
+.ticket-sky.city{background:linear-gradient(#9fd4f5,#e3f3fc)}
+.ticket-sky.city:before{left:6px;bottom:0;width:22px;height:54px;border-radius:3px 3px 0 0;background:#f7b9a6;transform:none;box-shadow:26px 18px 0 #a8d3f4,52px -10px 0 #d6c1f1,78px 22px 0 #f8e19c,104px 6px 0 #b6e2c4}
+.ticket-sky.city:after{display:none}.ticket-sky.city i{font-size:20px}
+.board-scene[data-place=city]{background:linear-gradient(#a6d8f7,#e8f5fc)}
+.board-scene[data-place=city]:before{content:'';position:absolute;left:4%;bottom:0;width:34px;height:74px;border-radius:4px 4px 0 0;background:#f7b9a688;box-shadow:42px 24px 0 #a8d3f488,84px -16px 0 #d6c1f188,126px 30px 0 #f8e19c88,168px 6px 0 #b6e2c488,210px 28px 0 #f7b9a688,252px -6px 0 #a8d3f488,294px 20px 0 #d6c1f188}
+/* Four tickets: a little shorter on a phone, two by two on wider or sideways screens. */
+.ticket{min-height:88px}.ticket strong{font-size:20px}
+@media(min-width:700px) and (min-height:501px){.tickets{grid-template-columns:repeat(2,1fr)}.ticket{flex-direction:row;align-items:center;gap:14px;padding:0 44px 0 0;min-height:96px}.ticket-sky{flex:0 0 118px}.ticket-sky img{width:92px;height:92px;right:4px}.ticket-words{padding:10px 0}.ticket>b{top:50%;bottom:auto;margin-top:-16px}}
+@media(max-height:500px){.tickets{grid-template-columns:repeat(2,1fr);gap:6px}.ticket{min-height:60px}.ticket-sky{flex-basis:58px}.ticket-sky img{width:54px;height:54px}.board-row{margin-top:6px}.chunky{min-height:44px}.pilot-passport summary{min-height:26px}}
