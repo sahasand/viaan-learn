@@ -28,8 +28,8 @@ export function makeHero() {
   const badge = part(STAR, gold, 0, 1.12, .41); badge.scale.setScalar(.21);
   const head = new THREE.Group(); head.position.set(0, 2.02, 0); body.add(head);
   outlined(part(new THREE.SphereGeometry(.66, 24, 18), skin, 0, 0, 0, head), 1.045);
-  const hair = part(new THREE.SphereGeometry(.69, 20, 12, 0, Math.PI * 2, 0, Math.PI * .46), hairColor, 0, .03, -.04, head); hair.rotation.x = -.32;
-  for (const [x, y, z, r] of [[-.18, .62, .3, .2], [.1, .68, .26, .22], [.34, .56, .2, .17]]) part(new THREE.SphereGeometry(r, 10, 8), hairColor, x, y, z, head);   // a tuft at the front
+  // A smooth cap of hair that follows the head, a little lower at the back. Nothing sticks out of it.
+  const hair = part(new THREE.SphereGeometry(.685, 28, 16, 0, Math.PI * 2, 0, Math.PI * .5), hairColor, 0, .01, -.02, head); hair.rotation.x = -.42;
   part(new THREE.CylinderGeometry(.668, .668, .34, 26, 1, true), suit, 0, .06, 0, head);                                  // the mask
   for (const side of [-1, 1]) {
     part(new THREE.SphereGeometry(.14, 10, 8), suit, side * .66, .06, -.05, head).scale.set(.6, 1.6, 1.2);               // mask ties flying behind the ears

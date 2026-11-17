@@ -2,10 +2,10 @@
 // in hero.js and the city in scenery.js; this file joins them up and adds the feel: the rope,
 // trails, sparks, pop-up words, the progress bar and the first-swing lesson.
 import * as THREE from 'three';
-import { SAVE_KEY, BODY, SUITS, FINISH_STARS, makeMission, startHero, stepHero, gather, hookFor, normalizeSave, earn, rescue, finishMission, chooseSuit } from './swing.js?v=2';
-import { makeHero, poseHero, STAR, BIG } from './hero.js?v=2';
-import { buildCity, LOOK } from './scenery.js?v=2';
-import { createSound } from './audio.js?v=2';
+import { SAVE_KEY, BODY, SUITS, FINISH_STARS, makeMission, startHero, stepHero, gather, hookFor, normalizeSave, earn, rescue, finishMission, chooseSuit } from './swing.js?v=3';
+import { makeHero, poseHero, STAR, BIG } from './hero.js?v=3';
+import { buildCity, LOOK } from './scenery.js?v=3';
+import { createSound } from './audio.js?v=3';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world'), reduced = matchMedia('(prefers-reduced-motion: reduce)').matches, sound = createSound();

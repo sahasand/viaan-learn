@@ -2,7 +2,7 @@
 // life, hooks, trampolines, stars, friends, the finish, and everything in the distance.
 // Where things are comes from the mission (swing.js); this file only draws and animates.
 import * as THREE from 'three';
-import { STAR, outlined } from './hero.js?v=2';
+import { STAR, outlined } from './hero.js?v=3';
 
 const WALLS = ['#ff9aa2', '#ffd166', '#8ecae6', '#b5e48c', '#cdb4f0', '#ffb37a', '#7fd6c2'];
 const ROOFS = ['#e0565f', '#e59a1f', '#3f88c5', '#5fae4e', '#8e6fd1', '#e0703a', '#2fa58e'];
