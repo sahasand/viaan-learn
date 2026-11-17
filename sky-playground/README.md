@@ -67,7 +67,12 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
   a thank-you or a splash. Toys are thrown ahead of the plane so they stay in view.
 - A whale, dolphins, and puffy clouds to fly through are there to be discovered, and
   the passenger comments in a speech bubble.
-- At the airport, **My plane** offers colours, trails and toys. Locked ones show their price
+- At the airport, **My plane** starts with three planes to choose from, all free: Little
+  Prop (the toy propeller plane), Big Jumbo (a chunky passenger jet, seen from a little
+  further back) and Zippy Jet (small and pointed, with a flame that grows with speed and
+  stretches when zooming). They fly the same way; the jets whine where the propeller
+  buzzes. The chosen plane is saved and its picture shows on the My plane button. Below
+  the planes are colours, trails and toys. Locked ones show their price
   in stars; tapping one buys it when there are enough and otherwise says how many more
   are needed. Anything affordable glows, and the game says so in flight the moment the
   stars reach a price. Stars only come from flying. Choices save under `viaan-pilot-v1`.
@@ -111,7 +116,14 @@ plane are reproduced with:
 ```sh
 blender --background --factory-startup --python sky-playground/tools/build_assets.py
 blender --background --factory-startup --python sky-playground/tools/build_destinations.py
+blender --background --factory-startup --python sky-playground/tools/build_planes.py
 ```
+
+The third script builds Big Jumbo and Zippy Jet in the toy plane's style and renders the
+three `plane-*.png` pictures for the chooser. A plane's paintable parts use the material
+named `Coral enamel`; a propeller is the object named `Propeller` and a jet flame `Flame`.
+A new plane also needs an entry in `PLANE_MODELS` in `sky.js` (passenger seat, trail
+start, camera distance, engine sound).
 
 The second script derives the snowy, jungle and starry material variants from Sunny
 Island; island names after `--` build only those (`... -- starry-island`).

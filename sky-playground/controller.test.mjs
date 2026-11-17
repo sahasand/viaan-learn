@@ -107,3 +107,10 @@ test('with nobody aboard the autopilot follows the round-trip trail from each is
  const h=harness();h.run(CLOCK+"restartAirline();leaveAirport(true);takeOff();");h.get('guide').listeners.click();h.run("fly(9000)");
  assert.equal(h.run('phase'),'landing');assert.equal(h.run('landingAirport'),'snowy');
 });
+
+test('choosing a plane in My plane saves it, and it costs nothing',()=>{
+ const h=harness();h.run("restartAirline()");assert.equal(h.run('pilot.plane'),'toy');assert.match(h.get('planeModels').innerHTML,/data-plane="jumbo"/);
+ h.run("choosePlane('plane','jumbo')");assert.equal(h.run('pilot.plane'),'jumbo');assert.equal(h.run('pilot.stars'),0);
+ assert.match(h.events.saved.v,/"plane":"jumbo"/);assert.match(h.get('myPlaneIcon').src,/plane-jumbo\.png/);assert.match(h.get('hangarNote').textContent,/Big Jumbo/);
+ h.run("choosePlane('plane','spaceship')");assert.equal(h.run('pilot.plane'),'jumbo','an unknown plane changes nothing');
+});

@@ -203,9 +203,12 @@ test('collecting marks things taken once, works at low frame rates, and a new fl
 });
 
 test('the pilot’s saved stars, paints and trails are validated before use', () => {
-  const fresh = { stars: 0, owned: [], paint: 'red', trail: 'clouds', toy: 'horn', sound: false };
+  const fresh = { stars: 0, owned: [], plane: 'toy', paint: 'red', trail: 'clouds', toy: 'horn', sound: false };
   for (const bad of [null, undefined, '', 'nonsense', '[]', 42, '{"stars":-3,"owned":"gold","paint":"mud"}']) assert.deepEqual(S.normalizePilot(bad), fresh);
-  assert.deepEqual(S.normalizePilot('{"stars":12,"paint":"blue","trail":"hearts","owned":["hearts","cheat","hearts"]}'), { stars: 12, owned: ['hearts'], paint: 'blue', trail: 'hearts', toy: 'horn', sound: false });
+  assert.deepEqual(S.normalizePilot('{"stars":12,"paint":"blue","trail":"hearts","owned":["hearts","cheat","hearts"]}'), { stars: 12, owned: ['hearts'], plane: 'toy', paint: 'blue', trail: 'hearts', toy: 'horn', sound: false });
+  assert.equal(S.normalizePilot({ plane: 'jumbo' }).plane, 'jumbo', 'every plane is free to choose');
+  assert.equal(S.normalizePilot({ plane: 'rocket' }).plane, 'toy', 'an unknown plane falls back to the first');
+  assert.equal(S.earnStars({ plane: 'zippy' }, 3).plane, 'zippy', 'earning stars keeps the plane');
   assert.equal(S.normalizePilot({ toy: 'fireworks' }).toy, 'horn', 'a locked toy falls back to the free one');
   assert.equal(S.normalizePilot({ toy: 'fireworks', owned: ['fireworks'] }).toy, 'fireworks');
   assert.equal(S.normalizePilot({ sound: true }).sound, true);
@@ -310,4 +313,20 @@ test('trails in and out of Big City run down Main Avenue, clear of every tower',
   const own = S.islandItems(city, obstacles);
   assert.equal(own.filter(i => i.street).length, 13, 'twelve stars down Cross Street and a big one over the park');
   for (const thing of own) for (const t of towers) assert.ok(Math.hypot(thing.x - t.x, thing.z - t.z) > t.radius + 2.8, 'the city stars hang over streets');
+});
+
+test('there are three planes to choose, each with its model, picture and paintable parts', () => {
+  assert.deepEqual(S.PLANE_MODELS.map(p => p.id), ['toy', 'jumbo', 'zippy']);
+  for (const p of S.PLANE_MODELS) {
+    assert.ok(!p.cost, 'planes are free');
+    const b = readFileSync(new URL(`./assets/${p.asset}.glb`, import.meta.url)), g = JSON.parse(b.toString('utf8', 20, 20 + b.readUInt32LE(12)));
+    assert.equal(b.toString('ascii', 0, 4), 'glTF');
+    assert.ok(g.materials.some(m => m.name === 'Coral enamel'), `${p.id} has parts the paints can colour`);
+    assert.ok(g.nodes.some(n => n.name === 'Pilot'), `${p.id} has its bear pilot`);
+    assert.equal(g.nodes.some(n => n.name === 'Propeller'), p.engine === 'prop', `${p.id} propeller`);
+    assert.equal(readFileSync(new URL(`./assets/plane-${p.id}.png`, import.meta.url)).toString('ascii', 1, 4), 'PNG');
+    assert.ok(p.seat.length === 3 && p.tail >= 2 && p.view >= 1);
+  }
+  const jumbo = S.PLANE_MODELS.find(p => p.id === 'jumbo'), toy = S.PLANE_MODELS[0];
+  assert.ok(jumbo.view > toy.view && jumbo.tail > toy.tail, 'the big plane is seen from further back');
 });

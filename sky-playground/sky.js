@@ -1,11 +1,19 @@
 // Things to find in the sky and the pilot's star bank, independent of rendering and storage.
-import { touchesTarget } from './flight.js?v=6';
-import { AIRPORTS, airportById, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=6';
-import { CROSS, PARK, RUN_OUT, GATE } from './city.js?v=6';
+import { touchesTarget } from './flight.js?v=7';
+import { AIRPORTS, airportById, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=7';
+import { CROSS, PARK, RUN_OUT, GATE } from './city.js?v=7';
 
 export const PILOT_KEY = 'viaan-pilot-v1';
 export const BOOST_SECONDS = 3;
 export const BOOST_SPEED = 1.45;       // a rainbow hoop multiplies the chosen speed
+// The planes to choose from. All three are free and fly the same way; they differ in looks and
+// sound. `seat` is where the passenger's head shows, `tail` how far behind the middle the trail
+// starts, and `view` how much further back the camera sits.
+export const PLANE_MODELS = [
+  { id: 'toy', name: 'Little Prop', asset: 'toy-plane', seat: [0, .65, .83], tail: 2.2, view: 1, engine: 'prop' },
+  { id: 'jumbo', name: 'Big Jumbo', asset: 'jumbo-plane', seat: [0, .96, -.94], tail: 3.4, view: 1.32, engine: 'jet' },
+  { id: 'zippy', name: 'Zippy Jet', asset: 'zippy-plane', seat: [0, .58, .21], tail: 2.7, view: 1, engine: 'jet' }
+];
 // Paints and trails with a cost are unlocked with stars collected while flying.
 export const PLANE_PAINTS = [
   { id: 'red', name: 'Cherry red', color: '#f03320' },
@@ -227,7 +235,7 @@ export function normalizePilot(raw) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) saved = {};
   const owned = Array.isArray(saved.owned) ? SHOP.filter(thing => saved.owned.includes(thing.id)).map(thing => thing.id) : [];
   const pick = (list, id) => (list.find(thing => thing.id === id && (!thing.cost || owned.includes(id))) || list[0]).id;
-  return { stars: Number.isInteger(saved.stars) && saved.stars > 0 ? Math.min(saved.stars, 99999) : 0, owned, paint: pick(PLANE_PAINTS, saved.paint), trail: pick(PLANE_TRAILS, saved.trail), toy: pick(PLANE_TOYS, saved.toy), sound: saved.sound === true };
+  return { stars: Number.isInteger(saved.stars) && saved.stars > 0 ? Math.min(saved.stars, 99999) : 0, owned, plane: pick(PLANE_MODELS, saved.plane), paint: pick(PLANE_PAINTS, saved.paint), trail: pick(PLANE_TRAILS, saved.trail), toy: pick(PLANE_TOYS, saved.toy), sound: saved.sound === true };
 }
 export function earnStars(pilot, count) {
   const current = normalizePilot(pilot);

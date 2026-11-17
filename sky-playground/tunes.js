@@ -42,7 +42,8 @@ export function createTunes(ctx) {
   const engineFilter = node(() => ctx.createBiquadFilter(), f => { f.type = 'lowpass'; f.frequency.value = 420; f.connect(chop); });
   const engineA = node(() => ctx.createOscillator(), o => { o.type = 'sawtooth'; o.frequency.value = 62; o.connect(engineFilter); o.start(); });
   const engineB = node(() => ctx.createOscillator(), o => { o.type = 'square'; o.frequency.value = 124; o.connect(gain(.4, engineFilter)); o.start(); });
-  const blades = node(() => ctx.createOscillator(), o => { o.type = 'sine'; o.frequency.value = 22; o.connect(gain(.38, chop.gain)); o.start(); });
+  const bladeDepth = gain(.38, chop.gain), blades = node(() => ctx.createOscillator(), o => { o.type = 'sine'; o.frequency.value = 22; o.connect(bladeDepth); o.start(); });
+  let jet = false;                       // a jet whines and hisses where a propeller buzzes and chops
   // Wind grows with speed.
   const windGain = gain(0, master);
   const windFilter = node(() => ctx.createBiquadFilter(), f => { f.type = 'bandpass'; f.frequency.value = 800; f.Q.value = .7; f.connect(windGain); });
@@ -99,13 +100,15 @@ export function createTunes(ctx) {
     calm(flag) { calm = flag; musicBus.gain.setTargetAtTime(flag ? .36 : .5, now(), .3); },
     music(id) { const next = SONGS[id] || SONGS.sunny; if (next !== song) { song = next; step = 0; nextTime = 0; } },
     hurry(flag) { tempo = flag ? 1.12 : 1; },
+    // 'prop' or 'jet': the kind of engine the chosen plane has.
+    setEngine(kind) { jet = kind === 'jet'; bladeDepth.gain.setTargetAtTime(jet ? .05 : .38, now(), .1); },
     engine(speed, climb, running, boosting) {
-      const f = 46 + speed * 2.3 + climb * 7, t = now();
+      const f = (jet ? 92 : 46) + speed * (jet ? 3.6 : 2.3) + climb * 7, t = now();
       engineGain.gain.setTargetAtTime(running ? .05 : 0, t, .15);
       engineA.frequency.setTargetAtTime(f, t, .1); engineB.frequency.setTargetAtTime(f * 2.01, t, .1);
       blades.frequency.setTargetAtTime(13 + speed * 1.1, t, .1);
-      engineFilter.frequency.setTargetAtTime(380 + speed * 30, t, .12);
-      windGain.gain.setTargetAtTime(running ? .004 + speed * .0011 + (boosting ? .03 : 0) : 0, t, .2);
+      engineFilter.frequency.setTargetAtTime((jet ? 620 : 380) + speed * (jet ? 44 : 30), t, .12);
+      windGain.gain.setTargetAtTime(running ? .004 + speed * .0011 + (boosting ? .03 : 0) + (jet ? .014 : 0) : 0, t, .2);
       windFilter.frequency.setTargetAtTime(500 + speed * 45, t, .2);
     },
     // Each star in a run plays the next note up, with a little twinkle above it.

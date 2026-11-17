@@ -1,18 +1,19 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=6';
+import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=7';
 
-import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, SHOOTING_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, tourFrom, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=6';
-import { createFun } from './fx.js?v=6';
-import { createTunes } from './tunes.js?v=6';
-import { createCity } from './cityscape.js?v=6';
-import { allObstacles } from './city.js?v=6';
-import { AIRPORTS, SPEEDS, WORLD, nightAt, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=6';
+import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, SHOOTING_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_MODELS, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, tourFrom, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=7';
+import { createFun } from './fx.js?v=7';
+import { createTunes } from './tunes.js?v=7';
+import { createCity } from './cityscape.js?v=7';
+import { allObstacles } from './city.js?v=7';
+import { AIRPORTS, SPEEDS, WORLD, nightAt, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=7';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let renderer, scene, camera, plane, propeller, water, sun, hemi, beacon, city;
+let renderer, scene, camera, plane, propeller, flame, water, sun, hemi, beacon, city;
+const planeModels = {};          // each plane's loaded model, by id; `plane` is the frame that holds the chosen one
 let state = initialFlight(), phase = 'loading', collected = 0, guided = false;
 let paused = false, soundOn = false, pointer = null, toastUntil = 0, hintUntil = 12;
 let elapsed = 0, lastTime = 0, lastMap = 0, landingTime = 0, landingStart;
@@ -64,7 +65,7 @@ function updateSound() {
 // Must be called from a tap or key press so the browser allows sound.
 async function setSound(on) {
   try {
-    if (!audio) { audio = new (window.AudioContext || window.webkitAudioContext)(); tunes = createTunes(audio); }
+    if (!audio) { audio = new (window.AudioContext || window.webkitAudioContext)(); tunes = createTunes(audio); tunes.setEngine((PLANE_MODELS.find(p => p.id === pilot.plane) || PLANE_MODELS[0]).engine); }
     await audio.resume(); soundOn = on;
     for (const id of ['sound', 'boardSound']) { $(id).setAttribute('aria-pressed', soundOn); $(id).setAttribute('aria-label', soundOn ? 'Turn sound off' : 'Turn sound on'); }
     if (pilot.sound !== on) { pilot = { ...pilot, sound: on }; savePilot(); }
@@ -254,8 +255,20 @@ function doTrick() {
   if (fun?.trick()) { tunes?.trick(); chatter('Wheee!'); return true; }
 }
 const TRAIL_ICONS = { clouds: '☁️', bubbles: '🫧', ribbon: '🌈', hearts: '💗' };
+// Puts the chosen plane's model on the frame the game flies, with its passenger seat, paint and engine sound.
+function showPlane() {
+  const choice = PLANE_MODELS.find(p => p.id === pilot.plane) || PLANE_MODELS[0], model = planeModels[choice.id];
+  $('myPlaneIcon').src = `./assets/plane-${choice.id}.png`;
+  if (!plane || !model) return;
+  for (const other of Object.values(planeModels)) plane.remove(other);
+  plane.add(model); plane.userData.view = choice.view;
+  propeller = model.getObjectByName('Propeller'); flame = model.getObjectByName('Flame');
+  passengerModel?.position.set(...choice.seat);
+  fun?.setPlane(choice.tail); tunes?.setEngine(choice.engine);
+}
 function renderHangar() {
   $('starBank').textContent = pilot.stars;
+  $('planeModels').innerHTML = PLANE_MODELS.map(p => `<button data-plane="${p.id}" aria-label="${p.name}" aria-pressed="${p.id === pilot.plane}"><img src="./assets/plane-${p.id}.png" alt=""><small>${p.name}</small></button>`).join('');
   $('planePaints').innerHTML = PLANE_PAINTS.map(p => {
     const mine = pilotOwns(pilot, p), ready = !mine && pilot.stars >= p.cost, fill = p.id === 'rainbow' ? 'conic-gradient(#ff5f5f,#ffd24a,#58d68d,#4aa8ff,#b06bff,#ff5f5f)' : p.color;
     return `<button data-paint="${p.id}" class="${mine ? '' : ready ? 'locked ready' : 'locked'}" style="background:${fill}" aria-label="${p.name}${mine ? '' : `, ${ready ? 'ready to unlock' : 'locked'}, costs ${p.cost} stars`}" aria-pressed="${p.id === pilot.paint}">${mine ? '' : '🔒<br>' + p.cost}</button>`;
@@ -271,12 +284,13 @@ function renderHangar() {
 }
 // Tapping something locked buys it when there are enough stars, and says how many are missing when not.
 function choosePlane(kind, id) {
-  const thing = ({ paint: PLANE_PAINTS, trail: PLANE_TRAILS, toy: PLANE_TOYS })[kind].find(i => i.id === id); if (!thing) return;
+  const thing = ({ plane: PLANE_MODELS, paint: PLANE_PAINTS, trail: PLANE_TRAILS, toy: PLANE_TOYS })[kind].find(i => i.id === id); if (!thing) return;
   if (!pilotOwns(pilot, thing)) {
     if (pilot.stars < thing.cost) { $('hangarNote').textContent = `${thing.cost - pilot.stars} more stars for ${thing.name}`; return; }
     pilot = buyForPilot(pilot, id); $('hangarNote').textContent = `You unlocked ${thing.name}!`; tunes?.unlock();
   } else { $('hangarNote').textContent = ''; if (kind === 'toy') tunes?.toy(id); else tunes?.tap(); }
   pilot = normalizePilot({ ...pilot, [kind]: id }); savePilot();
+  if (kind === 'plane') { showPlane(); $('hangarNote').textContent = `${thing.name} is ready to fly!`; }
   fun?.setPaint(pilot.paint); fun?.setTrail(pilot.trail); showToy(); renderHangar();
 }
 function tripAirport() { return trip?.status === 'flying' ? trip.destination : currentAirport; }
@@ -355,7 +369,7 @@ function restartAirline() {
 }
 function updatePassenger() {
   if (!passengerModel) return;
-  passengerModel.visible = trip?.boarded && trip.status !== 'arrived';
+  passengerModel.visible = !!trip?.boarded && trip.status !== 'arrived';
   const name = trip ? airportById(trip.destination).animal : 'panda';
   passengerModel.getObjectByName('Passenger head').material.color.set(name === 'frog' ? '#92bb70' : name === 'penguin' ? '#374954' : name === 'owl' ? '#b98a5a' : name === 'giraffe' ? '#f2c14e' : '#ffefcf');
   passengerModel.children.filter(o => o.name === 'Passenger ear').forEach(o => { o.visible = name !== 'penguin'; o.material.color.set(name === 'frog' ? '#92bb70' : name === 'owl' ? '#8a5f38' : name === 'giraffe' ? '#c98a2b' : '#374954'); });
@@ -518,6 +532,7 @@ function setupControls() {
   const own = { trick: mine('trick', doTrick), zoom: mine('zoom', doZoom), toy: mine('toy', doToy) };
   for (const id of ['trick', 'zoom', 'toy']) $(id).addEventListener('click', own[id]);
   $('planeToys').addEventListener('click', e => { const b = e.target.closest('[data-toy]'); if (b) choosePlane('toy', b.dataset.toy); });
+  $('planeModels').addEventListener('click', e => { const b = e.target.closest('[data-plane]'); if (b) choosePlane('plane', b.dataset.plane); });
   $('planePaints').addEventListener('click', e => { const b = e.target.closest('[data-paint]'); if (b) choosePlane('paint', b.dataset.paint); });
   $('planeTrails').addEventListener('click', e => { const b = e.target.closest('[data-trail]'); if (b) choosePlane('trail', b.dataset.trail); });
   $('airportPicnic').addEventListener('click',restart);
@@ -589,7 +604,7 @@ function setupControls() {
 }
 function setCamera(immediate = false, dt = 0) {
   const forward = v.set(Math.sin(state.heading), 0, -Math.cos(state.heading));
-  const distance = innerWidth < 650 && innerHeight > innerWidth ? 13 : 11;
+  const distance = (innerWidth < 650 && innerHeight > innerWidth ? 13 : 11) * (plane?.userData?.view || 1);
   cameraGoal.set(state.x - forward.x * distance, state.y + 4.6, state.z - forward.z * distance);
   cameraGoal.y = Math.max(cameraGoal.y, worldGroundHeight(cameraGoal.x, cameraGoal.z) + 3);
   lookGoal.set(state.x + forward.x * 13, state.y + 1.5, state.z + forward.z * 13);
@@ -722,6 +737,8 @@ function animate(now) {
     plane.position.set(state.x, state.y, state.z);
     plane.rotation.set(state.climb * .19, -state.heading, -state.turn * .48 + (fun?.roll || 0), 'YXZ');
     if (propeller) propeller.rotation.z += dt * (phase==='parked'?0:22+state.speed*2);
+    // A jet's flame flickers, grows with speed and stretches when zooming.
+    if (flame) { flame.userData.long ??= flame.scale.z; flame.visible = phase !== 'parked'; flame.scale.z = flame.userData.long * (.5 + state.speed * .05 + (elapsed < boostUntil ? 1.3 : 0)) * (1 + Math.sin(elapsed * 31) * .12); }
     water.material.uniforms.time.value = elapsed; city?.update(dt, elapsed);
     clouds.forEach(c => { c.position.x += c.userData.speed * dt; if (c.position.x > 310) c.position.x = -310; });
     boats.forEach((b, i) => { b.position.y = .2 + Math.sin(elapsed + i) * .1; b.rotation.z = Math.sin(elapsed * .7 + i) * .025; });
@@ -796,21 +813,21 @@ async function init() {
     sun.shadow.normalBias = .04; sun.shadow.bias = -.0002; scene.add(sun, sun.target);
     makeOcean(); makeClouds(); makeExtras(); makeTrail();
     const loader = new GLTFLoader();
-    const [islandAsset, planeAsset, obstacleData] = await Promise.all([loader.loadAsync('./assets/sunny-island.glb'), loader.loadAsync('./assets/toy-plane.glb'), fetch('./assets/obstacles.json').then(r => { if (!r.ok) throw new Error('Island data failed to load'); return r.json(); })]);
+    const [islandAsset, planeAsset, obstacleData] = await Promise.all([loader.loadAsync('./assets/sunny-island.glb'), Promise.all(PLANE_MODELS.map(p => loader.loadAsync(`./assets/${p.asset}.glb`))), fetch('./assets/obstacles.json').then(r => { if (!r.ok) throw new Error('Island data failed to load'); return r.json(); })]);
     obstacles = allObstacles(obstacleData); skyItems = buildSky(obstacles);
     islandAsset.scene.traverse(o => { if (o.isMesh) { o.receiveShadow = true; o.castShadow = true; } });
     scene.add(islandAsset.scene);
     const otherIslands=await Promise.all(AIRPORTS.slice(1).filter(a=>!a.city).map(async a=>({a,asset:await loader.loadAsync('./assets/'+a.asset+'.glb')})));
     for(const {a,asset} of otherIslands){asset.scene.position.set(a.x,0,a.z);asset.scene.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});scene.add(asset.scene);}
     city = createCity({ scene, airport: airportById('city'), reducedMotion });
-    plane = planeAsset.scene;
-    plane.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    propeller = plane.getObjectByName('Propeller'); scene.add(plane);makePassenger();makeAirportDetails();
+    plane = new THREE.Group();
+    PLANE_MODELS.forEach((p, i) => { planeModels[p.id] = planeAsset[i].scene; planeAsset[i].scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); });
+    scene.add(plane);makePassenger();showPlane();makeAirportDetails();
     window.addEventListener('resize', () => {
       renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
     });
     fun = createFun({ scene, camera, plane, items: skyItems, airports: AIRPORTS, runwayOf: airportRunway, groundAt: worldGroundHeight, water, reducedMotion });
-    fun.setPaint(pilot.paint); fun.setTrail(pilot.trail); showToy(); showZoom();
+    showPlane(); fun.setPaint(pilot.paint); fun.setTrail(pilot.trail); showToy(); showZoom();
     // For checking the game by hand from the browser console.
     window.littlePilot = { get state() { return state; }, get pilot() { return pilot; }, get tunes() { return tunes; }, get items() { return skyItems; } };
     restartAirline(); plane.position.set(state.x,state.y,state.z); $('loading').classList.add('done'); $('loading').setAttribute('aria-hidden', 'true'); $('loading').inert = true;

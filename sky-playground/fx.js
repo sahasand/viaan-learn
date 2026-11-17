@@ -1,7 +1,7 @@
 // The playful layer of Little Pilot: things to collect, sparkles, sea friends,
 // runway fans, plane paint and trails. Rules live in sky.js; this file only draws.
 import * as THREE from 'three';
-import { PLANE_PAINTS, inSky, reachOf } from './sky.js?v=6';
+import { PLANE_PAINTS, inSky, reachOf } from './sky.js?v=7';
 
 const PARTY = ['#eb6548', '#ffc44e', '#58c7b0', '#f2559c', '#5b8def', '#ffffff'];
 const BALLOONS = ['#f2559c', '#ffc44e', '#5b8def', '#58c7b0', '#eb6548', '#8a55e0'];
@@ -268,8 +268,10 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, gro
   }
 
   /* ---------- the plane's paint ---------- */
-  const coats = new Set();
-  plane.traverse(o => { if (o.isMesh && o.material.name === 'Coral enamel') coats.add(o.material); });
+  // The painted parts of whichever plane is chosen, and how far behind its middle the trail starts.
+  const coats = new Set(); let tail = 2.2;
+  function gatherCoats() { coats.clear(); plane.traverse(o => { if (o.isMesh && o.material.name === 'Coral enamel') coats.add(o.material); }); }
+  gatherCoats();
   function setPaint(id) {
     const choice = PLANE_PAINTS.find(p => p.id === id) || PLANE_PAINTS[0]; paint = choice.id;
     for (const coat of coats) { coat.color.set(choice.color); coat.metalness = paint === 'gold' ? .55 : 0; coat.roughness = paint === 'gold' ? .28 : .32; }
@@ -278,6 +280,8 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, gro
   return {
     get roll() { return roll; },
     setPaint, burst, night: setNight,
+    // Call after the plane's model is swapped for another.
+    setPlane(behind = 2.2) { tail = behind; gatherCoats(); setPaint(paint); },
     setTrail(id) { trail = id; },
     // Which star trail is in the sky: see inSky in sky.js.
     setRoute(id) { route = id; seen.clear(); hops.clear(); },
@@ -324,7 +328,7 @@ export function createFun({ scene, camera, plane, items, airports, runwayOf, gro
       if (paint === 'rainbow') for (const coat of coats) coat.color.setHSL((clock * .15) % 1, .85, .55);
       const where = plane.position, heading = -plane.rotation.y, fx = Math.sin(heading), fz = -Math.cos(heading);
       if (flying) {
-        const bx = where.x - fx * 2.2, bz = where.z - fz * 2.2, wide = () => (rand() - .5) * .8;
+        const bx = where.x - fx * tail, bz = where.z - fz * tail, wide = () => (rand() - .5) * .8;
         if (trail === 'clouds' && rand() < 22 * dt) spawn(bx + wide(), where.y - .2, bz + wide(), -fx * 1.5, .3, -fz * 1.5, .17 + rand() * .12, 1, '#ffffff', 0, 1);
         if (trail === 'bubbles' && rand() < 20 * dt) spawn(bx + wide(), where.y, bz + wide(), -fx + wide(), 1 + rand(), -fz + wide(), .2 + rand() * .22, 1.4, rand() < .5 ? '#bfe9ff' : '#ffffff', -.5, 1);
         if (trail === 'ribbon' && rand() < 55 * dt) spawn(bx, where.y, bz, -fx * 1.2, 0, -fz * 1.2, .26, 1, PARTY[Math.floor(clock * 8) % 5]);

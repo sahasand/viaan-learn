@@ -168,3 +168,13 @@ body[data-phase="parked"] .star-counter,body[data-phase="loading"] .star-counter
 .ticket{min-height:88px}.ticket strong{font-size:20px}
 @media(min-width:700px) and (min-height:501px){.tickets{grid-template-columns:repeat(2,1fr)}.ticket{flex-direction:row;align-items:center;gap:14px;padding:0 44px 0 0;min-height:96px}.ticket-sky{flex:0 0 118px}.ticket-sky img{width:92px;height:92px;right:4px}.ticket-words{padding:10px 0}.ticket>b{top:50%;bottom:auto;margin-top:-16px}}
 @media(max-height:500px){.tickets{grid-template-columns:repeat(2,1fr);gap:6px}.ticket{min-height:60px}.ticket-sky{flex-basis:58px}.ticket-sky img{width:54px;height:54px}.board-row{margin-top:6px}.chunky{min-height:44px}.pilot-passport summary{min-height:26px}}
+
+/* Choosing a plane: three big pictures at the top of My plane, and the chosen one on its button. */
+.plane-models{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:11px}
+.plane-models button{display:grid;justify-items:center;gap:0;padding:4px 4px 8px;border-radius:20px;background:#f6fbf2;border:3px solid #dfe8d6;box-shadow:0 4px 0 #dfe8d6}
+.plane-models img{width:100%;max-width:120px;aspect-ratio:1;object-fit:contain;margin:-6px 0 -8px}
+.plane-models small{font-size:14px;font-weight:900;color:var(--ink)}
+.plane-models button[aria-pressed=true]{background:#fff3c4;border-color:#f0a800;box-shadow:0 4px 0 #f0a800}
+.plane-models button:active{transform:translateY(3px);box-shadow:0 1px 0 #dfe8d6}
+.my-plane img{width:44px;height:44px;object-fit:contain;margin:-8px -4px -8px -6px}
+@media(max-height:500px){.view-hangar{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);column-gap:14px;align-items:start}#airportBoard:not([data-view=hangar]) .view-hangar{display:none!important}.hangar-top{grid-column:1 / -1}.plane-models{grid-row:2 / span 4;grid-template-columns:1fr;margin:0;gap:5px}.plane-models button{grid-template-columns:auto 1fr;align-items:center;justify-items:start;padding:0 8px}.plane-models img{width:54px;margin:-4px 0}.hangar-note{grid-column:2}.my-plane img{width:36px;height:36px}}
