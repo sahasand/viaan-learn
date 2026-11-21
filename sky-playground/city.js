@@ -5,8 +5,8 @@
 // shore, and every star trail in or out of the city follows it (see trailPath in sky.js). The
 // City Tour is a loop of streets that never leaves the city. A lot keeps its building unless a
 // flight line passes too close, so every trail is a street between buildings, never through one.
-import { airportById, worldObstacles, approachFor, CITY, cityEdge } from './airline.js?v=9';
-import { RUNWAY, straight, bend, joined } from './flight.js?v=9';
+import { airportById, worldObstacles, approachFor, CITY, cityEdge } from './airline.js?v=10';
+import { RUNWAY, straight, bend, joined } from './flight.js?v=10';
 
 export const TOWER = 5.5;                          // half a building's width
 export const AVENUE = 22;                          // Main Avenue's line, the runway's own

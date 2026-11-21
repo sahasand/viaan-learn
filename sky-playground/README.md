@@ -142,7 +142,14 @@ terrain formula in `flight.js` matches the original asset generator.
 
 Big City is the one place built in code, not Blender: `city.js` says where its streets,
 towers and houses stand and where the City Tour goes (plain numbers, tested in Node), and
-`cityscape.js` draws it. Its outline is `CITY` in `airline.js`. A building is kept off any
+`cityscape.js` draws it. Its outline is `CITY` in `airline.js`. The drawing is detailed but
+cheap: building fronts are painted tiles (brick, glass, stone, art deco, flats with
+balconies, modern ribbon windows) stretched so every face shows whole windows, with a row
+of shops at street level; towers step in as they rise and carry tanks, gardens, aerials,
+signs, helipads and one clock; houses have gable roofs, chimneys and gardens. Everything
+that stands still and shares a material is merged into one shape (`batch`), and everything
+repeated (houses, trees, lamps, traffic lights, cars, buses) is drawn as instances
+(`copies`), so add detail through those two rather than as separate meshes. A building is kept off any
 lot that a flight line passes too close to, so to move a street or the tour, change the
 numbers in `city.js` and the buildings follow.
 

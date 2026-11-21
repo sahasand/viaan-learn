@@ -1,7 +1,7 @@
 // Things to find in the sky and the pilot's star bank, independent of rendering and storage.
-import { touchesTarget, TURN, straight, bend, joined } from './flight.js?v=9';
-import { AIRPORTS, airportById, airportRunway, approachFor, worldGroundHeight, cityEdge } from './airline.js?v=9';
-import { STAR_STREET, PARK, RUN_OUT, GATE, tourPath } from './city.js?v=9';
+import { touchesTarget, TURN, straight, bend, joined } from './flight.js?v=10';
+import { AIRPORTS, airportById, airportRunway, approachFor, worldGroundHeight, cityEdge } from './airline.js?v=10';
+import { STAR_STREET, PARK, RUN_OUT, GATE, tourPath } from './city.js?v=10';
 
 export const PILOT_KEY = 'viaan-pilot-v1';
 export const BOOST_SECONDS = 3;
