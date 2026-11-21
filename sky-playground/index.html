@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#85d7df">
   <title>Little Pilot · Viaan</title>
-  <link rel="stylesheet" href="style.css?v=8">
+  <link rel="stylesheet" href="style.css?v=9">
   <script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
 </head>
 <body>
@@ -46,7 +46,7 @@
     <div class="boarding-header"><span class="ticket-mark">✈</span><div><span class="eyebrow" id="departureAirport">SUNNY AIRPORT</span><h2 id="airportHeading">Where shall we fly?</h2></div><button class="round board-sound" id="boardSound" aria-label="Turn sound on" aria-pressed="false">♫</button></div>
     <section class="view view-pick" aria-label="Choose a flight">
       <div class="tickets" id="destinationCards"></div>
-      <div class="board-row"><button class="chunky my-plane" id="openHangar"><img id="myPlaneIcon" src="./assets/plane-toy.png" alt=""> My plane <b class="star-bank"><span aria-hidden="true">⭐</span><span id="starBankOpen">0</span></b></button><button class="chunky" id="freeFly"><span aria-hidden="true">🌤️</span> Just fly</button></div>
+      <div class="board-row"><button class="chunky my-plane" id="openHangar"><img id="myPlaneIcon" src="./assets/plane-toy.png" alt=""> My plane <b class="star-bank"><span aria-hidden="true">⭐</span><span id="starBankOpen">0</span></b></button><button class="chunky" id="freeFly"><span aria-hidden="true">🌤️</span> Just fly</button><button class="chunky tour" id="cityTour"><span aria-hidden="true">🏙️</span> City tour</button></div>
       <details class="pilot-passport"><summary>My pilot passport <span id="tripTotal"></span></summary><div id="passportStamps"></div></details>
       <div class="airport-other"><button id="airportPicnic">Bear’s picnic adventure</button><a href="../index.html">Home</a></div>
     </section>
@@ -61,6 +61,6 @@
   </dialog>
   <dialog id="landingChoice" aria-labelledby="landingTitle"><div class="dialog-icon">🛬</div><span class="eyebrow" id="landingDestination"></span><h2 id="landingTitle">Let’s land!</h2><p>We’ll line up with the runway first.<br>Then choose how you’d like to come in.</p><button class="primary" id="handsLand">I’ll steer · with helping wings</button><button class="secondary landing-auto" id="autoLand">Land for me</button><button class="secondary" id="cancelLanding">Keep flying</button></dialog>
   <noscript><p class="noscript">Please enable JavaScript to fly. <a href="../index.html">Back to Viaan</a></p></noscript>
-  <script type="module" src="game.js?v=8"></script>
+  <script type="module" src="game.js?v=9"></script>
 </body>
 </html>

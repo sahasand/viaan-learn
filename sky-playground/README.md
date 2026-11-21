@@ -28,14 +28,21 @@ browser security prevents GLB loading from a `file://` page. Requires WebGL 2.
   suitcase, welcome the passenger, then **Take off**. **Pick another place** goes back.
   **My plane** is a page of its own and glows when the stars can buy something.
 - Takeoff counts **3, 2, 1, Go!** as the plane rolls and lifts off.
-- Big City is flat, with 27 towers on a grid of streets, parks, cars, a Ferris wheel and
-  a blimp. Main Avenue runs through the runway from shore to shore. Every star trail in
-  or out of the city follows it: a departure flies the length of the avenue before it
-  bends, and an arrival bends onto it out at sea and flies down it, over the runway, to
-  the landing approach. The city's own stars hang along Cross Street, with the big one
-  over the park. A tower is a wall: a plane below its top slides round it and is turned
-  a little away, never bounced over it; towers under the flight ceiling can be flown
-  over. On a trip the autopilot keeps to the avenue and leaves the side streets alone.
+- Big City is a large flat city on a waterfront, about three times the size of an island.
+  A downtown of 38 towers stands inside a ring of 49 low houses, on a grid of streets with
+  lane lines and zebra crossings, cars and buses on every street, Central Park with a pond,
+  a harbour with a pier and boats, a Ferris wheel and a blimp. The airport is on the south
+  shore, so landings come in over the harbour. Main Avenue runs north from the runway to
+  the far shore, and every star trail in or out of the city follows it: a departure flies
+  its whole length before it bends, and an arrival joins it at sea and flies down it. A
+  tower is a wall: a plane below its top slides round it and is turned a little away.
+  Houses are low and the plane is lifted over them, like trees on the islands.
+- **City tour** (a button at every airport) is a flight that never leaves the city. It
+  starts at City Airport wherever the plane was, follows a loop of stars up the avenue,
+  west through downtown, down the west side, east past the airport, down the east side to
+  the harbour and back to the runway, then lands. The plane is turned back at the city
+  limits, the map zooms in to show the streets and the stars still to catch, and the
+  autopilot can fly the whole loop.
 - Flying toward Starlight Island the day turns to dusk and then night (`nightAt` in
   `airline.js`): the lights dim, the sea darkens, and stars, a sleepy moon, northern
   lights and drifting lanterns fade in. The island's trees and houses glow. Now and
@@ -133,8 +140,11 @@ They share geometry and local obstacle coordinates, translated per airport. If
 moving buildings or trees, update `assets/obstacles.json` to match. The analytic
 terrain formula in `flight.js` matches the original asset generator.
 
-Big City is the one island built in code, not Blender: `city.js` says where its towers
-stand (plain numbers, tested in Node) and `cityscape.js` draws it.
+Big City is the one place built in code, not Blender: `city.js` says where its streets,
+towers and houses stand and where the City Tour goes (plain numbers, tested in Node), and
+`cityscape.js` draws it. Its outline is `CITY` in `airline.js`. A building is kept off any
+lot that a flight line passes too close to, so to move a street or the tour, change the
+numbers in `city.js` and the buildings follow.
 
 `game.js` owns the scene, input, mission, camera, sound, and lifecycle. `flight.js`
 contains flight rules. `sky.js` holds the rules for stars, balloons, hoops, the star

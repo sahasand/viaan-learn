@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import * as flight from './flight.js';
 import * as airline from './airline.js';
 import * as sky from './sky.js';
+import * as city from './city.js';
 const code=readFileSync(new URL('./game.js',import.meta.url),'utf8').replace(/^import .*;\n/gm,'').replace(/init\(\);\s*$/,'');
 class Vec {constructor(x=0,y=0,z=0){this.set(x,y,z);}set(x,y,z){this.x=x;this.y=y;this.z=z;return this;}copy(v){return this.set(v.x,v.y,v.z);}lerp(v){return this.copy(v);}setScalar(){return this;}}
 function harness(){
@@ -12,7 +13,7 @@ function harness(){
  function element(id){const classes=new Set();return {id,open:false,hidden:false,disabled:false,style:{},dataset:{},children:[],textContent:'',innerHTML:'',listeners:{},classList:{add(c){classes.add(c);},remove(c){classes.delete(c);},toggle(c,on){if(on)classes.add(c);else classes.delete(c);}},setAttribute(){},querySelectorAll(){return [];},getContext(){return {};},addEventListener(name,fn){this.listeners[name]=fn;},showModal(){this.open=true;},close(){this.open=false;}};}
  const get=id=>els[id]||(els[id]=element(id));
  class Mesh {constructor(g,m){this.geometry=g;this.material=m;this.position=new Vec();this.scale=new Vec();this.userData={};}}
- const ctx=vm.createContext({...flight,...airline,...sky,console,innerWidth:1280,innerHeight:720,performance:{now:()=>0},matchMedia:()=>({matches:true}),localStorage:{getItem:()=>null,setItem(k,v){events.saved={k,v};}},window:{addEventListener(n,fn){events[n]=fn;}},document:{body:{dataset:{}},getElementById:get,querySelector:s=>get(s),querySelectorAll:()=>[],addEventListener(n,fn){events[n]=fn;}},THREE:{Vector3:Vec,SphereGeometry:class{},Mesh,MeshStandardMaterial:class{constructor(o){Object.assign(this,o);}}}});
+ const ctx=vm.createContext({...flight,...airline,...sky,...city,console,innerWidth:1280,innerHeight:720,performance:{now:()=>0},matchMedia:()=>({matches:true}),localStorage:{getItem:()=>null,setItem(k,v){events.saved={k,v};}},window:{addEventListener(n,fn){events[n]=fn;}},document:{body:{dataset:{}},getElementById:get,querySelector:s=>get(s),querySelectorAll:()=>[],addEventListener(n,fn){events[n]=fn;}},THREE:{Vector3:Vec,SphereGeometry:class{},Mesh,MeshStandardMaterial:class{constructor(o){Object.assign(this,o);}}}});
  vm.runInContext(code+`; scene={add(){}};camera={position:new THREE.Vector3(),lookAt(){}};plane={position:new THREE.Vector3()};beacon={visible:false};setupControls();`,ctx);
  return {run:s=>vm.runInContext(s,ctx),get,events};
 }
@@ -113,4 +114,18 @@ test('choosing a plane in My plane saves it, and it costs nothing',()=>{
  h.run("choosePlane('plane','jumbo')");assert.equal(h.run('pilot.plane'),'jumbo');assert.equal(h.run('pilot.stars'),0);
  assert.match(h.events.saved.v,/"plane":"jumbo"/);assert.match(h.get('myPlaneIcon').src,/plane-jumbo\.png/);assert.match(h.get('hangarNote').textContent,/Big Jumbo/);
  h.run("choosePlane('plane','spaceship')");assert.equal(h.run('pilot.plane'),'jumbo','an unknown plane changes nothing');
+});
+
+test('the City Tour starts at City Airport from any airport, stays over the city and lands back there',()=>{
+ const h=harness();h.run(CLOCK+"restartAirline();");assert.equal(h.run('currentAirport'),'sunny');
+ h.get('cityTour').listeners.click();
+ assert.equal(h.run('mode'),'tour');assert.equal(h.run('currentAirport'),'city');assert.equal(h.run('phase'),'takeoff');assert.equal(h.run('trip'),null);assert.equal(h.get('airportBoard').open,false);
+ assert.equal(h.run('skyRoute()'),sky.CITY_TOUR);assert.equal(h.run('state.x+","+state.z'),airline.parkedAt('city').x+','+airline.parkedAt('city').z);
+ h.run("takeOff();");assert.equal(h.get('missionTitle').textContent,'City tour');h.get('guide').listeners.click();
+ const far=h.run("var far=0,mid=airportById('city');fly(9000,function(){far=Math.max(far,Math.hypot(state.x-mid.x-LIMITS.x,state.z-mid.z-LIMITS.z));});far");
+ assert.ok(far<city.LIMITS.radius,`never beyond the city limits: ${far.toFixed(0)}`);
+ assert.equal(h.run('phase'),'landing');assert.equal(h.run('landingAirport'),'city');assert.ok(h.run('flightStars')>55,`${h.run('flightStars')} stars`);
+ h.run("for(let i=0;i<281&&phase==='landing';i++)updateLanding(.05)");assert.equal(h.run('phase'),'parked');assert.equal(h.run('currentAirport'),'city');assert.equal(h.run('passport.trips'),0,'a tour is not a passenger trip');
+ h.run("mode='tour';phase='flying';state={...state,x:airportById('city').x+LIMITS.x+LIMITS.radius+20,z:airportById('city').z+LIMITS.z,y:30,heading:Math.PI/2,returning:false};setGuided(false);autopilot=false;updateFlight(.05);");
+ assert.equal(h.run('state.returning'),true,'a pilot who flies out of the city is turned back');
 });

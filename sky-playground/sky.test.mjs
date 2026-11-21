@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stepFlight, touchesTarget } from './flight.js';
-import { AIRPORTS, WORLD, airportRunway, approachFor, worldGroundHeight, worldObstacles } from './airline.js';
+import { AIRPORTS, WORLD, airportRunway, approachFor, worldGroundHeight, worldObstacles, cityEdge } from './airline.js';
 import * as S from './sky.js';
-import { allObstacles, cityPlan } from './city.js';
+import { allObstacles, cityPlan, tourPath, LIMITS } from './city.js';
 
 const obstacles = allObstacles(JSON.parse(readFileSync(new URL('./assets/obstacles.json', import.meta.url))));
 const afterTakeoff = id => { const r = airportRunway(id); return { x: r.x, y: r.parkedY + 14, z: r.stopZ - 50, heading: 0, turn: 0, climb: 0, speed: 13, returning: false }; };
@@ -12,9 +12,9 @@ const afterTakeoff = id => { const r = airportRunway(id); return { x: r.x, y: r.
 test('the sky holds stars, balloons and hoops that float clear of land, trees and the edge of the world', () => {
   const items = S.buildSky(obstacles);
   assert.ok(items.filter(i => i.kind === 'star').length > 150);
-  assert.equal(items.filter(i => i.kind === 'hoop').length, 40);
-  assert.equal(items.filter(i => i.kind === 'balloon').length, 5 * 4 + 20 * 3);
-  assert.equal(items.filter(i => i.big).length, 5 + 20 * 2, 'a big star over every island, and two on every trail');
+  assert.equal(items.filter(i => i.kind === 'hoop').length, 42);
+  assert.equal(items.filter(i => i.kind === 'balloon').length, 5 * 4 + 21 * 3);
+  assert.equal(items.filter(i => i.big).length, 5 + 21 * 2, 'a big star over every island, and two on every trail and on the City Tour');
   for (const thing of items) {
     assert.ok(Math.hypot(thing.x - WORLD.x, thing.z - WORLD.z) < WORLD.radius - 60, 'well inside the turn-back boundary');
     assert.ok(thing.y - worldGroundHeight(thing.x, thing.z) >= 6.4 && thing.y <= 44, `${thing.kind} height ${thing.y}`);
@@ -303,7 +303,9 @@ test('trails in and out of Big City run down Main Avenue, clear of every tower',
       for (let d = 0; d <= path.length; d += 2) {
         const p = path.at(d), q = path.at(Math.min(path.length, d + 2));
         assert.ok(Math.hypot(q.x - p.x, q.z - p.z) < 2.01, `${from}>${to} has no jumps`);
-        if (Math.hypot((p.x - city.x) / 96, (p.z - city.z) / 78) < 1) { inside++; assert.ok(Math.abs(p.x - avenue) < .01, `${from}>${to} is on the avenue over the city`); }
+        if (cityEdge(p.x - city.x, p.z - city.z) >= 0) continue;
+        // Over the city a trail is on the avenue; at most it clips a corner of low houses, clear of every tower.
+        if (Math.abs(p.x - avenue) < .01) inside++; else for (const t of towers) assert.ok(Math.hypot(p.x - t.x, p.z - t.z) > t.radius + 9, `${from}>${to} is clear of the towers`);
       }
       assert.ok(inside > (from === city.id ? 20 : 60), `${from}>${to} flies a good length of the avenue`);
       for (const thing of items) for (const t of towers) assert.ok(Math.hypot(thing.x - t.x, thing.z - t.z) > t.radius + 2.8 || thing.y > t.top + 2, `${from}>${to} ${thing.kind} is not inside a tower`);
@@ -311,7 +313,7 @@ test('trails in and out of Big City run down Main Avenue, clear of every tower',
     }
   }
   const own = S.islandItems(city, obstacles);
-  assert.equal(own.filter(i => i.street).length, 13, 'twelve stars down Cross Street and a big one over the park');
+  assert.equal(own.filter(i => i.street).length, 13, 'twelve stars along a street and a big one over the park');
   for (const thing of own) for (const t of towers) assert.ok(Math.hypot(thing.x - t.x, thing.z - t.z) > t.radius + 2.8, 'the city stars hang over streets');
 });
 
@@ -329,4 +331,40 @@ test('there are three planes to choose, each with its model, picture and paintab
   }
   const jumbo = S.PLANE_MODELS.find(p => p.id === 'jumbo'), toy = S.PLANE_MODELS[0];
   assert.ok(jumbo.view > toy.view && jumbo.tail > toy.tail, 'the big plane is seen from further back');
+});
+
+test('the City Tour is a loop of streets that never leaves the city and never touches a building', () => {
+  const city = AIRPORTS.find(a => a.city), path = tourPath(), { towers, houses } = cityPlan(), start = afterTakeoff('city'), end = approachFor('city')[0];
+  assert.ok(path.length > 700 && path.length < 1100, `a good long flight: ${path.length.toFixed(0)}`);
+  const first = path.at(0), last = path.at(path.length);
+  assert.ok(Math.abs(first.x - start.x) < .01 && first.z < start.z + 10 && first.heading === 0, 'starts straight ahead of the takeoff');
+  assert.ok(Math.hypot(last.x - end.x, last.z - end.z) < .01 && Math.abs(Math.sin(last.heading)) < 1e-9 && Math.cos(last.heading) > .99, 'ends where the landing begins, facing up the runway');
+  for (let d = 0; d <= path.length; d += 2) {
+    const p = path.at(d), q = path.at(Math.min(path.length, d + 2));
+    assert.ok(Math.hypot(q.x - p.x, q.z - p.z) < 2.01, 'no jumps');
+    assert.ok(Math.hypot(p.x - city.x - LIMITS.x, p.z - city.z - LIMITS.z) < LIMITS.radius - 25, 'well inside the city limits');
+    for (const b of [...towers, ...houses]) assert.ok(Math.hypot(p.x - b.x, p.z - b.z) >= b.radius + 9 - .01, 'clear of every building');
+  }
+  const items = S.tourItems(obstacles), stars = items.filter(i => i.kind === 'star');
+  assert.ok(stars.length > 55); assert.equal(items.filter(i => i.kind === 'hoop').length, 2); assert.equal(items.filter(i => i.kind === 'balloon').length, 3);
+  assert.ok(items.every(i => i.route === S.CITY_TOUR && i.y <= 26), 'all at street height');
+  for (const thing of items) for (const t of towers) assert.ok(Math.hypot(thing.x - t.x, thing.z - t.z) > t.radius + 2.8, `${thing.kind} hangs over a street`);
+  assert.equal(S.inSky(stars[0], S.CITY_TOUR), true); assert.equal(S.inSky(stars[0], ''), false, 'only in the sky on a City Tour'); assert.equal(S.inSky(stars[0], 'sunny>city'), false);
+});
+
+test('the autopilot flies the whole City Tour, gathering nearly every star, and arrives ready to land', () => {
+  const items = S.buildSky(obstacles), target = approachFor('city')[0], city = AIRPORTS.find(a => a.city), mine = items.filter(i => i.route === S.CITY_TOUR), found = [];
+  const limits = { speed: 13, guideSpeed: 13, boundary: LIMITS.radius, center: { x: city.x + LIMITS.x, z: city.z + LIMITS.z }, groundHeight: worldGroundHeight };
+  let state = afterTakeoff('city'), steps = 0, held = null, turnedBack = 0;
+  while (steps++ < 30000) {
+    const previous = state, next = S.autoTarget(items, S.CITY_TOUR, state, held); held = next;
+    state = stepFlight(state, { x: 0, y: 0 }, 1 / 60, next || target, obstacles, limits); if (state.returning) turnedBack++;
+    found.push(...S.collectSky(items, previous, state, S.CITY_TOUR));
+    if (!next && touchesTarget(previous, state, target, 8)) break;
+  }
+  const count = (list, kind) => list.filter(i => i.route === S.CITY_TOUR && i.kind === kind).length;
+  assert.ok(steps < 30000, 'reaches the landing approach'); assert.equal(turnedBack, 0, 'without ever being turned back at the city limits');
+  assert.ok(count(found, 'star') >= count(mine, 'star') * .9, `${count(found, 'star')} of ${count(mine, 'star')} stars`);
+  assert.equal(count(found, 'hoop'), 2); assert.equal(count(found, 'balloon'), 3);
+  assert.ok(Math.abs(Math.atan2(Math.sin(state.heading), Math.cos(state.heading))) < .5, 'facing up the runway');
 });

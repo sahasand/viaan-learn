@@ -94,3 +94,13 @@ export function touchesTarget(previous, current, target, radius = 5.8) {
   const t = length2 ? clamp(((target.x - previous.x) * dx + (target.y - previous.y) * dy + (target.z - previous.z) * dz) / length2, 0, 1) : 0;
   return Math.hypot(previous.x + dx * t - target.x, previous.y + dy * t - target.y, previous.z + dz * t - target.z) < radius;
 }
+// Pieces of a flight line, for star trails. Headings are flight headings: 0 is north (toward -z), a quarter turn is east.
+export const TURN = 36;                 // the radius of every bend
+export const straight = (x, z, heading, length) => ({ length, at: d => ({ x: x + Math.sin(heading) * d, z: z - Math.cos(heading) * d, heading }) });
+// A bend to the right (side 1) or left (side -1) through `angle`, starting at a point and heading.
+export function bend(x, z, heading, side, angle) {
+  const cx = x + side * TURN * Math.cos(heading), cz = z + side * TURN * Math.sin(heading);
+  return { length: TURN * angle, at: d => { const h = heading + side * d / TURN; return { x: cx - side * TURN * Math.cos(h), z: cz - side * TURN * Math.sin(h), heading: h }; } };
+}
+// Several pieces flown one after another.
+export const joined = parts => ({ length: parts.reduce((n, p) => n + p.length, 0), at(distance) { let d = distance; for (const part of parts) { if (d <= part.length || part === parts.at(-1)) return part.at(d); d -= part.length; } } });

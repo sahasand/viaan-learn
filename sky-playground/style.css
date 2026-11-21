@@ -178,3 +178,10 @@ body[data-phase="parked"] .star-counter,body[data-phase="loading"] .star-counter
 .plane-models button:active{transform:translateY(3px);box-shadow:0 1px 0 #dfe8d6}
 .my-plane img{width:44px;height:44px;object-fit:contain;margin:-8px -4px -8px -6px}
 @media(max-height:500px){.view-hangar{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);column-gap:14px;align-items:start}#airportBoard:not([data-view=hangar]) .view-hangar{display:none!important}.hangar-top{grid-column:1 / -1}.plane-models{grid-row:2 / span 4;grid-template-columns:1fr;margin:0;gap:5px}.plane-models button{grid-template-columns:auto 1fr;align-items:center;justify-items:start;padding:0 8px}.plane-models img{width:54px;margin:-4px 0}.hangar-note{grid-column:2}.my-plane img{width:36px;height:36px}}
+
+/* Three buttons under the tickets: My plane, Just fly and the City Tour. */
+.board-row{grid-template-columns:repeat(3,1fr);gap:8px}
+.board-row .chunky{flex-direction:column;gap:0;min-height:64px;padding:6px 4px;font-size:14px;line-height:1.15}.board-row .chunky>span:first-child{font-size:22px;line-height:1}
+.board-row .my-plane img{width:40px;height:40px;margin:-8px 0 -6px}.board-row .my-plane .star-bank{position:absolute;right:-4px;top:-9px;font-size:11px;padding:0 7px}.board-row .my-plane{position:relative}
+.chunky.tour{background:#e7f1ff;border-color:#9ec5f2;box-shadow:0 4px 0 #9ec5f2}
+@media(max-height:500px){.board-row .chunky{flex-direction:row;gap:6px;min-height:44px;font-size:13px}.board-row .chunky>span:first-child{font-size:18px}.board-row .my-plane img{width:32px;height:32px;margin:-6px 0}}

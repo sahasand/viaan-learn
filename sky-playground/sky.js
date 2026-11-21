@@ -1,7 +1,7 @@
 // Things to find in the sky and the pilot's star bank, independent of rendering and storage.
-import { touchesTarget } from './flight.js?v=8';
-import { AIRPORTS, airportById, airportRunway, approachFor, worldGroundHeight } from './airline.js?v=8';
-import { CROSS, PARK, RUN_OUT, GATE } from './city.js?v=8';
+import { touchesTarget, TURN, straight, bend, joined } from './flight.js?v=9';
+import { AIRPORTS, airportById, airportRunway, approachFor, worldGroundHeight, cityEdge } from './airline.js?v=9';
+import { STAR_STREET, PARK, RUN_OUT, GATE, tourPath } from './city.js?v=9';
 
 export const PILOT_KEY = 'viaan-pilot-v1';
 export const BOOST_SECONDS = 3;
@@ -48,7 +48,6 @@ export const SHOOTING_STARS = 2;         // for a shooting star seen in the nigh
 export const ZOOM_PULL = 2;             // a zooming plane pulls stars in from twice as far
 export const ZOOM_STARS = 6, ZOOM_MAX = 3;  // stars that fill one zoom, and how many zooms the plane holds
 export const WISH_STARS = 3;            // for doing what the passenger asks while the autopilot flies
-const TURN = 36;                        // radius of the bend that starts every star trail
 // Free flying shows one trail leaving each island, a round trip of all five.
 const TOUR = ['sunny>snowy', 'snowy>starry', 'starry>jungle', 'jungle>city', 'city>sunny'];
 // What is in the sky right now: island things always, and one star trail. On a passenger
@@ -70,16 +69,10 @@ const lift = (x, z, y, clearance, obstacles) => {
 // the destination, then straight to where its landing begins. Headings are flight headings.
 // Big City is different at its end of a trail: a departure flies the length of Main Avenue
 // before it bends, and an arrival bends onto the avenue and flies down it to the landing.
-const line = (x, z, heading, length) => ({ length, at: d => ({ x: x + Math.sin(heading) * d, z: z - Math.cos(heading) * d, heading }) });
-// A bend to the right (side 1) or left (side -1) through `angle`, starting at a point and heading.
-const bend = (x, z, heading, side, angle) => {
-  const cx = x + side * TURN * Math.cos(heading), cz = z + side * TURN * Math.sin(heading);
-  return { length: TURN * angle, at: d => { const h = heading + side * d / TURN; return { x: cx - side * TURN * Math.cos(h), z: cz - side * TURN * Math.sin(h), heading: h }; } };
-};
 export function trailPath(fromId, toId) {
   const runway = airportRunway(fromId), end = approachFor(toId)[0], full = Math.PI * 2, from = airportById(fromId), to = airportById(toId), parts = [];
   const start = { x: runway.x, z: runway.stopZ - 54 };
-  if (from.city) { parts.push(line(start.x, start.z, 0, RUN_OUT)); start.z -= RUN_OUT; }
+  if (from.city) { parts.push(straight(start.x, start.z, 0, RUN_OUT)); start.z -= RUN_OUT; }
   // An arrival at the city aims for the avenue's gate, out at sea beyond its far shore.
   const aim = to.city ? { x: end.x, z: to.z + GATE } : end, side = aim.x >= start.x ? 1 : -1;
   const cx = start.x + side * TURN, cz = start.z;
@@ -90,18 +83,19 @@ export function trailPath(fromId, toId) {
   if (to.city) {
     // Round the corner at the gate onto the avenue, heading south, then straight down it.
     const off = Math.atan2(Math.sin(Math.PI - leave.heading), Math.cos(Math.PI - leave.heading)), corner = Math.abs(off), cut = TURN * Math.tan(corner / 2);
-    const straight = line(leave.x, leave.z, leave.heading, reach - cut), turn = straight.at(straight.length), round = bend(turn.x, turn.z, leave.heading, off >= 0 ? 1 : -1, corner), down = round.at(round.length);
-    parts.push(straight, round, line(down.x, down.z, Math.PI, end.z - down.z));
-  } else parts.push(line(leave.x, leave.z, leave.heading, reach));
-  return { length: parts.reduce((n, p) => n + p.length, 0), at(distance) {
-    let d = distance;
-    for (const part of parts) { if (d <= part.length || part === parts.at(-1)) return part.at(d); d -= part.length; }
-  } };
+    const run = straight(leave.x, leave.z, leave.heading, reach - cut), turn = run.at(run.length), round = bend(turn.x, turn.z, leave.heading, off >= 0 ? 1 : -1, corner), down = round.at(round.length);
+    parts.push(run, round, straight(down.x, down.z, Math.PI, end.z - down.z));
+  } else parts.push(straight(leave.x, leave.z, leave.heading, reach));
+  return joined(parts);
 }
 // A line of stars follows that path, weaving a little so following it feels like play.
 // Two rainbow hoops and three balloons sit along the way; the middle and last stars are big ones.
-export function routeItems(fromId, toId, obstacles = []) {
-  const path = trailPath(fromId, toId), route = `${fromId}>${toId}`, count = Math.floor(path.length / 13), items = [];
+export const routeItems = (fromId, toId, obstacles = []) => itemsAlong(trailPath(fromId, toId), `${fromId}>${toId}`, obstacles);
+// The City Tour's trail (see tourPath in city.js). It runs between buildings the whole way, so its hoops and balloons hang on the trail itself.
+export const CITY_TOUR = 'city>city';
+export const tourItems = (obstacles = []) => itemsAlong(tourPath(), CITY_TOUR, obstacles, false);
+function itemsAlong(path, route, obstacles, overSea = true) {
+  const count = Math.floor(path.length / 13), items = [];
   const at = (t, side = 0) => {
     const p = path.at(t * path.length), weave = Math.sin(t * Math.PI * 4) * 3.2 * Math.min(1, t * 5, (1 - t) * 5) + side;
     const x = p.x + Math.cos(p.heading) * weave, z = p.z + Math.sin(p.heading) * weave;
@@ -112,7 +106,7 @@ export function routeItems(fromId, toId, obstacles = []) {
     items.push(big ? bigStar(p.x, p.y, p.z, { route }) : item('star', p.x, p.y, p.z, { route }));
   }
   // Hoops hang over open sea, clear of an island's own ring of stars.
-  const atSea = t => { const p = path.at(t * path.length); return AIRPORTS.every(a => Math.hypot(p.x - a.x, p.z - a.z) > 135); };
+  const atSea = t => { if (!overSea) return true; const p = path.at(t * path.length); return AIRPORTS.every(a => a.city ? cityEdge(p.x - a.x, p.z - a.z) > 40 : Math.hypot(p.x - a.x, p.z - a.z) > 135); };
   const hooped = [];
   for (const tries of [[.25, .3, .2, .35], [.75, .7, .65, .8, .6, .55, .5, .45, .4]]) { const t = tries.find(atSea) ?? tries[0], p = at(t); hooped.push(t); items.push(item('hoop', p.x, p.y, p.z, { route, heading: p.heading })); }
   // Balloons float beside the trail, so they too keep to open sea, apart from each other and clear of a hoop.
@@ -120,7 +114,7 @@ export function routeItems(fromId, toId, obstacles = []) {
   [.2, .5, .86].forEach((want, i) => {
     const tries = Array.from({ length: 16 }, (_, k) => want + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * .04).filter(t => t > .08 && t < .94);
     // On a short hop with no sea to spare, the balloon hangs on the trail itself.
-    const free = tries.find(t => atSea(t) && floated.every(f => Math.abs(f - t) > .09) && hooped.every(h => Math.abs(h - t) > .045)), t = free ?? want, p = at(t, free === undefined ? 0 : i % 2 ? 13 : -13);
+    const free = tries.find(t => atSea(t) && floated.every(f => Math.abs(f - t) > .09) && hooped.every(h => Math.abs(h - t) > .045)), t = free ?? want, p = at(t, free === undefined || !overSea ? 0 : i % 2 ? 13 : -13);
     floated.push(t); items.push(item('balloon', p.x, p.y + 3, p.z, { route }));
   });
   return items;
@@ -130,8 +124,8 @@ export function islandItems(airport, obstacles = []) {
   const items = [];
   // Big City's own stars hang along Cross Street between the towers, with the big one over the park.
   if (airport.city) {
-    for (let i = 0; i < 12; i++) { const x = airport.x - 72 + i * 12.4, z = airport.z + CROSS; items.push(item('star', x, lift(x, z, 19, 7, obstacles), z, { street: true })); }
-    for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2 + .7, x = airport.x + Math.cos(a) * 104, z = airport.z + Math.sin(a) * 86; items.push(item('balloon', x, lift(x, z, 17 + i * 3, 9, obstacles), z)); }
+    for (let i = 0; i < 12; i++) { const x = airport.x - 66 + i * 15.6, z = airport.z + STAR_STREET; items.push(item('star', x, lift(x, z, 19, 7, obstacles), z, { street: true })); }
+    [[-70, 118], [150, 122], [-75, -338], [125, -338]].forEach(([dx, dz], i) => { const x = airport.x + dx, z = airport.z + dz; items.push(item('balloon', x, lift(x, z, 17 + i * 3, 9, obstacles), z)); });   // over the harbour and the north shore
     items.push(bigStar(airport.x + PARK.x, lift(airport.x + PARK.x, airport.z + PARK.z, 21, 9, obstacles), airport.z + PARK.z, { street: true }));
     return items;
   }
@@ -150,6 +144,7 @@ export function islandItems(airport, obstacles = []) {
 export function buildSky(obstacles = []) {
   const items = AIRPORTS.flatMap(airport => islandItems(airport, obstacles));
   for (const from of AIRPORTS) for (const to of AIRPORTS) if (from !== to) items.push(...routeItems(from.id, to.id, obstacles));
+  items.push(...tourItems(obstacles));
   return items;
 }
 // The helping wing follows the star trail forwards: the nearest star after the last one
@@ -157,17 +152,25 @@ export function buildSky(obstacles = []) {
 // to its start, and a star just missed is left behind rather than circled for.
 export function nextOnRoute(items, route, state) {
   if (!route) return null;
-  const fx = Math.sin(state.heading), fz = -Math.cos(state.heading);
-  let best = null, nearest = Infinity;
+  const fx = Math.sin(state.heading), fz = -Math.cos(state.heading), open = [];
+  let first = items.length;
   for (let i = items.length - 1; i >= 0; i--) {
     const thing = items[i];
     if (thing.route !== route || thing.kind !== 'star') continue;
     if (thing.taken) break;
-    const dx = thing.x - state.x, dz = thing.z - state.z, far = Math.hypot(dx, dz);
-    if (far < 20 && dx * fx + dz * fz < -2) continue;
-    if (far <= nearest) { nearest = far; best = thing; }
+    first = i; open.push(i);
   }
-  return best;
+  // The nearest star wins, so a plane far along joins the trail where it is. But where a trail
+  // comes back past itself, the nearest may be many stars ahead: there the order is kept, by
+  // charging a little for every star skipped and taking the cheaper one if it is much earlier.
+  let near = -1, least = Infinity, cheap = -1, lowest = Infinity;
+  for (const i of open) {
+    const thing = items[i], dx = thing.x - state.x, dz = thing.z - state.z, far = Math.hypot(dx, dz);
+    if (far < 20 && dx * fx + dz * fz < -2) continue;
+    if (far <= least) { least = far; near = i; }
+    if (far + (i - first) * 3 <= lowest) { lowest = far + (i - first) * 3; cheap = i; }
+  }
+  return near < 0 ? null : items[near - cheap > 6 ? cheap : near];
 }
 // Where the autopilot flies next. It keeps a choice until that is caught or flown past.
 // On a passenger trip it follows the trail forwards, with a small detour for a balloon

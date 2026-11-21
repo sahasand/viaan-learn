@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from './vendor/GLTFLoader.js';
-import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=8';
+import { clamp, angleDelta, groundHeight, initialFlight, stepFlight, touchesTarget, TRAIL, PICNIC, RUNWAY, AIRPORT_APPROACH, runwayLanding, runwayTakeoff } from './flight.js?v=9';
 
-import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, SHOOTING_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_MODELS, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, tourFrom, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=8';
-import { createFun } from './fx.js?v=8';
-import { createTunes } from './tunes.js?v=8';
-import { createCity } from './cityscape.js?v=8';
-import { allObstacles } from './city.js?v=8';
-import { AIRPORTS, SPEEDS, WORLD, nightAt, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=8';
+import { PILOT_KEY, BOOST_SECONDS, BOOST_SPEED, CLOUD_STARS, LANDING_STARS, GIFT_STARS, SIGHT_STARS, WISH_STARS, SHOOTING_STARS, ZOOM_PULL, ZOOM_MAX, PLANE_MODELS, PLANE_PAINTS, PLANE_TRAILS, PLANE_TOYS, buildSky, resetSky, collectSky, autoTarget, tourFrom, CITY_TOUR, starHeight, freshZoom, chargeZoom, spendZoom, normalizePilot, earnStars, buyForPilot, pilotOwns, nowAffordable } from './sky.js?v=9';
+import { createFun } from './fx.js?v=9';
+import { createTunes } from './tunes.js?v=9';
+import { createCity } from './cityscape.js?v=9';
+import { allObstacles, LIMITS } from './city.js?v=9';
+import { AIRPORTS, SPEEDS, WORLD, CITY, nightAt, airportById, airportRunway, approachFor, parkedAt, worldGroundHeight, worldObstacles, nearestAirport, newTrip, prepareTrip, arriveTrip, normalizePassport, stampArrival, assistedLanding } from './airline.js?v=9';
 
 const $ = id => document.getElementById(id);
 const canvas = $('world');
@@ -244,7 +244,9 @@ function gather(found) {
   bank(earned);
 }
 // Which star trail is in the sky: the trip's own, the round trip when just flying, none over the picnic.
-const skyRoute = () => mode === 'picnic' ? 'picnic' : trip?.status === 'flying' ? `${trip.origin}>${trip.destination}` : '';
+const skyRoute = () => mode === 'picnic' ? 'picnic' : mode === 'tour' ? CITY_TOUR : trip?.status === 'flying' ? `${trip.origin}>${trip.destination}` : '';
+// On a City Tour the plane is kept over the city; otherwise it may roam the whole world.
+const limits = () => { const c = airportById('city'); return mode === 'tour' ? { boundary: LIMITS.radius, center: { x: c.x + LIMITS.x, z: c.z + LIMITS.z } } : { boundary: WORLD.radius, center: WORLD }; };
 function newSky() {
   resetSky(skyItems); flightStars = 0; starStreak = 0; boostUntil = -1; zoom = freshZoom(); showStars(); showZoom(); showToy();
   shy.clear(); autoHeld = null; autoTrickAt = 0; setWish(null); nextWish = elapsed + 10.5;
@@ -338,15 +340,18 @@ function airportBoard() {
   else if (view === 'board') [$('loadBag'), $('boardPassenger'), $('depart')].find(b => !b.hidden)?.focus?.();
   updateMission(); updateSound();
 }
-function leaveAirport(free = false) {
+// `kind` is 'trip' (the passenger flight chosen), 'free' (just fly) or 'tour' (the City Tour, which always starts at City Airport).
+function leaveAirport(kind = 'trip') {
   if (phase !== 'parked') return;
-  if (free) { mode = 'free'; trip = null; }
+  const free = kind !== 'trip';
+  if (kind === 'tour') { mode = 'tour'; trip = null; currentAirport = landingAirport = 'city'; state = parkedAt('city'); plane.position.set(state.x, state.y, state.z); setCamera(true); }
+  else if (free) { mode = 'free'; trip = null; }
   else { const next = prepareTrip(trip, 'depart'); if (next?.status !== 'flying') return; trip = next; mode = 'airline'; }
   $('airportBoard').close(); $('celebration').close();
   paused = false; phase = 'takeoff'; landingTime = 0; landingStart = { ...state }; airportLeg = -1;
   clearInput(); setGuided(false); updatePassenger(); newSky(); updateMission(); updateSound();
   lastTime = performance.now(); countShown = ''; boardView = 'pick';
-  say(free ? 'Cleared for takeoff!' : 'Passenger ready. Bags ready. Cleared for takeoff!');
+  say(kind === 'tour' ? 'City tour! Follow the stars between the buildings.' : free ? 'Cleared for takeoff!' : 'Passenger ready. Bags ready. Cleared for takeoff!');
 }
 function openLandingChoice() {
   if (phase !== 'flying' || paused) return;
@@ -424,9 +429,9 @@ function updateMission() {
     rings.forEach(r=>r.visible=false);beacon.visible=false;document.querySelector('.ring-counter').hidden=true;$('progress').style.visibility='hidden';
     const dest=airportById(airportLeg>=0?landingAirport:tripAirport());
     $('missionIcon').innerHTML=trip?.boarded?`<img src="../memory-assets/${airportById(trip.destination).animal}.png" alt="">`:'✈';
-    $('missionKicker').textContent=phase==='parked'?airportById(currentAirport).airport:airportLeg>=0?dest.airport:trip?'HAPPY PASSENGER FLIGHT':'FREE FLIGHT';
-    $('missionTitle').textContent=phase==='takeoff'?'Ready, set, fly!':phase==='landing'?(landingStyle==='hands'?'You’re landing the plane!':'A lovely gentle landing'):phase==='parked'?'Where shall we go?':trip?`${dest.passenger} → ${dest.name}`:'Explore our five islands';
-    $('missionSubtitle').textContent=phase==='landing'?(landingStyle==='hands'?'Steer gently. Helping wings keep you safe.':'Wheels down. Rolling to a stop.'):airportLeg>=0?'Follow the glowing runway gates':phase==='takeoff'?'Speeding up along the runway':autopilot?'You do the tricks! 🤖':trip?'Follow the stars! ⭐':'Find stars. Pop balloons. Land anywhere.';
+    $('missionKicker').textContent=phase==='parked'?airportById(currentAirport).airport:airportLeg>=0?dest.airport:trip?'HAPPY PASSENGER FLIGHT':mode==='tour'?'BIG CITY':'FREE FLIGHT';
+    $('missionTitle').textContent=phase==='takeoff'?'Ready, set, fly!':phase==='landing'?(landingStyle==='hands'?'You’re landing the plane!':'A lovely gentle landing'):phase==='parked'?'Where shall we go?':trip?`${dest.passenger} → ${dest.name}`:mode==='tour'?'City tour':'Explore our five islands';
+    $('missionSubtitle').textContent=phase==='landing'?(landingStyle==='hands'?'Steer gently. Helping wings keep you safe.':'Wheels down. Rolling to a stop.'):airportLeg>=0?'Follow the glowing runway gates':phase==='takeoff'?'Speeding up along the runway':autopilot?'You do the tricks! 🤖':trip?'Follow the stars! ⭐':mode==='tour'?'Follow the stars round the city! 🏙️':'Find stars. Pop balloons. Land anywhere.';
     $('land').innerHTML=phase==='landing'&&landingStyle==='hands'?'Land for me':airportLeg>=0&&phase==='flying'?'Keep flying':'↘ Land';
     $('land').disabled=!(phase==='flying'||phase==='landing'&&landingStyle==='hands');
     $('guide').disabled=phase!=='flying'||airportLeg>=0;
@@ -539,7 +544,7 @@ function setupControls() {
   $('openHangar').addEventListener('click',()=>{boardView='hangar';airportBoard();tunes?.tap();});
   $('closeHangar').addEventListener('click',()=>{boardView='pick';airportBoard();tunes?.tap();});
   $('otherPlaces').addEventListener('click',()=>{trip=null;boardView='pick';updatePassenger();airportBoard();tunes?.tap();});
-  $('freeFly').addEventListener('click',()=>leaveAirport(true));
+  $('freeFly').addEventListener('click',()=>leaveAirport('free'));$('cityTour').addEventListener('click',()=>leaveAirport('tour'));
   $('loadBag').addEventListener('click',()=>{trip=prepareTrip(trip,'bag');airportBoard();tunes?.thump();});
   $('boardPassenger').addEventListener('click',()=>{trip=prepareTrip(trip,'board');updatePassenger();airportBoard();tunes?.hello(airportById(trip.destination).animal);});
   $('depart').addEventListener('click',()=>leaveAirport());
@@ -613,14 +618,21 @@ function setCamera(immediate = false, dt = 0) {
   camera.position.copy(currentCamera); camera.lookAt(currentLook);
 }
 function drawMap() {
-  const c=map, airline=mode!=='picnic', scale=airline?.155:.54;
-  const toX=x=>80+(x-(airline?2:0))*scale,toY=z=>80+(z+(airline?65:0))*scale;
+  const c=map, airline=mode!=='picnic', tour=mode==='tour', city=airportById('city'), scale=tour?.36:airline?.118:.54;
+  // A City Tour shows just the city; other flights show all five places.
+  const midX=tour?city.x+(CITY.x0+CITY.x1)/2:airline?WORLD.x:0, midZ=tour?city.z+(CITY.z0+CITY.z1)/2+20:airline?WORLD.z-65:0;
+  const toX=x=>80+(x-midX)*scale,toY=z=>80+(z-midZ)*scale;
   c.clearRect(0,0,160,160);
   for(const a of airline?AIRPORTS:[AIRPORTS[0]]) {
-    c.fillStyle=a.id==='snowy'?'#e4edf0':a.id==='jungle'?'#6caa70':a.id==='starry'?'#7d76cf':a.city?'#c3bfd0':'#a6c889';c.beginPath();c.ellipse(toX(a.x),toY(a.z),90*scale,72*scale,0,0,Math.PI*2);c.fill();
-    c.strokeStyle='#fff2ce';c.lineWidth=3;c.beginPath();c.moveTo(toX(a.x+22),toY(a.z+16));c.lineTo(toX(a.x+22),toY(a.z+60));c.stroke();
-    if(airline){c.fillStyle='#265552';c.font='bold 13px sans-serif';c.textAlign='center';c.fillText(a.icon,toX(a.x),toY(a.z)-2);}
+    c.fillStyle=a.id==='snowy'?'#e4edf0':a.id==='jungle'?'#6caa70':a.id==='starry'?'#7d76cf':a.city?'#c3bfd0':'#a6c889';c.beginPath();
+    if(a.city){const x=toX(a.x+CITY.x0),y=toY(a.z+CITY.z0),w=(CITY.x1-CITY.x0)*scale,h=(CITY.z1-CITY.z0)*scale;c.roundRect?c.roundRect(x,y,w,h,CITY.corner*scale):c.rect(x,y,w,h);}
+    else c.ellipse(toX(a.x),toY(a.z),90*scale,72*scale,0,0,Math.PI*2);
+    c.fill();
+    c.strokeStyle='#fff2ce';c.lineWidth=tour?4:2.5;c.beginPath();c.moveTo(toX(a.x+22),toY(a.z+16));c.lineTo(toX(a.x+22),toY(a.z+60));c.stroke();
+    if(airline&&!tour){c.fillStyle='#265552';c.font='bold 11px sans-serif';c.textAlign='center';c.fillText(a.icon,toX(a.x+(a.city?25:0)),toY(a.z+(a.city?-100:0))+3);}
   }
+  // On a tour, the stars still to catch show the way round.
+  if(tour){c.fillStyle='#ffd23f';for(const s of skyItems)if(s.route===CITY_TOUR&&s.kind==='star'&&!s.taken){c.beginPath();c.arc(toX(s.x),toY(s.z),1.6,0,Math.PI*2);c.fill();}}
   const target=getTarget();c.strokeStyle='#fff5c5';c.lineWidth=1.5;c.setLineDash([3,3]);c.beginPath();c.moveTo(toX(state.x),toY(state.z));c.lineTo(toX(target.x),toY(target.z));c.stroke();c.setLineDash([]);
   c.fillStyle='#fff4d1';c.beginPath();c.arc(toX(target.x),toY(target.z),3,0,Math.PI*2);c.fill();
   c.save();c.translate(clamp(toX(state.x),7,153),clamp(toY(state.z),7,153));c.rotate(state.heading);c.fillStyle='#e6583f';c.strokeStyle='#fff9df';c.lineWidth=1.5;c.beginPath();c.moveTo(0,-7);c.lineTo(5,5);c.lineTo(0,2);c.lineTo(-5,5);c.closePath();c.fill();c.stroke();c.restore();
@@ -657,8 +669,8 @@ function updateFlight(dt) {
     const level = starHeight(skyItems, skyRoute(), state);
     if (level !== null) fly = { x: steer.x, y: clamp((level - state.y) * .12, -.6, .6) };
   }
-  state = stepFlight(state, fly, dt, guided ? guideTarget() : null, obstacles, {speed:SPEEDS[speedMode]*(elapsed<boostUntil?BOOST_SPEED:1),guideSpeed:airportLeg>=0||mode==='picnic'?(elapsed<boostUntil?15:10):elapsed<boostUntil?19:Math.min(SPEEDS[speedMode],14),boundary:mode === 'picnic' ? 165 : WORLD.radius,center:mode === 'picnic' ? null : WORLD,groundHeight:mode === 'picnic' ? groundHeight : worldGroundHeight});
-  if (state.returning && !previous.returning) toast('Let’s turn back toward our islands. ☀️');
+  state = stepFlight(state, fly, dt, guided ? guideTarget() : null, obstacles, {speed:SPEEDS[speedMode]*(elapsed<boostUntil?BOOST_SPEED:1),guideSpeed:airportLeg>=0||mode==='picnic'?(elapsed<boostUntil?15:10):elapsed<boostUntil?19:Math.min(SPEEDS[speedMode],14),boundary:mode === 'picnic' ? 165 : limits().boundary,center:mode === 'picnic' ? null : limits().center,groundHeight:mode === 'picnic' ? groundHeight : worldGroundHeight});
+  if (state.returning && !previous.returning) toast(mode === 'tour' ? 'Back to the city! 🏙️' : 'Let’s turn back toward our islands. ☀️');
   const found = collectSky(skyItems, previous, state, skyRoute(), elapsed < boostUntil ? ZOOM_PULL : 1);
   if (found.length) gather(found);
   if (airportLeg >= 0) {

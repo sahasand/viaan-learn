@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stepFlight,touchesTarget,angleDelta,runwayLanding,runwayTakeoff} from './flight.js';
 import {allObstacles,cityPlan} from './city.js';
-import {AIRPORTS,SPEEDS,airportRunway,approachFor,parkedAt,worldGroundHeight,worldObstacles,newTrip,prepareTrip,arriveTrip,normalizePassport,stampArrival,assistedLanding,nearestAirport,WORLD,nightAt} from './airline.js';
+import {AIRPORTS,SPEEDS,airportRunway,approachFor,parkedAt,worldGroundHeight,worldObstacles,newTrip,prepareTrip,arriveTrip,normalizePassport,stampArrival,assistedLanding,nearestAirport,WORLD,nightAt,CITY,cityEdge} from './airline.js';
 const local=JSON.parse(readFileSync(new URL('./assets/obstacles.json',import.meta.url))),obstacles=allObstacles(local);
 
 test('a passenger can depart only after choosing another airport, loading a bag and boarding',()=>{
@@ -85,20 +85,23 @@ test('it is night over Starlight Island, day over the others, and dusk on the wa
 });
 
 test('Big City stands on flat ground with towers clear of the runway, Main Avenue and the park',()=>{
-  const city=AIRPORTS.find(a=>a.city),{towers,parks}=cityPlan(),r=airportRunway('city');
-  assert.ok(towers.length>=24,'a proper skyline');assert.ok(towers.some(t=>t.top>60)&&towers.some(t=>t.top<25),'tall and small towers');
-  for(const t of towers){
-    assert.ok(t.wall&&t.radius>t.half&&t.radius<t.half*1.42);
+  const city=AIRPORTS.find(a=>a.city),{towers,houses,parks}=cityPlan(),r=airportRunway('city'),all=[...towers,...houses];
+  assert.ok(towers.length>=30&&houses.length>=35,'a downtown of towers inside a ring of houses');assert.ok(towers.some(t=>t.top>60)&&towers.some(t=>t.top<25),'tall and small towers');
+  assert.ok(CITY.x1-CITY.x0>=280&&CITY.z1-CITY.z0>=350,'a big city');
+  for(const t of all){
+    assert.ok(t.radius>t.half&&t.radius<t.half*1.42);assert.equal(!!t.wall,towers.includes(t),'towers are walls, houses are flown over');
     assert.ok(Math.abs(t.x-r.x)>=t.radius+9,'Main Avenue is open from shore to shore');
-    assert.equal(worldGroundHeight(t.x,t.z),2.7,'every tower stands on the flat');
-    for(const o of towers)if(o!==t)assert.ok(Math.hypot(o.x-t.x,o.z-t.z)>=t.radius+o.radius+2*2.8+3,'a plane fits down every street');
+    assert.equal(worldGroundHeight(t.x,t.z),2.7,'every building stands on the flat');assert.ok(cityEdge(t.x-city.x,t.z-city.z)<-8,'and well inside the city');
+    for(const o of all)if(o!==t)assert.ok(Math.hypot(o.x-t.x,o.z-t.z)>=t.radius+o.radius+2*2.8+3,'a plane fits down every street');
   }
-  assert.ok(parks.length>=3);
+  for(const h of houses)assert.ok(h.top<=12,'houses are low');
+  assert.ok(parks.length>=4);
   for(let z=r.stopZ-60;z<=r.touchdownZ+16;z+=4)assert.equal(worldGroundHeight(r.x,z),2.7,'level under the runway');
-  assert.equal(worldGroundHeight(city.x+130,city.z),0);
+  for(const p of approachFor('city'))assert.equal(worldGroundHeight(p.x,p.z),0,'the landing comes in over the harbour');
+  assert.equal(worldGroundHeight(city.x+230,city.z),0);assert.equal(worldGroundHeight(city.x,city.z-200),2.7);
 });
 test('a plane below a tower top slides round it, and one above it flies over',()=>{
-  const t=cityPlan().towers.find(t=>t.top>55),short=cityPlan().towers.find(t=>t.top<30);
+  const t=cityPlan().towers.find(t=>t.top>55),short=cityPlan().houses[0];
   // Aimed just off the middle of a tall tower from the west: it comes out the far side without ever going inside or up over.
   let s={x:t.x-40,y:20,z:t.z+1,heading:Math.PI/2,turn:0,climb:0,speed:13,returning:false},closest=99,highest=0;
   for(let i=0;i<600&&s.x<t.x+25;i++){s=stepFlight(s,{x:0,y:0},1/60,{x:t.x+60,y:20,z:t.z},obstacles,{speed:13,boundary:WORLD.radius,center:WORLD,groundHeight:worldGroundHeight});closest=Math.min(closest,Math.hypot(s.x-t.x,s.z-t.z));highest=Math.max(highest,s.y);}
